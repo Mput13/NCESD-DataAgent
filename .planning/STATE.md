@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код, не LLM
-**Current focus:** Phase 1 — Ядро агента (NLU + RAG + поиск данных)
+**Current focus:** Изучение требований, данных и вариантов реализации
 
 ## Current Phase
 
-**Phase:** 1 of 3
-**Name:** Ядро агента — NLU + RAG + поиск данных
-**Status:** Not started
-**Plan:** Not created yet — run `/gsd-plan-phase 1`
+**Phase:** Discovery
+**Name:** Разбор ТЗ, доступных данных и возможного MVP
+**Status:** In progress
+**Plan:** Не создан — решений по стеку и скоупу пока нет
 
 ## Phase History
 
@@ -20,19 +20,23 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Decisions Log
 
-| Date | Decision | Context |
-|------|----------|---------|
-| 2026-05-08 | Yandex AI Studio + OpenAI SDK | Обязательное требование ТЗ |
-| 2026-05-08 | Streamlit для UI | Быстрый прототип, не мессенджер |
-| 2026-05-08 | RAG по метаданным | Эффективный поиск по 29K+ индикаторов |
-| 2026-05-08 | pandas для Parquet | Детерминированный код, требование ТЗ |
-| 2026-05-08 | Coarse granularity (3 фазы) | Хакатон — 5 дней, максимальная скорость |
+No decisions yet. Current work is exploratory: understand the task, data formats, evaluation criteria, and possible implementation paths.
 
-## Blockers
+## Known Inputs From Task
+
+- Yandex AI Studio / Yandex Cloud is recommended by the case materials; exact model and SDK usage still need validation.
+- UI must not be a messenger bot; Streamlit, Gradio, web UI, or CLI are possible options.
+- Numeric values must come from deterministic code, not from LLM table reading.
+- Main data candidates: local Rosstat/EMISS and World Bank dumps, plus optional NSED CKAN API.
+
+## Open Questions
 
 - [ ] Скачать данные с Yandex Disk (~3.5 GB)
 - [ ] Получить API-ключ Yandex AI Studio
 - [ ] Получить folder_id Yandex Cloud
+- [ ] Понять фактическую структуру локального дампа после скачивания
+- [ ] Выбрать несколько тестовых запросов для первичного анализа
+- [ ] Сравнить варианты поиска по метаданным и извлечения данных
 
 ---
-*Last updated: 2026-05-08 after initialization*
+*Last updated: 2026-05-08 after correcting discovery state*

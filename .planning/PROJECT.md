@@ -57,7 +57,7 @@
 
 **Тест-кейсы:** 15–20 пар «запрос → ожидаемый результат» разной сложности
 
-**Референсная реализация:** Agent.py в репо — обёртка над Yandex Cloud Responses API с function calling, web_search, file_search, MCP
+**Референсная реализация из материалов кейса:** Agent.py-style обёртка над Yandex Cloud Responses API с function calling, web_search, file_search, MCP. В текущем репозитории этот файл не является активным исходником.
 
 **Yandex AI Studio smoke test:** OpenAI-compatible Chat Completions endpoint works with DeepSeek 3.2 at `https://llm.api.cloud.yandex.net/v1/chat/completions` and model URI `gpt://b1gbntotj1b57karq6qm/deepseek-v32/latest`. Secrets must be kept out of git; use environment variables/local `.env`.
 
@@ -81,7 +81,7 @@
 - **Воспроизводимость**: README + requirements.txt + инструкция по запуску
 - **Дедлайн**: 13 мая 2026
 
-### Открытые вопросы (решаются в фазе исследования)
+### Открытые вопросы (решаются в Phase 1)
 
 - **Поиск по метаданным**: FAISS локально vs File Search Yandex AI Studio vs DuckDB FTS
 - **Извлечение данных**: DuckDB SQL vs pandas vs оба
@@ -98,12 +98,18 @@
 | Area | Candidates / constraint | Status |
 |------|-------------------------|--------|
 | LLM/API | DeepSeek 3.2 через Yandex AI Studio OpenAI-compatible API smoke-tested; compare with YandexGPT/Qwen on evals | Partially validated |
-| Agent loop | OpenAI Responses-style loop / OpenAI Agents SDK / LangChain / custom loop | Open |
+| Agent loop | LangGraph hierarchical supervisor per `.planning/ARCHITECTURE_STACK.md`; exact graph contract and implementation slices are Phase 1 work | Target selected, implementation pending |
 | Поиск по метаданным | Keyword/BM25/FTS / vector search / hybrid / AI Studio File Search | Open |
 | Чтение Parquet | pandas / DuckDB / pyarrow / комбинация | Open |
 | Источники | локальные дампы / CKAN API / World Bank API / комбинация | Open |
-| UI | Streamlit / Gradio / web UI / CLI | Open |
+| UI | Streamlit-first trace/artifacts surface unless Phase 1 records a blocker | Target selected, implementation pending |
 | Numeric extraction | Должен выполняться детерминированным кодом | Constraint |
+
+## Current Phase Model
+
+The current milestone has one active phase: `01-data-architecture-research`.
+The slug is historical; Phase 1 is implementation-oriented and should produce code, scripts, tests, evidence artifacts, and UI/trace contracts where required by the plans.
+Do not infer numbered follow-up phases or a three-person workstream split from older history.
 
 ## Evolution
 

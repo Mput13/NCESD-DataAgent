@@ -1,12 +1,14 @@
-# Phase 1: Исследование данных и вариантов реализации - Context
+# Phase 1: Data Architecture Implementation - Context
 
 **Gathered:** 2026-05-09
-**Status:** Ready for planning
+**Status:** Planned, ready for execution
 
 <domain>
 ## Phase Boundary
 
-Phase 1 delivers a full evidence-backed implementation research package for DataAgent: requirements map, data map, source/retrieval/extraction comparisons, model/orchestration validation plan, executable spikes where useful, and a recommended MVP scope for Phase 2. It does not ship the final MVP, but it must validate the target architecture deeply enough that Phase 2 can implement without reopening core stack decisions.
+Phase 1 is the only active phase in the current milestone. It delivers an implementation-oriented architecture package for DataAgent: requirements map, test cases, deterministic source inventory, source/retrieval/extraction code slices, model/orchestration validation, Streamlit trace/UI contract, and a final implementation decision package.
+
+The historical slug `01-data-architecture-research` remains canonical for continuity, but `research` does not mean prose-only work. Phase 1 may produce code, scripts, tests, and UI contracts. What it must not do is silently treat unverified spikes as complete: every implementation slice needs plan-bound verification and a `01-xx-SUMMARY.md`.
 
 The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is treated as the target stack, not merely a loose research note.
 
@@ -17,7 +19,9 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 
 ### Architecture Stack Status
 - **D-01:** Treat `.planning/ARCHITECTURE_STACK.md` as the target architecture for Phase 1 research and planning.
-- **D-02:** Phase 1 should validate risks and implementation details inside that stack, not compare against a radically simpler architecture unless a blocker is discovered.
+- **D-02:** Phase 1 should implement and validate risks inside that stack, not compare against a radically simpler architecture unless a blocker is discovered.
+- **D-02A:** The current milestone has no active numbered follow-up phases. Future phases require an explicit roadmap change after Phase 1 verification.
+- **D-02B:** Execute Phase 1 single-track. Do not recreate a Core/Data/UI owner split.
 
 ### Source Scope
 - **D-03:** FedStat, World Bank, and CKAN are all in scope from the start.
@@ -51,11 +55,11 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 - **D-21:** Evaluation must measure not just final answer text, but retrieval quality, coverage preview, source rejection, deterministic extraction, and trace completeness.
 
 ### Phase 1 Output Shape
-- **D-22:** Phase 1 output should include research report(s), executable spikes, and trade-off tables.
-- **D-23:** Spikes are evidence for planning and MVP selection; they are not automatically accepted as production implementation without explicit Phase 2 planning.
+- **D-22:** Phase 1 output should include implementation artifacts, research notes, executable spikes, deterministic verification, and trade-off tables.
+- **D-23:** Spikes are evidence for implementation decisions; they are not accepted as complete until the relevant plan's verification commands pass and a summary artifact is written.
 
 ### Success Criterion Priority
-- **D-24:** The main recommendation criterion for Phase 2 is maximum demonstration value from multi-agent trace and UI transparency.
+- **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.
 - **D-25:** Reliability remains non-negotiable: every numeric value must be source-bound and reproducible, but among reliable options the preferred path is the one with the strongest visible agent workflow and trace.
 
 ### the agent's Discretion
@@ -96,7 +100,7 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 - `app/llm/yandex_ai_studio.py`: minimal OpenAI-compatible chat completions client for Yandex AI Studio; can be used as a starting point but likely needs auth/header alignment, structured output support, tool-calling support, and model profile cleanup.
 
 ### Established Patterns
-- Repository is still a thin scaffold. There are no implemented data adapters, catalog builders, retrieval modules, LangGraph workflow, Streamlit UI, eval harness, or tests yet.
+- Repository is still a thin scaffold. There are no accepted data adapters, catalog builders, retrieval modules, LangGraph workflow, Streamlit UI, eval harness, or tests yet.
 - Durable planning context lives in `.planning/`; generated phase artifacts should stay under `.planning/phases/`.
 - Secrets must stay in local environment variables or `.env` and must not be committed.
 
@@ -111,9 +115,11 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 ## Specific Ideas
 
 - The user explicitly wants Phase 1 to follow `.planning/ARCHITECTURE_STACK.md` fully for retrieval, deterministic extraction, and LangGraph orchestration.
+- The user wants one canonical Phase 1 only. Do not infer later phases from older roadmap history.
+- The user rejected the three-person workstream split; execute as a single-track GSD phase.
 - The user selected CKAN as an equal first-class source, not a secondary API.
 - The user wants the broader 15-20 task test-case set prepared in Phase 1.
-- The user selected multi-agent trace and transparent UI wow-effect as the dominant Phase 2 recommendation criterion, while preserving source-bound reliability.
+- The user selected multi-agent trace and transparent UI wow-effect as the dominant implementation criterion, while preserving source-bound reliability.
 
 </specifics>
 
@@ -121,7 +127,6 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 ## Deferred Ideas
 
 - Broad DeepSeek/YandexGPT/Qwen benchmarking is deferred; Phase 1 targets Qwen 3.6 per architecture stack and can test alternatives later if needed.
-- Final production MVP implementation remains Phase 2, after Phase 1 research/spikes and explicit planning.
 
 </deferred>
 

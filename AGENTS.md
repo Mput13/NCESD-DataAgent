@@ -18,9 +18,11 @@ For small direct fixes, keep the change scoped, update `.planning/STATE.md` when
 ## Project-Specific Rules
 
 - Treat `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, and `.planning/STATE.md` as durable project memory.
+- The current milestone has one canonical phase only: `.planning/phases/01-data-architecture-research`. Do not use deprecated duplicate phase directories or infer numbered follow-up phases unless the roadmap is explicitly changed.
+- Execute work single-track through the canonical Phase 1 plans. Do not recreate a three-person Core/Data/UI owner split or owner-specific onboarding artifacts.
+- The `research` slug is historical. Phase 1 is implementation-oriented: produce code, scripts, tests, evidence artifacts, and summaries where the plans require them.
 - The assistant is source-bound: numbers must come from deterministic code or trusted source adapters, never from LLM memory.
 - CKAN is a trusted NSED catalog API, not general web search. Use it through bounded package/resource search and cache only promoted metadata.
 - Keep local secrets in `.env`; never commit API keys.
 - Prefer traceable artifacts: research notes, source candidates, rejection reasons, generated SQL/code, extraction logs, and verification results.
 - Streamlit is the first demo UI target. The UI must expose the state machine, trace, artifacts, and user feedback/fix requests.
-

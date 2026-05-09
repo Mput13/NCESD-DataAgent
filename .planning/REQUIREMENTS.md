@@ -86,15 +86,18 @@
 
 ## Traceability
 
+The current milestone has one active implementation-oriented phase: `01-data-architecture-research`.
+All v1 requirements map to Phase 1. Future phases must not be inferred from older artifacts; add them explicitly only after Phase 1 verification.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | NLU-01..04 | Phase 1 | Pending |
 | SRCH-01..04 | Phase 1 | Pending |
-| DATA-01..05 | Phase 2 | Pending |
-| ART-01..06 | Phase 2 | Pending |
-| RBST-01..04 | Phase 3 | Pending |
-| UI-01..04 | Phase 3 | Pending |
-| ENG-01..04 | Phase 3 | Pending |
+| DATA-01..05 | Phase 1 | Pending |
+| ART-01..06 | Phase 1 | Pending |
+| RBST-01..04 | Phase 1 | Pending |
+| UI-01..04 | Phase 1 | Pending |
+| ENG-01..04 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total

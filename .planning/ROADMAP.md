@@ -1,106 +1,61 @@
 # Roadmap: DataAgent
 
-**Created:** 2026-05-08
-**Granularity:** Coarse (3 phases, hackathon timeline)
+**Created:** 2026-05-08  
+**Reset:** 2026-05-10  
+**Granularity:** Single active phase for the current milestone  
 **Core Value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код
 
 ---
 
-## Phase 1: Исследование данных и вариантов реализации
+## Phase 1: Data Architecture Implementation (`01-data-architecture-research`)
 
-**Goal:** Понять требования, фактическую структуру данных, тест-кейсы и варианты MVP. При желании — сделать маленькие спайки, но не считать их принятыми решениями до обсуждения.
+**Canonical directory:** `.planning/phases/01-data-architecture-research`
 
-**Covers:** NLU-01, NLU-02, NLU-03, NLU-04, SRCH-01, SRCH-02, SRCH-03, SRCH-04
+**Naming note:** the slug keeps `research` for continuity with existing GSD artifacts. In this roadmap, Phase 1 is not prose-only research. It is the single implementation-oriented phase for the current milestone: build the MVP architecture through small, verifiable plans, deterministic source adapters/spikes, traceable artifacts, and an end-to-end demo path.
 
-**Plans:** 3 plans
+**Goal:** Implement and validate the DataAgent architecture enough to demonstrate the core product loop: natural-language request → structured intent/research design → source discovery over FedStat, World Bank, and CKAN → deterministic coverage/extraction path → source-bound artifacts → visible Streamlit trace and feedback loop.
 
-Plans:
-- [ ] 01-01-PLAN.md — Shared Phase 1 foundation: requirements map, data map verification, and golden cases
-- [ ] 01-02-PLAN.md — Metadata search, source cards, retrieval comparison, and coverage/extraction probes
-- [ ] 01-03-PLAN.md — Structured NLU evaluation and MVP scope recommendation package
+**Boundary:** Phase 1 may create production-bound code, scripts, tests, and UI contracts. It must not silently accept unverified spikes as complete implementation. Every implemented slice needs explicit evidence, deterministic verification, and a summary artifact.
 
-**Исследовательские вопросы (спайки):**
-- Какой инструмент поиска по 29K метаданных даёт лучшее качество? (FAISS / DuckDB FTS / AI Studio File Search)
-- DuckDB SQL vs pandas для чтения Parquet — что удобнее для генерации кода агентом?
-- Какая LLM модель лучше справляется с классификацией и уточняющим диалогом?
-- Как агент должен комбинировать локальные данные и live API?
+**Covers:** NLU-01..04, SRCH-01..04, DATA-01..05, ART-01..06, RBST-01..04, UI-01..04, ENG-01..04
 
-**Deliverables:**
-- Карта требований: что обязательно, что можно эмулировать, что является бонусом
-- Карта данных: какие файлы/поля/форматы реально доступны после скачивания дампа
-- Сравнение вариантов поиска по метаданным и извлечения данных
-- Набор из 15–20 тест-кейсов и рубрика оценки retrieval / extraction / trace
-- Рекомендация по MVP-скоупу, но без автоматического принятия решений
+**Execution model:** single-track GSD execution. Do not split work into Core/Data/UI owners or parallel human workstreams unless the roadmap is explicitly changed.
 
-**Plans:** 5 plans
+### Plans
 
-Plans:
-- [ ] 01-01-PLAN.md — Requirements map, 15-20 golden cases, and eval rubric
-- [ ] 01-02-PLAN.md — Deterministic data inventory and typed source-card builders
-- [ ] 01-03-PLAN.md — Hybrid retrieval comparison and deterministic extraction probes
-- [ ] 01-04-PLAN.md — Qwen/Yandex client hardening and LangGraph contract spike
-- [ ] 01-05-PLAN.md — Streamlit trace/UI demo contract and Phase 2 recommendation package
+- [ ] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
+- [ ] `01-02-PLAN.md` — Deterministic data inventory and typed source-card builders
+- [ ] `01-03-PLAN.md` — Hybrid retrieval comparison and deterministic extraction probes
+- [ ] `01-04-PLAN.md` — Qwen/Yandex client hardening and LangGraph contract/architecture slice
+- [ ] `01-05-PLAN.md` — Streamlit trace/UI demo contract and implementation decision package
 
-**Validation:**
-- [ ] Понятно, какие данные есть локально и через CKAN
-- [ ] Понятно, какие типы запросов реально закрыть за время хакатона
-- [ ] Понятны риски: шумный поиск, отсутствие данных, разные единицы измерения, разные методологии
-- [ ] Команда осознанно выбирает следующий шаг после обсуждения
+### Deliverables
 
----
+- Requirement-to-artifact map covering all v1 requirements.
+- 15-20 test cases across simple, comparative, research, derived metric, ambiguous, and no-data requests.
+- Deterministic source inventory for local dumps and bounded CKAN package/resource access.
+- Shared source-card/evidence contracts for FedStat, World Bank, and CKAN.
+- Retrieval comparison with lexical, dense, rerank, and credential-aware fallback evidence.
+- DuckDB SQL-first extraction probes and adapter strategy for FedStat, World Bank, and CKAN.
+- Hardened Yandex AI Studio/Qwen integration notes and runnable gated checks.
+- LangGraph architecture contract or skeleton with typed artifacts and trace ownership.
+- Streamlit-first trace/UI contract exposing state, trace, artifacts, and feedback/fix requests.
+- Final implementation decision package documenting what is accepted, what remains risky, and what must be verified before demo.
 
-## Phase 2: Прототипирование выбранного MVP
+### Validation
 
-**Goal:** После явного решения команды собрать работающий прототип выбранного пути: от запроса до релевантных источников, данных или промежуточных артефактов.
-
-**Covers:** DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, ART-01, ART-02, ART-03, ART-04, ART-05, ART-06
-
-**Deliverables** (только после выбора MVP):
-- Инструмент поиска данных
-- Инструмент извлечения данных детерминированным кодом
-- Поддержка выбранных источников
-- Вычисление производных метрик через сгенерированный код
-- Генерация промежуточных артефактов (определение, дизайн, структура)
-- Генерация скрипта сборки (скачиваемый, запускаемый автономно)
-- Итоговый датасет (CSV/Parquet) с метаданными и ссылками на источники
-- Каждая цифра — со ссылкой
-
-**UAT:**
-- [ ] Простой запрос → end-to-end от NL до CSV с данными
-- [ ] Сравнительный запрос → датасет с данными из нескольких стран/периодов
-- [ ] Производная метрика → корректное вычисление через код
-- [ ] Скрипт сборки скачивается и запускается автономно
+- [ ] Local data and CKAN access paths are documented with bounded, reproducible commands.
+- [ ] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.
+- [ ] Retrieval and extraction decisions are backed by artifacts, not only prose.
+- [ ] The visible trace shows selected sources, rejected sources, coverage checks, extraction plans, and no-data reasoning.
+- [ ] `requirements.txt` and run/test commands reproduce the implemented slices.
+- [ ] Phase summaries exist for completed plans before the phase is marked complete.
 
 ---
 
-## Phase 3: UI + устойчивость + полировка выбранного прототипа
-
-**Goal:** Довести выбранный прототип до понятной демонстрации: интерфейс, прозрачный «след» работы, README и проверка на тест-кейсах.
-
-**Covers:** RBST-01, RBST-02, RBST-03, RBST-04, UI-01, UI-02, UI-03, UI-04, ENG-01, ENG-02, ENG-03, ENG-04
-
-**Deliverables:**
-- UI с чат-интерфейсом или CLI (конкретный вариант выбирается отдельно)
-- Отображение «следа» работы (шаги, источники, отклонённые варианты)
-- Скачивание датасетов и скриптов
-- Корректная обработка всех 6 типов запросов
-- README с описанием архитектуры, ограничений и принятых на тот момент решений
-- requirements.txt + инструкция по запуску
-- Прогон по 5–8 тест-кейсам с количественной оценкой
-
-**UAT:**
-- [ ] Все 6 типов запросов обрабатываются корректно через UI
-- [ ] «След» работы ассистента виден в интерфейсе
-- [ ] Непрограммист может использовать интерфейс
-- [ ] `pip install -r requirements.txt && [команда запуска]` запускает систему
-- [ ] Прогон по 5–8 тест-кейсам с количественной оценкой
-
----
-
-**Total phases:** 3
-**Total v1 requirements:** 27
+**Total active phases:** 1  
+**Total v1 requirements:** 27  
 **Coverage:** 100%
 
 ---
-*Created: 2026-05-08*
-*Last updated: 2026-05-08 — discovery mode, decisions not made*
+*Last updated: 2026-05-10 — reset to one canonical implementation-oriented Phase 1*

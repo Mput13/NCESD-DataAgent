@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: replanning
+last_updated: "2026-05-10T01:40:00+03:00"
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 1
+---
+
 # Project State: DataAgent
 
 ## Project Reference
@@ -5,28 +18,33 @@
 See: `.planning/PROJECT.md`
 
 **Core value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код, не LLM  
-**Current focus:** Phase 1 Data Architecture Implementation
+**Current focus:** Phase 01 — data-architecture-research
 
 ## Current Phase
 
 **Phase:** 1  
 **Slug:** `01-data-architecture-research`  
 **Name:** Data Architecture Implementation  
-**Status:** Planned, not executed  
+**Status:** Replanning after embedding/data-readiness boundary correction
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** execute `01-01-PLAN.md` first, then continue through `01-05-PLAN.md` in dependency order.
+**Next action:** resume execution at revised `01-02-PLAN.md`; do not continue old Wave 2 until the prepared-data and embedding-corpus contract is accepted.
 
 ## Phase Boundary
 
-The current milestone has exactly one active phase. Despite the historical slug, Phase 1 is implementation-oriented: it should produce code, scripts, tests, data/retrieval/extraction evidence, and UI trace contracts where the plans require them.
+The current milestone has exactly one active phase. Despite the historical slug, Phase 1 is implementation-oriented: it should produce code, scripts, tests, prepared-data artifacts, embedding/search index manifests, data/retrieval/extraction evidence, and UI trace contracts where the plans require them.
 
 Phase 1 is not a license to build an unverified full product in one jump. Each slice must follow its plan, produce its expected artifacts, run its verification commands, and write the corresponding `01-xx-SUMMARY.md`.
+
+The corrected Phase 1 boundary is stronger than the original plan: by the end of Phase 1 the source-card corpus and embedding/search index should be ready for demo use. Reprocessing or re-embedding all sources after Phase 1 is an exceptional recovery path, not the default next step. Because embedding may be long-running, execution should start the embedding/index build as soon as the source-card corpus is ready and use that time to prepare orchestration, extraction, UI, and demo integration.
 
 ## Phase History
 
 - **2026-05-10 — Planning reset to one canonical phase.**
   Removed the failed core/workflow skeleton, deprecated duplicate Phase 1 directory, forensic incident artifact, and three-person workstream documents from the active tree.
   The active roadmap now has one phase only: `.planning/phases/01-data-architecture-research`.
+
+- **2026-05-10 — Phase 1 boundary corrected for prepared data and embeddings.**
+  User clarified that Phase 1 must finish with prepared data and embedding/search index ready for demo use. Later reprocessing is exceptional. Plans `01-02` through `01-05` were revised so embedding corpus/indexing starts early and independent workflow/UI/extraction work proceeds while it runs.
 
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
@@ -82,17 +100,19 @@ Phase 1 is not a license to build an unverified full product in one jump. Each s
 - [x] Получить рабочий folder_id Yandex Cloud for DeepSeek 3.2 smoke test: `b1gbntotj1b57karq6qm`
 - [x] Понять фактическую структуру локального дампа после скачивания — summarized in `.planning/DATA_REPORT.md`
 - [ ] Create the 15-20 case golden set in `01-01-PLAN.md`
-- [ ] Compare and implement the first retrieval/extraction slices through `01-02` and `01-03`
-- [ ] Define and verify the orchestration/UI trace contract through `01-04` and `01-05`
+- [ ] Finish revised prepared-data and embedding-corpus contract in `01-02-PLAN.md`
+- [ ] Materialize embedding/search index and retrieval eval in revised `01-03-PLAN.md`
+- [ ] Define and verify orchestration, extraction, and UI trace contract through revised `01-04` and integrated demo package in `01-05`
 
 ## Recommended Next Action
 
-Run the existing Phase 1 plans in order:
+Run the revised Phase 1 plans in order:
 
-1. Execute `.planning/phases/01-data-architecture-research/01-01-PLAN.md`.
-2. Create `.planning/phases/01-data-architecture-research/01-01-SUMMARY.md`.
-3. Continue with `01-02`, `01-03`, `01-04`, and `01-05` only after dependencies and verification commands pass.
-4. Run `$gsd-verify-work 1` after all five summaries exist.
+1. Treat existing `01-01-SUMMARY.md` as an eval-foundation artifact, but do not mark product NLU requirements complete from it alone.
+2. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md`.
+3. Start the long-running embedding/index build in revised `01-03` as soon as the corpus is ready; prepare `01-04` work while indexing runs.
+4. Run revised `01-05` only after prepared-index status and independent contracts are clear.
+5. Run `$gsd-verify-work 1` after all five summaries exist.
 
 ---
 *Last updated: 2026-05-10 after single-phase cleanup*

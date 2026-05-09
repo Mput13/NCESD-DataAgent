@@ -6,13 +6,15 @@
 <domain>
 ## Phase Boundary
 
-Phase 1 is the only active phase in the current milestone. It delivers an implementation-oriented architecture package for DataAgent: requirements map, test cases, deterministic source inventory, source/retrieval/extraction code slices, model/orchestration validation, Streamlit trace/UI contract, and a final implementation decision package.
+Phase 1 is the only active phase in the current milestone. It delivers an implementation-oriented architecture package for DataAgent: requirements map, test cases, deterministic source inventory, a durable prepared-data and embedding-index product, source/retrieval/extraction code slices, model/orchestration validation, Streamlit trace/UI contract, and a final implementation decision package.
 
 The historical slug `01-data-architecture-research` remains canonical for continuity, but `research` does not mean prose-only work. Phase 1 may produce code, scripts, tests, and UI contracts. What it must not do is silently treat unverified spikes as complete: every implementation slice needs plan-bound verification and a `01-xx-SUMMARY.md`.
 
 The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is treated as the target stack, not merely a loose research note.
 
 Phase 1 may implement a narrow vertical slice first, but it must be architecturally scalable toward the full `.planning/ARCHITECTURE_STACK.md` vision. The implementation should avoid one-off demo shortcuts that would block later expansion into real source adapters, multiple retrieval providers, richer LangGraph orchestration, deterministic tool libraries, trace replay, and a fuller Streamlit UI.
+
+The prepared source-card corpus and embedding/search index are Phase 1 deliverables, not disposable research output. By the end of Phase 1 these data artifacts should be ready for demo use; reprocessing or re-embedding all sources in a later phase should happen only for an explicit blocker, schema migration, or corrupted/outdated artifact. Because embedding may be long-running, Phase 1 planning should start the embedding/index build as soon as the source-card corpus and provider contract are ready, then prepare orchestration, extraction, UI, and demo integration while that job runs.
 
 </domain>
 
@@ -36,6 +38,11 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 - **D-06:** Implement/research retrieval fully according to `.planning/ARCHITECTURE_STACK.md`: lexical BM25/FTS plus dense embeddings and reranking where feasible.
 - **D-07:** Metadata indexing should use compact source cards and evidence bundles rather than loading raw CKAN/API/table responses into LLM context.
 - **D-08:** Retrieval must support exact code/title matches, Russian and English lexical search, semantic matches, proxy candidates, methodology matches, and rejection reasons.
+- **D-08A:** Phase 1 must define a stable embedding document/chunk format before dense retrieval implementation: source id/card id, chunk id, source family, language, content hash, metadata version, provenance, coverage, units, dimensions, source URL/resource URL, and the exact text fields sent to the embedding model.
+- **D-08B:** The primary embedding target is Yandex AI Studio embeddings with document/query split: `text-search-doc` for source-card/chunk documents and `text-search-query` for user queries. If credentials are absent, execution must record a credential-aware gated skip while preserving the same corpus/index contract.
+- **D-08C:** Phase 1 should materialize a local source-card corpus and embedding/search index as a durable data product. Later phases should consume the manifest and local index, not reprocess all sources by default.
+- **D-08D:** Embedding inputs are metadata/source-card chunks only. They must not include raw numeric series, generated factual answers, or unsupported numeric claims from an LLM.
+- **D-08E:** Long-running embedding/indexing work should run as early as possible after corpus readiness; independent orchestration, UI, extraction, and demo work should continue in parallel while it runs.
 
 ### Deterministic Extraction
 - **D-09:** Implement/research data extraction fully according to `.planning/ARCHITECTURE_STACK.md`: DuckDB SQL-first with PyArrow/source adapters for normalization and Polars where useful.
@@ -61,6 +68,7 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 ### Phase 1 Output Shape
 - **D-22:** Phase 1 output should include implementation artifacts, research notes, executable spikes, deterministic verification, and trade-off tables.
 - **D-23:** Spikes are evidence for implementation decisions; they are not accepted as complete until the relevant plan's verification commands pass and a summary artifact is written.
+- **D-23A:** Prepared data artifacts are first-class phase outputs: source-card corpus, embedding/index manifest, build log, provider/model metadata, artifact paths, and rebuild instructions.
 
 ### Success Criterion Priority
 - **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.
@@ -69,7 +77,7 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 
 ### the agent's Discretion
 - The planner may choose exact spike ordering, file/module boundaries, schemas, and test harness structure.
-- The planner may decide whether to implement dense embeddings locally or through Yandex AI Studio first, as long as the full architecture target is respected.
+- The planner may choose local index storage details and library boundaries, but must keep the Yandex document/query embedding contract and durable manifest requirements intact.
 - The planner may choose specific charting/eval libraries within the stack constraints.
 
 </decisions>
@@ -124,6 +132,8 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 - The user rejected the three-person workstream split; execute as a single-track GSD phase.
 - The user selected CKAN as an equal first-class source, not a secondary API.
 - The user wants the broader 15-20 task test-case set prepared in Phase 1.
+- The user expects Phase 1 to finish with prepared data and a ready embedding/search index. Reprocessing later is an exception, not the normal continuation path.
+- The user wants long-running embedding to start early; while it runs, agents should prepare the workflow, extraction, UI, and demo integration that can consume the completed index.
 - The user selected multi-agent trace and transparent UI wow-effect as the dominant implementation criterion, while preserving source-bound reliability.
 - The user accepts that not every full-stack capability will be complete in Phase 1, as long as the result is a working scalable seed that can grow into `.planning/ARCHITECTURE_STACK.md`.
 

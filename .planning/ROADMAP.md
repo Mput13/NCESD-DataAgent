@@ -22,8 +22,17 @@
 - Карта требований: что обязательно, что можно эмулировать, что является бонусом
 - Карта данных: какие файлы/поля/форматы реально доступны после скачивания дампа
 - Сравнение вариантов поиска по метаданным и извлечения данных
-- Черновой список 5-8 тестовых запросов для MVP
+- Набор из 15–20 тест-кейсов и рубрика оценки retrieval / extraction / trace
 - Рекомендация по MVP-скоупу, но без автоматического принятия решений
+
+**Plans:** 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Requirements map, 15-20 golden cases, and eval rubric
+- [ ] 01-02-PLAN.md — Deterministic data inventory and typed source-card builders
+- [ ] 01-03-PLAN.md — Hybrid retrieval comparison and deterministic extraction probes
+- [ ] 01-04-PLAN.md — Qwen/Yandex client hardening and LangGraph contract spike
+- [ ] 01-05-PLAN.md — Streamlit trace/UI demo contract and Phase 2 recommendation package
 
 **Validation:**
 - [ ] Понятно, какие данные есть локально и через CKAN

@@ -12,6 +12,8 @@ The historical slug `01-data-architecture-research` remains canonical for contin
 
 The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is treated as the target stack, not merely a loose research note.
 
+Phase 1 may implement a narrow vertical slice first, but it must be architecturally scalable toward the full `.planning/ARCHITECTURE_STACK.md` vision. The implementation should avoid one-off demo shortcuts that would block later expansion into real source adapters, multiple retrieval providers, richer LangGraph orchestration, deterministic tool libraries, trace replay, and a fuller Streamlit UI.
+
 </domain>
 
 <decisions>
@@ -22,6 +24,8 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 - **D-02:** Phase 1 should implement and validate risks inside that stack, not compare against a radically simpler architecture unless a blocker is discovered.
 - **D-02A:** The current milestone has no active numbered follow-up phases. Future phases require an explicit roadmap change after Phase 1 verification.
 - **D-02B:** Execute Phase 1 single-track. Do not recreate a Core/Data/UI owner split.
+- **D-02C:** Phase 1 may ship a narrow working slice, but it must preserve extension seams for the full architecture: source adapters, retrieval providers, typed workflow artifacts, graph nodes, deterministic tools, trace events, and UI view models.
+- **D-02D:** Every shortcut must be documented as either accepted MVP simplification, deferred full-stack capability, or rejected option in the final decision package.
 
 ### Source Scope
 - **D-03:** FedStat, World Bank, and CKAN are all in scope from the start.
@@ -61,6 +65,7 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 ### Success Criterion Priority
 - **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.
 - **D-25:** Reliability remains non-negotiable: every numeric value must be source-bound and reproducible, but among reliable options the preferred path is the one with the strongest visible agent workflow and trace.
+- **D-26:** Scalability matters: Phase 1 should leave the codebase easier, not harder, to grow into the full target architecture.
 
 ### the agent's Discretion
 - The planner may choose exact spike ordering, file/module boundaries, schemas, and test harness structure.
@@ -120,6 +125,7 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 - The user selected CKAN as an equal first-class source, not a secondary API.
 - The user wants the broader 15-20 task test-case set prepared in Phase 1.
 - The user selected multi-agent trace and transparent UI wow-effect as the dominant implementation criterion, while preserving source-bound reliability.
+- The user accepts that not every full-stack capability will be complete in Phase 1, as long as the result is a working scalable seed that can grow into `.planning/ARCHITECTURE_STACK.md`.
 
 </specifics>
 
@@ -127,6 +133,7 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 ## Deferred Ideas
 
 - Broad DeepSeek/YandexGPT/Qwen benchmarking is deferred; Phase 1 targets Qwen 3.6 per architecture stack and can test alternatives later if needed.
+- Full production coverage of every role/tool in `.planning/ARCHITECTURE_STACK.md` may be staged after the initial working slice, but Phase 1 must explicitly document the growth path.
 
 </deferred>
 

@@ -17,6 +17,8 @@
 
 **Boundary:** Phase 1 may create production-bound code, scripts, tests, and UI contracts. It must not silently accept unverified spikes as complete implementation. Every implemented slice needs explicit evidence, deterministic verification, and a summary artifact.
 
+**Scalability contract:** Phase 1 is allowed to implement a narrow working slice, but it must be designed as the seed of the full `.planning/ARCHITECTURE_STACK.md` vision. Any shortcut must preserve extension seams: source adapters, typed artifacts, retrieval providers, graph nodes, deterministic tools, trace events, and UI view models should be replaceable or extensible without rewriting the product.
+
 **Covers:** NLU-01..04, SRCH-01..04, DATA-01..05, ART-01..06, RBST-01..04, UI-01..04, ENG-01..04
 
 **Execution model:** single-track GSD execution. Do not split work into Core/Data/UI owners or parallel human workstreams unless the roadmap is explicitly changed.
@@ -41,6 +43,7 @@
 - LangGraph architecture contract or skeleton with typed artifacts and trace ownership.
 - Streamlit-first trace/UI contract exposing state, trace, artifacts, and feedback/fix requests.
 - Final implementation decision package documenting what is accepted, what remains risky, and what must be verified before demo.
+- Architecture growth map explaining how the Phase 1 slice expands into the full `ARCHITECTURE_STACK.md` design.
 
 ### Validation
 
@@ -50,6 +53,7 @@
 - [ ] The visible trace shows selected sources, rejected sources, coverage checks, extraction plans, and no-data reasoning.
 - [ ] `requirements.txt` and run/test commands reproduce the implemented slices.
 - [ ] Phase summaries exist for completed plans before the phase is marked complete.
+- [ ] The final decision package identifies extension seams and deferred full-stack capabilities without treating them as discarded scope.
 
 ---
 

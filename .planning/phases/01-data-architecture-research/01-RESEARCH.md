@@ -8,6 +8,8 @@
 
 Phase 1 should implement the DataAgent MVP architecture through small, verifiable slices. The phase should produce runnable code and scripts where the plans require them, but every slice must remain source-bound and evidence-backed.
 
+The expected result is a scalable seed, not a throwaway demo. If Phase 1 implements only a representative subset of the full architecture, it must still preserve the interfaces needed to grow into the complete `.planning/ARCHITECTURE_STACK.md` design.
+
 The key design stance is:
 
 - LLM handles intent, research design, planning, narration, and critique.
@@ -35,6 +37,16 @@ The key design stance is:
 - Yandex/Qwen gated checks with credential-aware skip notes.
 - LangGraph contract or skeleton with canonical trace event ownership.
 - Streamlit trace/UI contract and implementation decision package.
+- Architecture growth map: what is implemented now, what is intentionally deferred, and which extension seams make the full target architecture reachable.
+
+## Extension Seams To Preserve
+
+- **Source adapters:** FedStat, World Bank, and CKAN should share contracts while keeping source-specific normalization isolated.
+- **Retrieval providers:** lexical, dense, and rerank paths should sit behind interfaces so local/Yandex/fallback providers can change.
+- **Workflow artifacts:** intent, design, evidence, coverage, extraction, critique, narration, visualization, and trace objects should be typed and reusable across graph and UI layers.
+- **Deterministic tools:** numeric extraction should be a tool library, not embedded in LLM prompts or UI code.
+- **Trace events:** the same canonical trace should support Streamlit display now and replay/session history later.
+- **UI view models:** Streamlit should adapt workflow artifacts for display without owning the core schema.
 
 ## Known Pitfalls
 
@@ -44,6 +56,7 @@ The key design stance is:
 - Duplicating trace schemas between workflow and UI.
 - Adding dependencies without updating `requirements.txt` and verification commands.
 - Reintroducing owner-specific workstream docs.
+- Hardcoding a narrow demo path in a way that blocks full `ARCHITECTURE_STACK.md` expansion.
 
 ## Open Questions For Execution
 
@@ -51,6 +64,7 @@ The key design stance is:
 - Which FedStat tables are small and representative enough for normalizer proof?
 - Which CKAN resources are safe to inspect/download within bounded limits?
 - How much LangGraph code is needed for an honest trace demo before full data adapters are complete?
+- Which deferred capabilities are required for the next roadmap phase versus acceptable post-demo hardening?
 
 ## Sources To Read First
 

@@ -21,7 +21,7 @@
 - показатель может иметь несколько периодичностей: год, квартал, месяц, неделя;
 - заявленный период в метаданных не всегда равен реально заполненному покрытию по выбранному срезу.
 
-Вывод: качество решения определяется не размером контекста и не количеством агентов, а надежностью слоя нормализации, поиска по метаданным, проверки покрытия и детерминированного извлечения.
+Вывод: качество решения определяется не размером контекста и не количеством "разговорных" агентов, а надежностью связки: hierarchical multi-agent research layer + нормализация + поиск по метаданным + проверка покрытия + детерминированное извлечение.
 
 По World Bank полезны другие паттерны, которые нужно сохранить в архитектуре:
 
@@ -36,13 +36,25 @@
 
 ```mermaid
 flowchart TD
-    U["Пользовательский запрос"] --> IA["Intent Analyst"]
-    IA --> RD["Research Designer"]
-    RD --> SR["Source Scout"]
-    SR --> CP["Coverage Preview"]
-    CP --> DE["Data Engineer"]
-    DE --> MC["Methodology Critic"]
-    MC --> NR["Narrator"]
+    U["Пользовательский запрос"] --> LDA["Lead DataAgent / Supervisor"]
+    LDA --> TRIAGE["Triage: simple / complex / research / no-data"]
+    TRIAGE --> RD["Research Designer Agent"]
+    TRIAGE --> DIRECT["Direct Lookup Path"]
+
+    RD --> FS["FedStat Scout Agent"]
+    RD --> WBS["World Bank Scout Agent"]
+    RD --> CKAN["CKAN Scout Agent"]
+
+    FS --> CP["Coverage & Schema Agent"]
+    WBS --> CP
+    CKAN --> CP
+
+    CP --> PLAN["Extraction Planner Agent"]
+    PLAN --> TOOLS["Deterministic Data Tools"]
+    TOOLS --> MC["Methodology Critic Agent"]
+    MC --> VIZ["Visualization Agent"]
+    VIZ --> NR["Narrator Agent"]
+    DIRECT --> TOOLS
     NR --> OUT["Ответ + датасет + скрипт + источники + trace"]
 
     subgraph Catalog["Каталог и поиск"]
@@ -65,15 +77,31 @@ flowchart TD
         N --> D
     end
 
-    SR --> IDX
-    DE --> D
+    FS --> IDX
+    WBS --> IDX
+    CKAN --> IDX
+    TOOLS --> D
 ```
 
-## Роли в workflow
+## Hierarchical multi-agent research layer
 
-Это не должны быть автономные агенты, которые спорят друг с другом. Надежнее реализовать роли как явные шаги state machine с Pydantic-артефактами. В интерфейсе это можно показывать как работу исследовательской команды, но внутри каждый шаг контролируем и тестируем.
+Мы используем hierarchical multi-agent system как основной исследовательский слой. Это не хаотичный group chat и не "несколько персонажей", которые свободно спорят. Это управляемая иерархия:
 
-Важно: архитектурно фиксируется не конкретная библиотека, а паттерн state machine. LangGraph - рекомендуемая реализация для максимального режима, потому что дает чекпойнты, возвраты и human-in-the-loop. Для хакатонного prototype mode допустим более легкий собственный orchestrator с теми же состояниями и схемами, если LangGraph начинает съедать время.
+- `Lead DataAgent / Supervisor` - единственная точка контакта с пользователем;
+- специализированные scout agents - ищут источники в своих корпусах;
+- planner/critic/narrator agents - проектируют извлечение, проверяют методологию и объясняют результат;
+- deterministic tools - извлекают числа, строят датасеты и сохраняют артефакты.
+
+Lead DataAgent динамически решает, сколько агентов нужно. Простой lookup не должен запускать всю команду. Сложный исследовательский запрос запускает несколько scout agents параллельно.
+
+Принцип:
+
+```text
+agents research, compare and critique;
+tools extract, compute and validate numbers.
+```
+
+LangGraph становится не декоративным дополнением, а рекомендуемым способом реализации иерархии, checkpointing, возвратов и human-in-the-loop. При этом внутри каждого агента остаются строгие Pydantic-артефакты, budgets и tool scopes, чтобы multi-agent слой не превращался в шум.
 
 Главный принцип для всех ролей: structured but open-ended. Структура нужна для воспроизводимости, тестов и детерминированного извлечения, но она не должна превращаться в жесткую анкету. Каждый шаг хранит два слоя:
 
@@ -81,6 +109,22 @@ flowchart TD
 - `open_reasoning` - гипотезы, альтернативные трактовки, proxy-показатели, поисковые ветки и методологические сомнения.
 
 Агент не обязан останавливать работу при каждом пропущенном поле. Если можно разумно продолжить через несколько поисковых веток и coverage-preview, он продолжает и явно показывает допущения.
+
+### Lead DataAgent / Supervisor
+
+Главный агент управляет всем процессом и общается с пользователем. Его задача - не решать все самому, а правильно распределять работу.
+
+Отвечает за:
+
+- triage сложности запроса;
+- решение, какие подагенты нужны;
+- формулировку bounded tasks для подагентов;
+- лимиты итераций, tool calls и количества кандидатов;
+- дедупликацию результатов;
+- сборку общего состояния;
+- решение, нужно ли уточнение пользователя.
+
+Supervisor не должен передавать подагентам расплывчатые инструкции вроде "исследуй инфляцию". Каждому подагенту передается цель, область поиска, допустимые инструменты и формат ответа.
 
 ### Intent Analyst
 
@@ -116,9 +160,15 @@ Research Designer не должен преждевременно сужать з
 
 Пример: если пользователь просит "оценить связь зарплат и инфляции", система должна не только найти зарплату и CPI, но и предложить реальные зарплаты, базовый год индекса, периодичность, регионы и ограничения сравнения.
 
-### Source Scout
+### Source Scout Agents
 
-Ищет кандидаты источников в локальном каталоге, World Bank-адаптере и CKAN. Здесь особенно опасен хардкод: нельзя искать только по одному `indicator_hint` или только по одному коду. Source Scout должен запускать несколько поисковых стратегий:
+Source Scout реализуется не одним общим агентом, а несколькими специализированными агентами с разными tool scopes:
+
+- `FedStat Scout Agent`;
+- `World Bank Scout Agent`;
+- `CKAN Scout Agent`.
+
+Они ищут кандидаты источников в своих корпусах и возвращают единый тип `SourceCandidateCard`. Здесь особенно опасен хардкод: нельзя искать только по одному `indicator_hint` или только по одному коду. Scout agents должны запускать несколько поисковых стратегий:
 
 - точный поиск по коду и названию;
 - лексический поиск по русским и английским словам;
@@ -142,7 +192,9 @@ Research Designer не должен преждевременно сужать з
 
 Карточка источника должна иметь не только `why_matched`, но и `match_mode`: exact, lexical, semantic, proxy, ckan_discovery, methodology_match. Это защищает нас от ситуации, когда агент нашел релевантный источник нестандартным путем, но не может объяснить почему.
 
-### Coverage Preview
+Scout agents могут работать параллельно. Supervisor получает их карточки, дедуплицирует и отправляет лучшие кандидаты в Coverage & Schema Agent.
+
+### Coverage & Schema Agent
 
 Перед извлечением чисел проверяет, что данные реально есть. Здесь тоже нельзя хардкодить только "годы + география": для экономических данных покрытие зависит от периодичности, единиц, классификаторов, срезов, агрегатов и версии методологии.
 
@@ -164,17 +216,18 @@ Coverage Preview должен возвращать не только verdict `en
 
 Это критично для FedStat, потому что метаданные могут обещать более широкий период, чем реально доступен в конкретном срезе.
 
-### Data Engineer
+### Extraction Planner Agent
 
 Готовит воспроизводимое извлечение:
 
-- нормализует широкий Parquet в long-формат;
+- выбирает source adapter;
+- выбирает безопасные операции;
 - строит SQL или шаблон Python-скрипта;
-- фильтрует по кодам, периодам, географии, классификаторам;
-- сохраняет датасет и manifest;
+- задает фильтры по кодам, периодам, географии, классификаторам;
+- описывает ожидаемый датасет и manifest;
 - не дает LLM самой "читать числа глазами".
 
-Data Engineer не должен быть свободным генератором произвольного кода. Но и здесь не нужен жесткий хардкод под один формат. Нужна библиотека безопасных операций:
+Extraction Planner не должен быть свободным генератором произвольного кода. Но и здесь не нужен жесткий хардкод под один формат. Нужна библиотека безопасных операций:
 
 - normalize wide FedStat table;
 - read regular long Parquet;
@@ -186,6 +239,20 @@ Data Engineer не должен быть свободным генераторо
 - validate units and coverage.
 
 LLM выбирает план операций, а не пишет весь pipeline с нуля. Это сохраняет гибкость без риска небезопасного или невоспроизводимого кода.
+
+### Deterministic Data Tools
+
+Это не агент, а исполняемый слой:
+
+- `fedstat_normalize_preview`;
+- `wb_coverage_preview`;
+- `ckan_package_search`;
+- `ckan_package_show`;
+- `run_duckdb_query`;
+- `build_dataset_artifact`;
+- `export_csv_parquet_manifest`.
+
+Именно здесь появляются числа. Если инструмент не вернул число, Narrator не имеет права его придумать.
 
 ### Methodology Critic
 
@@ -207,6 +274,47 @@ LLM выбирает план операций, а не пишет весь pipe
 - `not_found`.
 
 Если проблема исправима автоматически, Critic должен предложить repair-plan, а не сразу требовать вопрос к пользователю.
+
+### Visualization Agent
+
+Решает, нужен ли график или диаграмма, и какой тип визуализации лучше подходит к данным. Важно: график строится только по `DatasetArtifact`, а не по текстовому ответу LLM.
+
+Когда визуализация релевантна:
+
+- динамика во времени;
+- сравнение регионов, стран или категорий;
+- структура/доли;
+- связь двух показателей;
+- распределение;
+- before/after сравнение;
+- пользователь явно просит график.
+
+Типы визуализаций:
+
+- line chart для временных рядов;
+- grouped line chart для сравнения нескольких географий/показателей во времени;
+- bar chart для ранжирования и сравнения категорий;
+- stacked bar / area chart для структуры;
+- scatter plot для связи двух показателей;
+- heatmap для матриц регион x период или indicator x geography;
+- table-first view, если данных мало или график может исказить смысл.
+
+Visualization Agent возвращает `VisualizationSpec`:
+
+```json
+{
+  "should_visualize": true,
+  "chart_type": "line",
+  "x": "year",
+  "y": "value",
+  "color": "indicator_name",
+  "title": "Динамика показателя по годам",
+  "why_this_chart": "Запрос требует анализа динамики во времени",
+  "warnings": ["2024 год отсутствует для выбранного среза"]
+}
+```
+
+Рендер выполняет deterministic visualization tool: Altair/Plotly по данным из `DatasetArtifact`.
 
 ### Narrator
 
@@ -248,6 +356,30 @@ Narrator выбирает форму ответа по типу задачи, н
 
 Иными словами, свобода нужна в поиске, гипотезах и выборе веток. Строгость нужна в доказательствах, числах и воспроизводимости.
 
+## Правила делегирования и budgets
+
+Hierarchical multi-agent подход полезен только при строгой экономии внимания. Supervisor обязан масштабировать усилие под сложность запроса.
+
+Рекомендуемые режимы:
+
+| Тип запроса | Подагенты | Лимит |
+|---|---|---|
+| Direct lookup | 0-1 scout | 3-5 tool calls |
+| Ambiguous lookup | Research Designer + 1-2 scouts | до 10 candidates |
+| Comparative query | 2-3 scouts + Coverage Agent | до 20 candidates |
+| Research query | Research Designer + FedStat/WB/CKAN scouts + Critic | до 3 поисковых веток на источник |
+| No-data check | Source scouts + Methodology Critic | искать прямой показатель и proxy отдельно |
+
+Защиты от хаоса:
+
+- каждый агент имеет ограниченный tool scope;
+- каждый подагент получает bounded task;
+- каждый подагент возвращает только Pydantic artifact;
+- Supervisor дедуплицирует кандидаты;
+- итоговые числа идут только из deterministic tools;
+- все решения пишутся в trace;
+- если агент исчерпал budget, он возвращает partial result с gaps, а не продолжает бесконечно.
+
 ## Технологический стек
 
 | Слой | Выбор | Почему |
@@ -256,7 +388,8 @@ Narrator выбирает форму ответа по типу задачи, н
 | API LLM | OpenAI-compatible API / Yandex AI Studio SDK | Позволяет работать с Qwen через привычные клиенты, Responses API, tool-calling и response formatting |
 | Yandex AI Studio native tools | Agents, File Search, MCP Hub, Vector Store API | Используем там, где они дают преимущество для хакатона Yandex Cloud: RAG по документам, подключение внешних API и демонстрация cloud-native интеграции |
 | Structured output | Pydantic v2 | Все шаги возвращают проверяемые схемы, а не свободный текст |
-| Workflow | State machine; LangGraph в maximum mode | Фиксируем явные состояния; LangGraph полезен для нелинейного пути, но не должен быть блокером первого рабочего прототипа |
+| Workflow | LangGraph hierarchical supervisor | Реализует Supervisor -> specialist agents, checkpointing, возвраты и human-in-the-loop |
+| Agent topology | Hierarchical multi-agent | Lead DataAgent делегирует FedStat/WB/CKAN scouts, planner, critic и narrator |
 | Табличный движок | DuckDB | Быстро читает Parquet, хорошо подходит под SQL, не требует отдельного сервера |
 | Нормализация | PyArrow + source-specific adapters | FedStat требует wide-to-long; World Bank требует выбора индикаторов, географий, агрегатов и покрытия |
 | Доп. обработка | Polars | Быстрые lazy-преобразования для больших таблиц, когда SQL неудобен |
@@ -265,12 +398,15 @@ Narrator выбирает форму ответа по типу задачи, н
 | Векторное хранилище | Qdrant в production mode; локальный индекс в prototype mode | Qdrant хорош для фильтров и гибридного поиска, но для первого прототипа можно начать проще |
 | Эмбеддинги | BAAI/bge-m3 или Yandex Text embeddings doc/query | bge-m3 силен для русского и гибридного поиска; Yandex embeddings проще в инфраструктуре |
 | Reranker | bge-reranker-v2-m3 | Пересортировка top-k кандидатов перед передачей в Qwen снижает шум |
-| Сессии | In-memory/file store на старте; PostgreSQL/LangGraph Checkpointer позже | Воспроизводимый журнал нужен обязательно, но Postgres не должен блокировать демо |
+| Сессии | LangGraph checkpoints; file store на старте, PostgreSQL позже | Воспроизводимый журнал нужен обязательно, но Postgres можно подключить после рабочего демо |
 | Файлы | Локальный Parquet на старте; S3/Yandex Object Storage позже | Локально быстрее для демо; S3 нужен для внедряемой архитектуры |
 | Code execution | Шаблонный SQL first; Docker sandbox позже | Сначала ограничиваем генерацию безопасными шаблонами, затем добавляем песочницу |
-| UI | Streamlit | Быстрый интерфейс с чатом, артефактами, trace и coverage-preview |
+| Visualization | Altair/Plotly + VisualizationSpec | Агент выбирает тип графика, но график строится детерминированно по DatasetArtifact |
+| UI | Streamlit | Основной demo-интерфейс: chat input, example prompts, live trace, artifacts, feedback и правки |
 | API сервиса | FastAPI как следующий слой | Нужен для внешней API-ручки и отделения UI от backend |
-| Логи | loguru + structured events | Trace ассистента должен быть продуктовой функцией, а не внутренним логом |
+| Trace | Structured TraceEvent store | Trace ассистента является продуктовой функцией: state, tools, artifacts, decisions, warnings |
+| Feedback | FeedbackArtifact + graph rewind | Пользователь может оценить ответ, указать непонятное место и вернуть граф в нужный state |
+| Логи | loguru + structured events | Технические логи отделены от пользовательского trace |
 | Оценка качества | pytest + golden eval cases | Проверяем retrieval, покрытие, отказ, SQL и финальные ответы на фиксированных кейсах |
 
 ## Почему этот стек подходит именно под Qwen 3.6
@@ -416,33 +552,148 @@ quality_flags
 
 Это позволяет Research Designer и Methodology Critic работать одинаково с FedStat, World Bank и CKAN-источниками.
 
-## Оркестрация: state machine first
+## Оркестрация: LangGraph hierarchical supervisor first
 
-Главное решение - явные состояния и артефакты, а не конкретная библиотека.
+Главное решение - hierarchical multi-agent с явными состояниями и артефактами. LangGraph выбран как базовый оркестратор, потому что позволяет описать supervisor, specialist agents, возвраты, checkpointing и human-in-the-loop без превращения системы в неуправляемый group chat.
 
-В prototype mode можно реализовать workflow обычным Python-классом:
+Базовый граф:
 
 ```text
-IntentArtifact
-ResearchDesignArtifact
-SourceCandidatesArtifact
-CoverageReport
-ExtractionPlan
-DatasetArtifact
-CritiqueReport
-FinalAnswer
+LeadDataAgent
+  -> Intent/Triage
+  -> ResearchDesigner
+  -> FedStatScout
+  -> WorldBankScout
+  -> CKANScout
+  -> CoverageSchemaAgent
+  -> ExtractionPlanner
+  -> DeterministicTools
+  -> MethodologyCritic
+  -> Narrator
 ```
 
-LangGraph подключается, когда нужны:
+Каждый агент является LangGraph node или subgraph. Обмен между ними идет не через длинные пересказы, а через typed artifacts:
 
-- checkpointing;
-- возвраты на предыдущие шаги;
-- human-in-the-loop;
-- replay сессий;
-- ветвление workflow;
-- более чистая демонстрация архитектуры.
+- `IntentArtifact`;
+- `ResearchDesignArtifact`;
+- `SourceCandidateCard[]`;
+- `CoverageReport`;
+- `ExtractionPlan`;
+- `DatasetArtifact`;
+- `CritiqueReport`;
+- `FinalAnswer`.
 
-Так мы снимаем риск overhead для хакатона, но не отказываемся от LangGraph как от сильного maximum-mode решения.
+Для простых запросов Supervisor пропускает лишних агентов. Для сложных запросов запускает source scouts параллельно. Это сохраняет скорость и одновременно дает настоящий multi-agent research layer.
+
+## State machine visualization и trace
+
+State machine должна быть видимой частью продукта, а не только внутренней реализацией. Даже если полноценный frontend откладывается, простой интерфейс обязан показывать, где сейчас находится запрос, какие агенты запускались, какие tools были вызваны и какие артефакты получены.
+
+Минимальная визуализация:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Received
+    Received --> Triage
+    Triage --> DirectLookup: simple
+    Triage --> ResearchDesign: complex/research
+    ResearchDesign --> ParallelSourceSearch
+    DirectLookup --> CoveragePreview
+    ParallelSourceSearch --> CoveragePreview
+    CoveragePreview --> UserClarification: missing critical choice
+    UserClarification --> Triage
+    CoveragePreview --> ExtractionPlanning: enough data
+    ExtractionPlanning --> DataExtraction
+    DataExtraction --> MethodologyCritique
+    MethodologyCritique --> Repair: needs repair
+    Repair --> CoveragePreview
+    MethodologyCritique --> FinalNarrative: pass/warnings
+    FinalNarrative --> UserFeedback
+    UserFeedback --> Triage: needs revision
+    UserFeedback --> [*]: accepted
+```
+
+Каждый state пишет `TraceEvent`:
+
+```json
+{
+  "run_id": "uuid",
+  "state": "coverage_preview",
+  "agent": "Coverage & Schema Agent",
+  "input_summary": "3 candidate sources for GDP/inflation",
+  "tool_calls": ["preview_coverage", "inspect_dimensions"],
+  "output_artifact": "coverage_report_001",
+  "decision": "continue_with_fedstat_57319",
+  "warnings": ["annual coverage ends earlier than quarterly coverage"],
+  "started_at": "2026-05-09T12:00:00Z",
+  "duration_ms": 842
+}
+```
+
+Trace должен быть понятен человеку:
+
+- не показывать весь сырой JSON по умолчанию;
+- показывать короткий человеческий summary каждого шага;
+- давать раскрыть детали: candidates, rejected sources, SQL, coverage, warnings;
+- давать скачать full trace как JSON;
+- показывать текущий state и следующий возможный action.
+
+## Human-in-the-loop и feedback
+
+Пользователь должен иметь возможность вмешаться не только в конце. Минимальный интерфейс должен поддерживать:
+
+- "непонятно, объясни проще";
+- "поправь период";
+- "возьми другой источник";
+- "не используй proxy";
+- "покажи, почему этот источник выбран";
+- "ответ понравился";
+- "ответ не понравился";
+- "пересобери датасет с правкой".
+
+Feedback сохраняется как отдельный артефакт:
+
+```json
+{
+  "run_id": "uuid",
+  "artifact_id": "final_answer_001",
+  "rating": "negative",
+  "user_comment": "Непонятно, почему выбран квартальный ряд, а не годовой",
+  "requested_action": "revise_source_or_period",
+  "target_state": "coverage_preview"
+}
+```
+
+Если пользователь просит правку, Supervisor не запускает весь процесс с нуля. Он возвращает граф в ближайший релевантный state:
+
+- правка периода -> Coverage Preview или Extraction Planning;
+- правка источника -> Source Scout или Coverage Preview;
+- непонятное объяснение -> Narrator;
+- методологическая претензия -> Methodology Critic;
+- новый смысл задачи -> Intent/Triage.
+
+Для демо Streamlit является обязательным пользовательским интерфейсом, через который люди смогут сами задавать вопросы системе. Минимальная раскладка:
+
+- верхняя область: chat input для свободного вопроса;
+- рядом или под ним: 5-7 example prompts для быстрого теста;
+- левая колонка: state machine + live trace;
+- центральная область: ответ, таблица, график, ссылки на источники;
+- вкладка artifacts: датасет, SQL/скрипт, manifest, rejected sources;
+- нижний блок: feedback buttons и поле "что исправить".
+
+Интерфейс должен поддерживать полный цикл:
+
+```text
+задать вопрос
+-> увидеть, какие агенты работают
+-> получить ответ и артефакты
+-> раскрыть trace
+-> оставить оценку
+-> попросить правку
+-> получить пересчитанный результат
+```
+
+Это важно для оценки: жюри и пользователи должны не только читать README, но и руками проверить, как система отвечает на реальные вопросы.
 
 ## Source Rejection Log
 
@@ -471,7 +722,12 @@ LangGraph подключается, когда нужны:
 - Qwen 3.6;
 - Streamlit;
 - Pydantic;
-- легкий state-machine orchestrator или LangGraph, если он не тормозит разработку;
+- LangGraph supervisor с ограниченным числом nodes;
+- Lead DataAgent;
+- FedStat Scout Agent;
+- World Bank Scout Agent;
+- CKAN Scout Agent;
+- Methodology Critic Agent;
 - DuckDB;
 - PyArrow;
 - SQLite/DuckDB catalog;
@@ -484,7 +740,7 @@ LangGraph подключается, когда нужны:
 - CKAN client с context compression;
 - Yandex AI Studio File Search для документов и брифа, если это ускоряет демонстрацию.
 
-LangGraph, Qdrant, Docker sandbox, S3 и PostgreSQL можно заложить интерфейсами, но не делать блокерами первого запуска.
+Qdrant, Docker sandbox, S3 и PostgreSQL можно заложить интерфейсами, но не делать блокерами первого запуска.
 
 ### Maximum mode
 
@@ -492,7 +748,7 @@ LangGraph, Qdrant, Docker sandbox, S3 и PostgreSQL можно заложить 
 
 Добавляем:
 
-- LangGraph checkpointed workflow;
+- больше специализированных подагентов и subgraphs;
 - Qdrant hybrid search;
 - bge-m3 embeddings;
 - bge-reranker-v2-m3;
@@ -503,6 +759,7 @@ LangGraph, Qdrant, Docker sandbox, S3 и PostgreSQL можно заложить 
 - AI Studio Agent shell;
 - MCP Hub adapter для CKAN/каталога;
 - Vector Store/File Search для методологических документов;
+- advanced visualization dashboard;
 - golden eval dashboard;
 - воспроизводимый session replay.
 
@@ -514,6 +771,9 @@ LangGraph, Qdrant, Docker sandbox, S3 и PostgreSQL можно заложить 
 app/
   ui/
     streamlit_app.py
+    example_prompts.py
+    feedback_panel.py
+    artifact_panel.py
   workflow/
     graph.py
     states.py
@@ -524,6 +784,7 @@ app/
       coverage.py
       data_engineer.py
       critic.py
+      visualization.py
       narrator.py
   retrieval/
     catalog_builder.py
@@ -537,10 +798,17 @@ app/
     wb_adapter.py
     parquet_profiler.py
     duckdb_runner.py
+    visualization_runner.py
     schemas.py
   artifacts/
     manifest.py
     exporters.py
+    trace.py
+    feedback.py
+    visualization.py
+  ui_state/
+    state_visualization.py
+    trace_presenter.py
   safety/
     ast_guard.py
     sandbox.py
@@ -571,17 +839,30 @@ app/
 
 ```text
 Qwen 3.6 via Yandex AI Studio
-State machine orchestrator
-LangGraph-ready workflow
+LangGraph hierarchical supervisor
+Lead DataAgent
+FedStat Scout Agent
+World Bank Scout Agent
+CKAN Scout Agent
+Research Designer Agent
+Coverage & Schema Agent
+Extraction Planner Agent
+Methodology Critic Agent
+Narrator Agent
+Visualization Agent
 Pydantic v2
 DuckDB
 PyArrow
 Polars
+Altair / Plotly
 SQLite/DuckDB catalog
 FedStat adapter
 World Bank adapter
 CKAN compressed client
 Streamlit
+TraceEvent store
+FeedbackArtifact
+State machine visualization
 FastAPI-ready service layer
 pytest golden evals
 ```
@@ -589,6 +870,8 @@ pytest golden evals
 Расширенный стек для максимального уровня:
 
 ```text
+LangGraph checkpointing
+LangGraph subgraphs
 Qdrant
 BAAI/bge-m3
 bge-reranker-v2-m3
@@ -602,4 +885,4 @@ MCP Hub
 session replay dashboard
 ```
 
-Приоритет реализации: сначала надежные source adapters and deterministic extraction, затем retrieval quality, затем trace/UX, затем LangGraph checkpointing и production-компоненты.
+Приоритет реализации: сначала LangGraph skeleton с Lead DataAgent и тремя source scouts, затем надежные source adapters и deterministic extraction, затем retrieval quality, затем trace/UX, затем checkpointing и production-компоненты.

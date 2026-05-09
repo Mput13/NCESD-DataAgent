@@ -1,4 +1,8 @@
 {
+  "workflow_system": "gsd",
+  "disabled_workflows": [
+    "superpowers"
+  ],
   "runtime": "codex",
   "resolve_model_ids": "omit",
   "mode": "yolo",

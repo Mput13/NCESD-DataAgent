@@ -42,6 +42,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 - `.planning/DATA_REPORT.md` maps FedStat, World Bank, and NSED CKAN API. It identifies World Bank as the easiest reliable first extractor and FedStat as requiring a wide-to-long normalizer.
 - `.planning/ARCHITECTURE_STACK.md` describes the preferred target architecture: Qwen/Yandex AI Studio, LangGraph hierarchical supervisor, source scouts, deterministic DuckDB/PyArrow extraction, Streamlit trace/artifacts UI, and pytest golden evals.
 - `.planning/YANDEX_AI_STUDIO_RESEARCH.md` records that DeepSeek 3.2 was smoke-tested through Yandex AI Studio. Runtime environment variables are not currently exported in this shell.
+- `.planning/TEAM_WORKSTREAMS.md` records the three-person ownership model and shared contract baseline for parallel GSD execution.
 
 **Important alignment note:** PROJECT/ROADMAP still frame Phase 1 as research before implementation. ARCHITECTURE_STACK contains a strong recommended stack, but Phase 1 GSD discussion should explicitly confirm the MVP slice before code work.
 
@@ -59,6 +60,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 - **2026-05-09 — Context rebuilt from repository state, not stale handoff.**
   Resume workflow found no active handoff/checkpoint/incomplete plan. Durable context now points to Phase 1 as the next workflow step, with local dumps verified under `/Users/a/Downloads/dumps`.
+
+- **2026-05-09 — Three-person workstream split captured.**
+  Added `.planning/TEAM_WORKSTREAMS.md` as a coordination baseline for parallel GSD work.
+  Initial ownership model: Core / Integration owner, Data / Retrieval owner, and UI / Evaluation / Demo owner.
+  The document also records the current MVP stance from Phase 1 discussion: World Bank, FedStat, and CKAN are all in scope; CKAN is required for discovery/catalog integration; MVP eval target is 15-20 test queries.
 
 ## Known Inputs From Task
 

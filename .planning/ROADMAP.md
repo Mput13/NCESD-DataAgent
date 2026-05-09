@@ -40,7 +40,7 @@
 - Local SQLite/DuckDB catalog for source cards, schemas, coverage hints, embedding chunks, and rejection logs.
 - Stable embedding document/chunk format with source ids, chunk ids, content hashes, metadata version, provenance, coverage, units, dimensions, and source/resource URLs.
 - Materialized local source-card corpus and embedding/search index ready for demo use, with manifest, build logs, provider/model metadata, and rebuild instructions.
-- Retrieval implementation and evaluation over the prepared index with lexical BM25/FTS, dense embeddings, bge-reranker-compatible rerank seam, Qdrant-ready production seam, and credential-aware fallback evidence.
+- Retrieval implementation and evaluation over a real Qdrant collection with lexical BM25/FTS, dense embeddings, bge-reranker-compatible rerank seam, and credential-aware fallback evidence. Phase 1 may use Qdrant local persistent mode for speed, but retrieval must use the Qdrant client/collection abstraction rather than a throwaway custom vector index.
 - DuckDB SQL-first extraction probes, deterministic tool contracts, DatasetArtifact export, and adapter strategy for FedStat, World Bank, and CKAN.
 - Hardened Yandex AI Studio/Qwen integration notes and runnable gated checks.
 - LangGraph architecture contract or skeleton with typed artifacts, budgets/tool scopes, checkpoint/rewind rules, and trace ownership.
@@ -51,7 +51,7 @@
 ### Validation
 
 - [ ] Local data and CKAN access paths are documented with bounded, reproducible commands.
-- [ ] The source-card corpus and embedding/search index are built or explicitly gated by missing credentials, with a manifest that records provider, model URI, dimensions, chunk counts, hashes, and local artifact paths.
+- [ ] The source-card corpus and Qdrant embedding/search collection are built or explicitly gated by missing credentials, with a manifest that records provider, model URI, dimensions, chunk counts, hashes, collection name, Qdrant mode/path or URL, and local artifact paths.
 - [ ] Long-running embedding/indexing work starts as soon as the source-card corpus is ready; orchestration, UI, and extraction work proceeds in parallel while it runs.
 - [ ] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.
 - [ ] Retrieval and extraction decisions are backed by artifacts, not only prose.

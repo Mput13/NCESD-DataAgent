@@ -40,11 +40,11 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-08:** Retrieval must support exact code/title matches, Russian and English lexical search, semantic matches, proxy candidates, methodology matches, and rejection reasons.
 - **D-08A:** Phase 1 must define a stable embedding document/chunk format before dense retrieval implementation: source id/card id, chunk id, source family, language, content hash, metadata version, provenance, coverage, units, dimensions, source URL/resource URL, and the exact text fields sent to the embedding model.
 - **D-08B:** The primary embedding target is Yandex AI Studio embeddings with document/query split: `YANDEX_EMBEDDING_DOC_MODEL=emb://<folder_id>/text-search-doc/latest` for source-card/chunk documents and `YANDEX_EMBEDDING_QUERY_MODEL=emb://<folder_id>/text-search-query/latest` for user queries. The expected vector size is `YANDEX_EMBEDDING_DIMENSIONS=256`. If credentials are absent, execution must record a credential-aware gated skip while preserving the same corpus/index contract.
-- **D-08C:** Phase 1 should materialize a local source-card corpus and embedding/search index as a durable data product. Later phases should consume the manifest and local index, not reprocess all sources by default.
+- **D-08C:** Phase 1 should materialize a local source-card corpus and a Qdrant embedding/search collection as a durable data product. Later phases should consume the manifest and Qdrant collection, not reprocess all sources by default.
 - **D-08D:** Embedding inputs are metadata/source-card chunks only. They must not include raw numeric series, generated factual answers, or unsupported numeric claims from an LLM.
 - **D-08E:** Long-running embedding/indexing work should run as early as possible after corpus readiness; independent orchestration, UI, extraction, and demo work should continue in parallel while it runs.
 - **D-08F:** Phase 1 source metadata must be materialized into a local SQLite or DuckDB catalog that stores source cards, schemas, coverage hints, embedding chunk ids, and rejection-ready metadata. Flat files may be exported for review, but the agent should query a catalog interface.
-- **D-08G:** Prototype mode may use a local vector index, but the retrieval interface must preserve a Qdrant-ready production seam and an explicit reranker seam compatible with `bge-reranker-v2-m3`.
+- **D-08G:** Phase 1 uses Qdrant as the vector store, not a temporary custom local vector index. For speed and low ops overhead, execution may use Qdrant local persistent mode via `qdrant-client` (`QDRANT_MODE=local`, `QDRANT_PATH=.local/qdrant`) or a server URL if provided, but both paths must use the Qdrant client/collection abstraction. Later production deployment should be a configuration change, not a retrieval rewrite.
 
 ### Deterministic Extraction
 - **D-09:** Implement/research data extraction fully according to `.planning/ARCHITECTURE_STACK.md`: DuckDB SQL-first with PyArrow/source adapters for normalization and Polars where useful.
@@ -82,7 +82,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 
 ### the agent's Discretion
 - The planner may choose exact spike ordering, file/module boundaries, schemas, and test harness structure.
-- The planner may choose local index storage details and library boundaries, but must keep the Yandex document/query embedding contract and durable manifest requirements intact.
+- The planner may choose Qdrant local persistent mode or a configured Qdrant server URL, but must keep the Yandex document/query embedding contract, Qdrant collection contract, and durable manifest requirements intact.
 - The planner may choose specific charting/eval libraries within the stack constraints.
 
 </decisions>

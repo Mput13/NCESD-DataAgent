@@ -155,6 +155,7 @@ cython_debug/
 .vscode/
 
 # Project specific
+.local/
 dumps/
 *.parquet
 *.zip

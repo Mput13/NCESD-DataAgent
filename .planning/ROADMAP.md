@@ -28,8 +28,8 @@
 - [x] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
 - [ ] `01-02-PLAN.md` — Prepared-data contract, source-card builders, and embedding corpus format
 - [ ] `01-03-PLAN.md` — Materialized embedding/search index and retrieval evaluation
-- [ ] `01-04-PLAN.md` — Qwen/Yandex, LangGraph, extraction, and UI skeleton while indexing runs
-- [ ] `01-05-PLAN.md` — Integrated demo over prepared data and final decision package
+- [ ] `01-04-PLAN.md` — Qwen/Yandex, runnable LangGraph narrow flow, extraction, and UI models while indexing runs
+- [ ] `01-05-PLAN.md` — Runnable Streamlit demo over prepared data and final decision package
 
 ### Deliverables
 
@@ -43,8 +43,8 @@
 - Retrieval implementation and evaluation over a real Qdrant collection with lexical BM25/FTS, dense embeddings, bge-reranker-compatible rerank seam, and credential-aware fallback evidence. Phase 1 may use Qdrant local persistent mode for speed, but retrieval must use the Qdrant client/collection abstraction rather than a throwaway custom vector index.
 - DuckDB SQL-first extraction probes, deterministic tool contracts, DatasetArtifact export, and adapter strategy for FedStat, World Bank, and CKAN.
 - Hardened Yandex AI Studio/Qwen integration notes and runnable gated checks.
-- LangGraph architecture contract or skeleton with typed artifacts, budgets/tool scopes, checkpoint/rewind rules, and trace ownership.
-- Streamlit-first demo UI exposing state, trace, artifacts, index readiness, feedback/fix requests, and source rejection details.
+- Runnable narrow LangGraph flow with typed artifacts, budgets/tool scopes, checkpoint/rewind rules, and trace ownership. It must execute at least the demo path over prepared retrieval/extraction contracts; prose-only graph contracts do not satisfy Phase 1.
+- Runnable Streamlit-first demo UI exposing state, trace, artifacts, index readiness, feedback/fix requests, and source rejection details.
 - Final implementation decision package documenting what is accepted, what remains risky, and what must be verified before demo.
 - Architecture growth map explaining how the Phase 1 slice expands into the full `ARCHITECTURE_STACK.md` design.
 
@@ -56,6 +56,7 @@
 - [ ] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.
 - [ ] Retrieval and extraction decisions are backed by artifacts, not only prose.
 - [ ] The visible trace shows selected sources, rejected sources, coverage checks, extraction plans, and no-data reasoning.
+- [ ] At least 2-3 representative golden cases run through the integrated demo path with trace/artifacts, or block on explicit credential/data gates with recorded evidence.
 - [ ] `requirements.txt` and run/test commands reproduce the implemented slices.
 - [ ] Phase summaries exist for completed plans before the phase is marked complete.
 - [ ] The final decision package identifies extension seams and deferred full-stack capabilities without treating them as discarded scope.

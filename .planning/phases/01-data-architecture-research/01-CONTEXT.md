@@ -14,6 +14,8 @@ The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is tre
 
 Phase 1 may implement a narrow vertical slice first, but it must be architecturally scalable toward the full `.planning/ARCHITECTURE_STACK.md` vision. The implementation should avoid one-off demo shortcuts that would block later expansion into real source adapters, multiple retrieval providers, richer LangGraph orchestration, deterministic tool libraries, trace replay, and a fuller Streamlit UI.
 
+The narrow slice still must be runnable. Phase 1 must not stop at prose contracts, skeleton modules, or UI shells that cannot execute the product loop. A valid Phase 1 result needs a runnable narrow LangGraph flow and runnable Streamlit demo path over the prepared retrieval/extraction contracts, verified on representative golden cases or explicitly blocked by recorded credential/data gates.
+
 The prepared source-card corpus and embedding/search index are Phase 1 deliverables, not disposable research output. By the end of Phase 1 these data artifacts should be ready for demo use; reprocessing or re-embedding all sources in a later phase should happen only for an explicit blocker, schema migration, or corrupted/outdated artifact. Because embedding may be long-running, Phase 1 planning should start the embedding/index build as soon as the source-card corpus and provider contract are ready, then prepare orchestration, extraction, UI, and demo integration while that job runs.
 
 </domain>
@@ -57,6 +59,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-14:** The minimum target graph for research/planning is Lead DataAgent/Supervisor, Intent/Triage, Research Designer, FedStat Scout, World Bank Scout, CKAN Scout, Coverage & Schema, Extraction Planner, deterministic tools, Methodology Critic, Narrator, and Visualization where relevant.
 - **D-15:** Simple direct lookups should be able to skip unnecessary agents, but complex research queries should use parallel source scouts and critic loops.
 - **D-15A:** Graph contracts must include per-node budgets and tool scopes so the hierarchical multi-agent system stays bounded: direct lookup uses few tool calls, complex/research/no-data routes fan out to scouts and critic only when justified.
+- **D-15B:** Phase 1 must implement a runnable narrow LangGraph flow, not only a skeleton or architecture note. It may support a limited set of routes, but it must move real typed artifacts through triage, retrieval, coverage/extraction planning, deterministic tools or gated evidence, critic/narrator, and trace emission.
 
 ### LLM Choice
 - **D-16:** Use Qwen 3.6 via Yandex AI Studio as the target model per architecture stack.
@@ -74,6 +77,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-23A:** Prepared data artifacts are first-class phase outputs: source-card corpus, embedding/index manifest, build log, provider/model metadata, artifact paths, and rebuild instructions.
 - **D-23B:** Typed workflow artifacts must include `DatasetArtifact`, `VisualizationSpec`, `FinalAnswer`, `MethodologyNote`, `FeedbackArtifact`, and source rejection records in addition to intent, research design, coverage, extraction plan, critique, and trace events.
 - **D-23C:** Deterministic tools must expose safe operations for coverage preview, DuckDB queries, dataset artifact export, CSV/Parquet/manifest output, and visualization rendering from `DatasetArtifact`; LLMs choose tool plans, not raw numeric values.
+- **D-23D:** The Streamlit deliverable must be runnable, not only a shell. It must execute the demo path, show trace/artifacts/source rejection/index readiness, and support feedback/fix-request capture for at least representative golden cases.
 
 ### Success Criterion Priority
 - **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.

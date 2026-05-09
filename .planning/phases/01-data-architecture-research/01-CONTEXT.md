@@ -43,6 +43,8 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-08C:** Phase 1 should materialize a local source-card corpus and embedding/search index as a durable data product. Later phases should consume the manifest and local index, not reprocess all sources by default.
 - **D-08D:** Embedding inputs are metadata/source-card chunks only. They must not include raw numeric series, generated factual answers, or unsupported numeric claims from an LLM.
 - **D-08E:** Long-running embedding/indexing work should run as early as possible after corpus readiness; independent orchestration, UI, extraction, and demo work should continue in parallel while it runs.
+- **D-08F:** Phase 1 source metadata must be materialized into a local SQLite or DuckDB catalog that stores source cards, schemas, coverage hints, embedding chunk ids, and rejection-ready metadata. Flat files may be exported for review, but the agent should query a catalog interface.
+- **D-08G:** Prototype mode may use a local vector index, but the retrieval interface must preserve a Qdrant-ready production seam and an explicit reranker seam compatible with `bge-reranker-v2-m3`.
 
 ### Deterministic Extraction
 - **D-09:** Implement/research data extraction fully according to `.planning/ARCHITECTURE_STACK.md`: DuckDB SQL-first with PyArrow/source adapters for normalization and Polars where useful.
@@ -54,6 +56,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-13:** Implement/research the orchestration fully according to `.planning/ARCHITECTURE_STACK.md`: LangGraph hierarchical supervisor with typed artifacts.
 - **D-14:** The minimum target graph for research/planning is Lead DataAgent/Supervisor, Intent/Triage, Research Designer, FedStat Scout, World Bank Scout, CKAN Scout, Coverage & Schema, Extraction Planner, deterministic tools, Methodology Critic, Narrator, and Visualization where relevant.
 - **D-15:** Simple direct lookups should be able to skip unnecessary agents, but complex research queries should use parallel source scouts and critic loops.
+- **D-15A:** Graph contracts must include per-node budgets and tool scopes so the hierarchical multi-agent system stays bounded: direct lookup uses few tool calls, complex/research/no-data routes fan out to scouts and critic only when justified.
 
 ### LLM Choice
 - **D-16:** Use Qwen 3.6 via Yandex AI Studio as the target model per architecture stack.
@@ -69,6 +72,8 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-22:** Phase 1 output should include implementation artifacts, research notes, executable spikes, deterministic verification, and trade-off tables.
 - **D-23:** Spikes are evidence for implementation decisions; they are not accepted as complete until the relevant plan's verification commands pass and a summary artifact is written.
 - **D-23A:** Prepared data artifacts are first-class phase outputs: source-card corpus, embedding/index manifest, build log, provider/model metadata, artifact paths, and rebuild instructions.
+- **D-23B:** Typed workflow artifacts must include `DatasetArtifact`, `VisualizationSpec`, `FinalAnswer`, `MethodologyNote`, `FeedbackArtifact`, and source rejection records in addition to intent, research design, coverage, extraction plan, critique, and trace events.
+- **D-23C:** Deterministic tools must expose safe operations for coverage preview, DuckDB queries, dataset artifact export, CSV/Parquet/manifest output, and visualization rendering from `DatasetArtifact`; LLMs choose tool plans, not raw numeric values.
 
 ### Success Criterion Priority
 - **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.

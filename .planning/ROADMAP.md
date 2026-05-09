@@ -37,13 +37,14 @@
 - 15-20 test cases across simple, comparative, research, derived metric, ambiguous, and no-data requests.
 - Deterministic source inventory for local dumps and bounded CKAN package/resource access.
 - Shared source-card/evidence contracts for FedStat, World Bank, and CKAN.
+- Local SQLite/DuckDB catalog for source cards, schemas, coverage hints, embedding chunks, and rejection logs.
 - Stable embedding document/chunk format with source ids, chunk ids, content hashes, metadata version, provenance, coverage, units, dimensions, and source/resource URLs.
 - Materialized local source-card corpus and embedding/search index ready for demo use, with manifest, build logs, provider/model metadata, and rebuild instructions.
-- Retrieval implementation and evaluation over the prepared index with lexical, dense, rerank, and credential-aware fallback evidence.
-- DuckDB SQL-first extraction probes and adapter strategy for FedStat, World Bank, and CKAN.
+- Retrieval implementation and evaluation over the prepared index with lexical BM25/FTS, dense embeddings, bge-reranker-compatible rerank seam, Qdrant-ready production seam, and credential-aware fallback evidence.
+- DuckDB SQL-first extraction probes, deterministic tool contracts, DatasetArtifact export, and adapter strategy for FedStat, World Bank, and CKAN.
 - Hardened Yandex AI Studio/Qwen integration notes and runnable gated checks.
-- LangGraph architecture contract or skeleton with typed artifacts and trace ownership.
-- Streamlit-first trace/UI contract exposing state, trace, artifacts, and feedback/fix requests.
+- LangGraph architecture contract or skeleton with typed artifacts, budgets/tool scopes, checkpoint/rewind rules, and trace ownership.
+- Streamlit-first demo UI exposing state, trace, artifacts, index readiness, feedback/fix requests, and source rejection details.
 - Final implementation decision package documenting what is accepted, what remains risky, and what must be verified before demo.
 - Architecture growth map explaining how the Phase 1 slice expands into the full `ARCHITECTURE_STACK.md` design.
 

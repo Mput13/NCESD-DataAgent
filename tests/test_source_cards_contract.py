@@ -124,7 +124,7 @@ class SourceCardsContractTest(unittest.TestCase):
         self.assertEqual(dumped["source_family"], "ckan")
         self.assertEqual(dumped["metadata_version"], "source-card-v1")
         self.assertEqual(dumped["provenance_url"], "https://fedstat.ru/indicator/57319")
-        self.assertRegex(dumped["chunk_id"], r"^ckan:emiss_57319:57319\\.parquet:source-card-v1:")
+        self.assertRegex(dumped["chunk_id"], r"^ckan:emiss_57319:57319\.parquet:source-card-v1:")
         self.assertRegex(dumped["content_hash"], r"^[0-9a-f]{64}$")
         self.assertIn("title: Gross domestic product in market prices", dumped["embedding_text"])
         self.assertIn("dataset_id: emiss_57319", dumped["embedding_text"])

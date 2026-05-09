@@ -80,9 +80,21 @@ def main() -> None:
         )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    embedding_chunks = [card.to_embedding_chunk().model_dump(mode="json") for card in cards]
+    payload = {
+        "metadata_version": "source-card-v1",
+        "embedding_provider_target": {
+            "provider": "yandex_ai_studio",
+            "document_model": "text-search-doc",
+            "query_model": "text-search-query",
+            "fallback_when_credentials_absent": "skip_dense_index_and_record_lexical_only",
+        },
+        "index_boundary": "source_card_metadata_only",
+        "cards": [card.model_dump(mode="json") for card in cards],
+        "embedding_chunks": embedding_chunks,
+    }
     args.output.write_text(
-        json.dumps([card.model_dump(mode="json") for card in cards], ensure_ascii=False, indent=2)
-        + "\n",
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {len(cards)} source cards to {args.output}")

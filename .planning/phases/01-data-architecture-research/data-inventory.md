@@ -59,6 +59,51 @@ Previously verified CKAN facts from `.planning/DATA_REPORT.md`:
 
 Because CKAN is live, counts and package metadata can change. Later scripts should cache only promoted metadata and preserve API timestamps/provenance.
 
+## Embedding and Indexing Contract
+
+Source cards are also the boundary for Wave 2 retrieval. Dense retrieval must embed source-card metadata chunks, not raw Parquet values and not generated factual answers.
+
+Provider target:
+
+- Primary provider: Yandex AI Studio embeddings.
+- Document/source-card vectors: `text-search-doc`.
+- User query vectors: `text-search-query`.
+- Credential-aware fallback: when Yandex embedding environment variables are absent, dense indexing should be skipped with an explicit trace note and lexical retrieval should remain available.
+
+Stable embedding input fields:
+
+- title/name;
+- source family;
+- dataset or indicator code;
+- resource identity;
+- geography hints;
+- period coverage;
+- units;
+- dimensions;
+- source URL or resource URL;
+- descriptive metadata such as topics, organization, license, methodology, and source notes.
+
+The embedding text must exclude raw table values, generated numeric answer text, and any number produced from LLM memory.
+
+Chunk identity fields required for the retrieval index:
+
+- `source_id`;
+- `card_id`;
+- `chunk_id`;
+- `source_family`;
+- `language`;
+- `text_hash` / `content_hash`;
+- `metadata_version`;
+- provenance URL/resource URL;
+- builder source.
+
+Storage/interface expectations for `01-03`:
+
+- `scripts/build_source_cards.py` emits both `cards` and `embedding_chunks`.
+- `embedding_chunks` are stable JSON records that can be embedded, hashed, and stored in a vector store or local cache without re-reading raw dump payloads.
+- Retrieval implementations should treat `metadata_version = source-card-v1` and `input_format_version = source-card-embedding-text-v1` as compatibility gates.
+- Dense retrieval may be added without redesigning `SourceCandidateCard`; it should consume `SourceCardEmbeddingChunk` records and join back to `card_id`.
+
 ## Known Gaps
 
 - FedStat `metadata.jsonl` is incomplete and cannot satisfy SRCH-01 by itself.

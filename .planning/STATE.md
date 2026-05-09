@@ -20,7 +20,10 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Decisions Log
 
-No decisions yet. Current work is exploratory: understand the task, data formats, evaluation criteria, and possible implementation paths.
+- **2026-05-09 — Yandex AI Studio API smoke test passed.**
+  DeepSeek 3.2 responds through the OpenAI-compatible Chat Completions endpoint with model URI `gpt://b1gbntotj1b57karq6qm/deepseek-v32/latest` and endpoint `https://llm.api.cloud.yandex.net/v1/chat/completions`.
+  The API key itself must stay outside git in environment variables or local `.env`.
+  Important gotcha: the folder id inside `gpt://<folder_id>/...` must match the service account folder. A mismatched folder returns `permission_error`.
 
 ## Known Inputs From Task
 
@@ -32,11 +35,11 @@ No decisions yet. Current work is exploratory: understand the task, data formats
 ## Open Questions
 
 - [ ] Скачать данные с Yandex Disk (~3.5 GB)
-- [ ] Получить API-ключ Yandex AI Studio
-- [ ] Получить folder_id Yandex Cloud
+- [x] Получить API-ключ Yandex AI Studio для smoke test
+- [x] Получить рабочий folder_id Yandex Cloud для DeepSeek 3.2 smoke test: `b1gbntotj1b57karq6qm`
 - [ ] Понять фактическую структуру локального дампа после скачивания
 - [ ] Выбрать несколько тестовых запросов для первичного анализа
 - [ ] Сравнить варианты поиска по метаданным и извлечения данных
 
 ---
-*Last updated: 2026-05-08 after correcting discovery state*
+*Last updated: 2026-05-09 after Yandex AI Studio DeepSeek smoke test*

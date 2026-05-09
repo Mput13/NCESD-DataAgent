@@ -59,6 +59,8 @@
 
 **Референсная реализация:** Agent.py в репо — обёртка над Yandex Cloud Responses API с function calling, web_search, file_search, MCP
 
+**Yandex AI Studio smoke test:** OpenAI-compatible Chat Completions endpoint works with DeepSeek 3.2 at `https://llm.api.cloud.yandex.net/v1/chat/completions` and model URI `gpt://b1gbntotj1b57karq6qm/deepseek-v32/latest`. Secrets must be kept out of git; use environment variables/local `.env`.
+
 **Оценка (100 баллов):**
 - Качество на тест-кейсах: 35
 - Устойчивость и честность: 25
@@ -70,6 +72,7 @@
 ### Жёсткие / явно заданные в ТЗ
 
 - **LLM / AI-инструменты**: использовать возможности, доступные через Yandex Cloud / Yandex AI Studio; точная модель и SDK-обвязка пока исследуются
+- **Yandex AI Studio auth**: model URI folder id must match the service account folder id; otherwise API returns `permission_error`
 - **Числа из данных**: Только детерминированный код — LLM не читает таблицы, не интерпретирует значения
 - **Источники**: Каждая цифра — со ссылкой; «цифра без источника» = ошибка
 - **Библиотеки**: Только open-source
@@ -83,7 +86,7 @@
 - **Поиск по метаданным**: FAISS локально vs File Search Yandex AI Studio vs DuckDB FTS
 - **Извлечение данных**: DuckDB SQL vs pandas vs оба
 - **Стратегия индексации**: Векторный поиск vs keyword search vs гибрид
-- **Модель**: YandexGPT vs Qwen3 vs DeepSeek — зависит от качества на тест-кейсах
+- **Модель**: DeepSeek 3.2 доступен и отвечает через AI Studio; YandexGPT/Qwen3 still need benchmark comparison on project test cases
 - **Оркестрация**: OpenAI Agents SDK vs LangChain vs голый loop
 - **UI фреймворк**: Streamlit vs Gradio vs CLI + thin web layer
 - **Источники данных**: Приоритет локальных дампов vs live API — зависит от покрытия
@@ -94,7 +97,7 @@
 
 | Area | Candidates / constraint | Status |
 |------|-------------------------|--------|
-| LLM/API | YandexGPT / Qwen / DeepSeek через Yandex AI Studio или совместимый API | Open |
+| LLM/API | DeepSeek 3.2 через Yandex AI Studio OpenAI-compatible API smoke-tested; compare with YandexGPT/Qwen on evals | Partially validated |
 | Agent loop | OpenAI Responses-style loop / OpenAI Agents SDK / LangChain / custom loop | Open |
 | Поиск по метаданным | Keyword/BM25/FTS / vector search / hybrid / AI Studio File Search | Open |
 | Чтение Parquet | pandas / DuckDB / pyarrow / комбинация | Open |

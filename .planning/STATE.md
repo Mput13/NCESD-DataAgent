@@ -11,12 +11,14 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Phase:** Discovery
 **Name:** Разбор ТЗ, доступных данных и возможного MVP
-**Status:** In progress
-**Plan:** Не создан — Phase 1 пока не обсуждалась/планировалась через GSD
+**Status:** Context gathered
+**Plan:** Не создан — следующий шаг `$gsd-plan-phase 1`
 
 ## Phase History
 
-(None yet)
+- **2026-05-09 — Phase 1 context gathered.**
+  Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
+  Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
 
 ## Resume Snapshot
 
@@ -24,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 **Git:** `main` clean, aligned with `origin/main` at `2eedf5c`
 **GSD init:** planning/project/roadmap/state exist; no interrupted agents
 **Incomplete work:** no `.planning/HANDOFF.json`, no `.continue-here` files, no phase `PLAN` files without `SUMMARY`
-**Phase artifacts:** `.planning/phases/` does not exist yet; Phase 1 has not been discussed/planned/executed in GSD
+**Phase artifacts:** Phase 1 context gathered at `.planning/phases/01-data-architecture-research/01-CONTEXT.md`; Phase 1 has not been planned/executed in GSD
 
 **Repository implementation surface:**
 - `app/llm/yandex_ai_studio.py` — small OpenAI-compatible Yandex AI Studio chat completions client with model profiles
@@ -43,7 +45,7 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 - `.planning/ARCHITECTURE_STACK.md` describes the preferred target architecture: Qwen/Yandex AI Studio, LangGraph hierarchical supervisor, source scouts, deterministic DuckDB/PyArrow extraction, Streamlit trace/artifacts UI, and pytest golden evals.
 - `.planning/YANDEX_AI_STUDIO_RESEARCH.md` records that DeepSeek 3.2 was smoke-tested through Yandex AI Studio. Runtime environment variables are not currently exported in this shell.
 
-**Important alignment note:** PROJECT/ROADMAP still frame Phase 1 as research before implementation. ARCHITECTURE_STACK contains a strong recommended stack, but Phase 1 GSD discussion should explicitly confirm the MVP slice before code work.
+**Important alignment note:** PROJECT/ROADMAP still frame Phase 1 as research before final MVP implementation. Phase 1 discussion confirmed `.planning/ARCHITECTURE_STACK.md` as the target architecture and calls for full-stack research/spikes before Phase 2.
 
 ## Decisions Log
 
@@ -80,9 +82,9 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 Run Phase 1 through GSD from fresh context:
 
-1. `$gsd-discuss-phase 1` — confirm MVP slice and stack decisions from the research notes.
-2. `$gsd-plan-phase 1` — split into small verifiable plans, likely starting with catalog/extractor spikes.
-3. `$gsd-execute-phase 1` — implement only after the plan exists.
+1. `$gsd-plan-phase 1` — split the confirmed context into small verifiable plans.
+2. `$gsd-execute-phase 1` — implement only after the plan exists.
+3. `$gsd-verify-work 1` — validate Phase 1 research/spikes before Phase 2 decisions.
 
 ---
-*Last updated: 2026-05-09 after rebuilding project context from current repository state*
+*Last updated: 2026-05-09 after Phase 1 context discussion*

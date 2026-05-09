@@ -7,4 +7,5 @@ from app.llm.yandex_ai_studio import smoke_prompt
 
 
 if __name__ == "__main__":
-    print(smoke_prompt())
+    profile = sys.argv[1] if len(sys.argv) > 1 else "QWEN"
+    print(smoke_prompt(profile=profile))

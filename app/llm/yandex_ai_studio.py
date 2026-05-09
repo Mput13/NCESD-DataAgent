@@ -18,17 +18,22 @@ class YandexAIStudioConfig:
     base_url: str = DEFAULT_BASE_URL
 
     @classmethod
-    def from_env(cls) -> "YandexAIStudioConfig":
+    def from_env(cls, profile: str = "QWEN") -> "YandexAIStudioConfig":
         load_dotenv(find_dotenv(usecwd=True))
-        api_key = os.getenv("YANDEX_AI_STUDIO_API_KEY")
-        model = os.getenv("YANDEX_AI_STUDIO_MODEL")
+        profile = profile.upper()
+        api_key = os.getenv(f"YANDEX_AI_STUDIO_{profile}_API_KEY")
+        model = os.getenv(f"YANDEX_AI_STUDIO_{profile}_MODEL")
+        if not api_key and profile == "QWEN":
+            api_key = os.getenv("YANDEX_AI_STUDIO_API_KEY")
+        if not model and profile == "QWEN":
+            model = os.getenv("YANDEX_AI_STUDIO_MODEL")
         base_url = os.getenv("YANDEX_AI_STUDIO_BASE_URL", DEFAULT_BASE_URL)
 
         missing = [
             name
             for name, value in {
-                "YANDEX_AI_STUDIO_API_KEY": api_key,
-                "YANDEX_AI_STUDIO_MODEL": model,
+                f"YANDEX_AI_STUDIO_{profile}_API_KEY": api_key,
+                f"YANDEX_AI_STUDIO_{profile}_MODEL": model,
             }.items()
             if not value
         ]
@@ -43,8 +48,13 @@ class YandexAIStudioConfig:
 class YandexAIStudioClient:
     """Small OpenAI-compatible client for Yandex AI Studio chat completions."""
 
-    def __init__(self, config: YandexAIStudioConfig | None = None) -> None:
-        self.config = config or YandexAIStudioConfig.from_env()
+    def __init__(
+        self,
+        config: YandexAIStudioConfig | None = None,
+        *,
+        profile: str = "QWEN",
+    ) -> None:
+        self.config = config or YandexAIStudioConfig.from_env(profile=profile)
 
     def chat(
         self,
@@ -77,8 +87,8 @@ class YandexAIStudioClient:
         return content.strip()
 
 
-def smoke_prompt() -> str:
-    client = YandexAIStudioClient()
+def smoke_prompt(profile: str = "QWEN") -> str:
+    client = YandexAIStudioClient(profile=profile)
     return client.chat(
         [
             {

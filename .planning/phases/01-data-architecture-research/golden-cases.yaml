@@ -1,0 +1,345 @@
+- id: GC-001
+  category: simple
+  query_ru: "Какой ВВП России в 2024 году?"
+  expected_route: "direct_lookup_with_methodology_choice"
+  expected_sources:
+    - "FedStat"
+    - "World Bank"
+  needs_clarification: true
+  expected_artifacts:
+    - "IntentArtifact with metric=GDP, geography=Russia, period=2024"
+    - "SourceCandidateCard for FedStat GDP and World Bank GDP"
+    - "Clarification question about Rosstat rubles vs World Bank current USD"
+  expected_rejection_or_no_data:
+    - "Do not extract a value until the source/methodology choice is resolved."
+  trace_expectations:
+    - "intent classification is simple"
+    - "candidate sources show source, unit, period, geography, and provenance"
+    - "trace records why clarification blocks extraction"
+
+- id: GC-002
+  category: simple
+  query_ru: "Покажи ВВП России по ППС по Росстату."
+  expected_route: "fedstat_direct_lookup"
+  expected_sources:
+    - "FedStat"
+  needs_clarification: false
+  expected_artifacts:
+    - "IntentArtifact with explicit FedStat source preference"
+    - "SourceCandidateCard for FedStat PPP GDP indicators"
+    - "CoverageReport before extraction"
+    - "ExtractionPlan with deterministic FedStat read strategy"
+  expected_rejection_or_no_data:
+    - "Reject non-PPP GDP candidates with a reason."
+  trace_expectations:
+    - "FedStat scout records exact or lexical match mode"
+    - "coverage-preview evidence precedes extraction"
+    - "all values must come from deterministic extraction artifacts"
+
+- id: GC-003
+  category: comparative
+  query_ru: "Сравни динамику ВВП стран БРИКС за 2015-2024 годы."
+  expected_route: "world_bank_comparative"
+  expected_sources:
+    - "World Bank"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact listing countries, indicator, and annual period"
+    - "World Bank SourceCandidateCard with indicator code evidence"
+    - "CoverageReport for each requested country and period"
+    - "DatasetArtifact with long-format country-year rows"
+  expected_rejection_or_no_data:
+    - "Flag unavailable latest-year values by country instead of filling them."
+  trace_expectations:
+    - "comparative intent is explicit"
+    - "countries and aggregates are not silently mixed"
+    - "coverage gaps are visible before final narration"
+
+- id: GC-004
+  category: comparative
+  query_ru: "Сравни инфляцию в России, Казахстане и Китае за последние доступные годы."
+  expected_route: "world_bank_comparative_with_latest_available"
+  expected_sources:
+    - "World Bank"
+    - "FedStat"
+  needs_clarification: false
+  expected_artifacts:
+    - "IntentArtifact with latest_available period policy"
+    - "World Bank CPI/inflation SourceCandidateCard"
+    - "CoverageReport identifying non-null latest available periods"
+    - "MethodologyNote about cross-country comparability"
+  expected_rejection_or_no_data:
+    - "Reject FedStat-only Russian detail as insufficient for cross-country comparison unless used as context."
+  trace_expectations:
+    - "source rejection log explains why one source is selected over another"
+    - "latest available periods are derived from coverage, not guessed"
+    - "unit and frequency are shown"
+
+- id: GC-005
+  category: research
+  query_ru: "Как связаны урбанизация и рождаемость по странам мира?"
+  expected_route: "research_design_then_world_bank_join"
+  expected_sources:
+    - "World Bank"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact with hypothesis, dimensions, indicators, and join keys"
+    - "Two or more World Bank SourceCandidateCards"
+    - "CoverageReport for country-year overlap"
+    - "ExtractionPlan for deterministic join"
+  expected_rejection_or_no_data:
+    - "Reject candidates without compatible country-year coverage."
+  trace_expectations:
+    - "research route includes Research Designer and Methodology Critic"
+    - "coverage preview shows overlap between indicators"
+    - "trace records join plan and limitations"
+
+- id: GC-006
+  category: research
+  query_ru: "Исследуй факторы, которые могут объяснить динамику реальных доходов населения в России."
+  expected_route: "research_design_multi_source"
+  expected_sources:
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: true
+  expected_artifacts:
+    - "ResearchDesignArtifact with possible income, CPI/deflator, wage, and employment branches"
+    - "FedStat and CKAN candidate source cards"
+    - "Clarification question about geography, period, and preferred income concept"
+  expected_rejection_or_no_data:
+    - "Do not compute real-income metrics until target concept and period are clear."
+  trace_expectations:
+    - "open reasoning lists proxy indicators and assumptions"
+    - "clarification is triggered before extraction"
+    - "source candidates include rejection-risk notes"
+
+- id: GC-007
+  category: derived_metric
+  query_ru: "Построй индекс реальных располагаемых доходов РФ к базовому году 2014."
+  expected_route: "fedstat_derived_metric"
+  expected_sources:
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact with formula inputs and base-year policy"
+    - "SourceCandidateCards for nominal income and price deflator or CPI candidates"
+    - "CoverageReport for both inputs"
+    - "ExtractionPlan with deterministic formula"
+  expected_rejection_or_no_data:
+    - "Reject proxy CPI/deflator candidates that do not match the requested concept unless explicitly labeled."
+  trace_expectations:
+    - "derived_metric intent is explicit"
+    - "formula, inputs, and base period are recorded"
+    - "Methodology Critic reviews unit and index compatibility"
+
+- id: GC-008
+  category: derived_metric
+  query_ru: "Нормализуй ВВП стран ЕАЭС так, чтобы первый доступный год был равен 100."
+  expected_route: "world_bank_derived_metric"
+  expected_sources:
+    - "World Bank"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact with country set and normalization rule"
+    - "World Bank GDP candidate"
+    - "CoverageReport with first non-null year per country"
+    - "Deterministic normalized index output artifact"
+  expected_rejection_or_no_data:
+    - "Report countries without usable baseline coverage instead of synthesizing a baseline."
+  trace_expectations:
+    - "normalization is computed by code"
+    - "source links remain attached to each numeric row"
+    - "coverage gaps are preserved in output metadata"
+
+- id: GC-009
+  category: ambiguous
+  query_ru: "Дай данные по инфляции."
+  expected_route: "clarification_required"
+  expected_sources:
+    - "World Bank"
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: true
+  expected_artifacts:
+    - "IntentArtifact with missing geography, period, frequency, and inflation concept"
+    - "Clarification question with concrete options"
+  expected_rejection_or_no_data:
+    - "No extraction should run before required fields are answered."
+  trace_expectations:
+    - "ambiguous intent is explicit"
+    - "trace records missing critical fields"
+    - "no unsupported numeric claim appears"
+
+- id: GC-010
+  category: ambiguous
+  query_ru: "Покажи доходы регионов."
+  expected_route: "clarification_required_with_candidate_preview"
+  expected_sources:
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: true
+  expected_artifacts:
+    - "IntentArtifact with missing country scope, income concept, period, and units"
+    - "Optional candidate preview limited to source cards"
+    - "Clarification question"
+  expected_rejection_or_no_data:
+    - "Do not choose a specific income indicator silently."
+  trace_expectations:
+    - "source cards can be shown without extraction"
+    - "clarification trigger explains why the request is under-specified"
+    - "UI trace can display the blocked state"
+
+- id: GC-011
+  category: no_data
+  query_ru: "Найди официальную инфляцию в Северной Корее за 2024 год."
+  expected_route: "no_data_after_bounded_search"
+  expected_sources:
+    - "World Bank"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "AttemptedSourceLog for World Bank and CKAN"
+    - "RejectionReason entries for missing or insufficient coverage"
+    - "NoDataExplanationArtifact"
+  expected_rejection_or_no_data:
+    - "Explain checked sources and coverage failure without inventing a value."
+  trace_expectations:
+    - "no_data intent or outcome is explicit"
+    - "attempted source list is visible"
+    - "unsupported numeric claims are forbidden"
+
+- id: GC-012
+  category: no_data
+  query_ru: "Собери товарооборот Россия-Казахстан по товарам за 2010-2025 годы из текущих локальных дампов."
+  expected_route: "no_data_or_ckan_discovery"
+  expected_sources:
+    - "FedStat"
+    - "World Bank"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "AttemptedSourceLog for FedStat and World Bank local dumps"
+    - "CKAN discovery candidate list if available"
+    - "NoDataExplanationArtifact or bounded follow-up source recommendation"
+  expected_rejection_or_no_data:
+    - "Reject local World Bank as insufficient for bilateral goods detail."
+    - "Reject weak FedStat candidates with clear mismatch reasons."
+  trace_expectations:
+    - "rejection-reason visibility is explicit"
+    - "CKAN is used as bounded catalog discovery, not web search"
+    - "no final dataset is claimed if coverage is absent"
+
+- id: GC-013
+  category: simple
+  query_ru: "Найди показатель ЕМИСС 57319 и покажи доступные ресурсы."
+  expected_route: "ckan_first_discovery_by_code"
+  expected_sources:
+    - "CKAN"
+    - "FedStat"
+  needs_clarification: false
+  expected_artifacts:
+    - "CKAN package_search result compressed into SourceCandidateCard"
+    - "Resource list with formats and provenance"
+    - "FedStat local availability flag"
+  expected_rejection_or_no_data:
+    - "Reject unrelated packages when code match is weaker than exact package/code match."
+  trace_expectations:
+    - "CKAN-first discovery is recorded"
+    - "package/resource ids and source URLs are preserved"
+    - "raw CKAN response is not dumped into LLM context"
+
+- id: GC-014
+  category: research
+  query_ru: "Какие источники подойдут для анализа потребительских цен в России?"
+  expected_route: "fedstat_and_ckan_research_discovery"
+  expected_sources:
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact with CPI and related price-index concepts"
+    - "Multiple SourceCandidateCards with match_mode values"
+    - "SourceRejectionLog for near misses"
+  expected_rejection_or_no_data:
+    - "Clearly separate price-index candidates from unrelated price-level datasets."
+  trace_expectations:
+    - "research route can return source recommendations before extraction"
+    - "candidate-source quality fields are complete"
+    - "rejected sources include reasons and severity"
+
+- id: GC-015
+  category: comparative
+  query_ru: "Сравни население России и Казахстана по данным World Bank."
+  expected_route: "world_bank_direct_comparative"
+  expected_sources:
+    - "World Bank"
+  needs_clarification: false
+  expected_artifacts:
+    - "IntentArtifact with explicit World Bank source preference"
+    - "World Bank population SourceCandidateCard"
+    - "CoverageReport for Russia and Kazakhstan"
+    - "DatasetArtifact with source-bound rows"
+  expected_rejection_or_no_data:
+    - "Reject FedStat candidates because source preference is World Bank."
+  trace_expectations:
+    - "source preference is honored"
+    - "country aliases are resolved deterministically"
+    - "trace completeness includes selected and rejected source paths"
+
+- id: GC-016
+  category: simple
+  query_ru: "Покажи доступные годы для индекса потребительских цен в ЕМИСС."
+  expected_route: "fedstat_coverage_preview_only"
+  expected_sources:
+    - "FedStat"
+  needs_clarification: false
+  expected_artifacts:
+    - "FedStat SourceCandidateCard for CPI-related indicator"
+    - "CoverageReport listing available periods without final numeric answer"
+  expected_rejection_or_no_data:
+    - "Reject candidates where title or methodology refers to unrelated price measures."
+  trace_expectations:
+    - "coverage-preview evidence is the final requested artifact"
+    - "no extraction value is required beyond deterministic coverage"
+    - "unit and frequency are visible"
+
+- id: GC-017
+  category: research
+  query_ru: "Подбери набор данных для анализа безработицы и ВВП по странам Европы."
+  expected_route: "world_bank_research_design"
+  expected_sources:
+    - "World Bank"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "ResearchDesignArtifact with indicator pair and geography group"
+    - "World Bank source cards for unemployment and GDP"
+    - "CoverageReport for European countries or aggregate policy"
+    - "MethodologyNote about country set and aggregates"
+  expected_rejection_or_no_data:
+    - "Reject aggregates if the user expects country-level rows unless explicitly labeled."
+  trace_expectations:
+    - "trace records geography expansion from Europe to countries or aggregate"
+    - "candidate sources include methodology risks"
+    - "extraction is deferred until coverage is acceptable"
+
+- id: GC-018
+  category: no_data
+  query_ru: "Сколько было пользователей телеграма в каждом регионе России по официальной статистике?"
+  expected_route: "invalid_or_no_data_after_bounded_search"
+  expected_sources:
+    - "FedStat"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "AttemptedSourceLog with FedStat and CKAN searches"
+    - "NoDataExplanationArtifact with distinction between official statistics and platform data"
+    - "SourceRejectionLog for weak social-media proxy matches"
+  expected_rejection_or_no_data:
+    - "State that official regional Telegram-user data was not found in bounded trusted sources."
+    - "Do not substitute internet usage proxies without user approval."
+  trace_expectations:
+    - "robust invalid/no-data handling is visible"
+    - "source rejection reasons are user-visible"
+    - "no unsupported numeric claim appears"

@@ -1,4 +1,6 @@
 {
+  "runtime": "codex",
+  "resolve_model_ids": "omit",
   "mode": "yolo",
   "granularity": "coarse",
   "parallelization": true,

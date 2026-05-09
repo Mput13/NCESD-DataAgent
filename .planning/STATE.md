@@ -20,6 +20,11 @@ See: .planning/PROJECT.md (updated 2026-05-08)
 
 ## Decisions Log
 
+- **2026-05-09 — GSD adopted as the primary Codex project workflow.**
+  Installed GSD v1.41.1 globally for Codex into `C:\Users\HONOR\.codex` with 66 skills, 33 agent roles, hooks, and `gsd-sdk`.
+  Project config now sets `runtime: "codex"` and `resolve_model_ids: "omit"` so GSD does not force Anthropic model identifiers.
+  Use GSD for phase discussion, planning, execution, and verification; keep `.planning/*` as durable project memory.
+
 - **2026-05-09 — Yandex AI Studio API smoke test passed.**
   DeepSeek 3.2 responds through the OpenAI-compatible Chat Completions endpoint with model URI `gpt://b1gbntotj1b57karq6qm/deepseek-v32/latest` and endpoint `https://llm.api.cloud.yandex.net/v1/chat/completions`.
   The API key itself must stay outside git in environment variables or local `.env`.

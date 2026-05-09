@@ -343,3 +343,47 @@
     - "robust invalid/no-data handling is visible"
     - "source rejection reasons are user-visible"
     - "no unsupported numeric claim appears"
+
+- id: GC-019
+  category: research
+  query_ru: "Проверь, готов ли dense retrieval искать источники по карточкам FedStat, World Bank и CKAN, не загружая числовые таблицы."
+  expected_route: "retrieval_embedding_readiness"
+  expected_sources:
+    - "FedStat"
+    - "World Bank"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "EmbeddingConfigArtifact declaring provider/model family or credential-aware fallback"
+    - "EmbeddingInputSpec for source-card/chunk documents"
+    - "Sample source-card chunks with provenance, coverage hints, units, dimensions, and source URLs/resource URLs"
+    - "RetrievalEvidenceArtifact proving dense retrieval indexes metadata/card chunks only"
+  expected_rejection_or_no_data:
+    - "Reject raw numeric data, extracted numeric answers, and LLM-generated numeric claims as embedding input."
+    - "If Yandex credentials are absent, record the gated check and fallback without dropping the Qwen/Yandex target."
+  trace_expectations:
+    - "embedding provider or fallback is visible in trace"
+    - "source-card/chunk text format is recorded"
+    - "dense retrieval input contains no unsupported numeric claim"
+
+- id: GC-020
+  category: simple
+  query_ru: "Для Yandex AI Studio embeddings покажи, чем индексируются документы источников и чем индексируется пользовательский запрос."
+  expected_route: "yandex_embedding_split_check"
+  expected_sources:
+    - "FedStat"
+    - "World Bank"
+    - "CKAN"
+  needs_clarification: false
+  expected_artifacts:
+    - "EmbeddingConfigArtifact with document mode text-search-doc for source-card/chunk docs"
+    - "EmbeddingConfigArtifact with query mode text-search-query for natural-language queries"
+    - "CredentialAwareSkipArtifact if Yandex credentials are missing"
+    - "SourceCardChunk example containing provenance, coverage, units/dimensions, and resource URLs"
+  expected_rejection_or_no_data:
+    - "Reject any dense retrieval setup that uses one ambiguous embedding mode for both documents and queries when Yandex split modes are selected."
+    - "Do not embed raw numeric tables or numeric answer text."
+  trace_expectations:
+    - "document/query embedding split is explicit"
+    - "credential-aware fallback preserves the Yandex/Qwen target"
+    - "retrieval output contains source metadata and links, not unsupported numeric values"

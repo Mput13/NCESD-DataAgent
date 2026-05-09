@@ -95,6 +95,42 @@ class SourceCardsContractTest(unittest.TestCase):
         self.assertEqual(MatchMode.CKAN_DISCOVERY.value, "ckan_discovery")
         self.assertEqual(MatchMode.METHODOLOGY_MATCH.value, "methodology_match")
 
+    def test_source_card_builds_stable_embedding_chunk_contract(self) -> None:
+        from app.artifacts.source_cards import CoverageHint, MatchMode, SourceCandidateCard
+
+        card = SourceCandidateCard(
+            source="ckan",
+            builder_source="ckan_package_search",
+            dataset_id="emiss_57319",
+            resource_id="57319.parquet",
+            title="Gross domestic product in market prices",
+            match_mode=MatchMode.CKAN_DISCOVERY,
+            units="million rubles",
+            geography=["Russian Federation"],
+            period_coverage=CoverageHint(start_period="2011", end_period="2024"),
+            provenance_url="https://fedstat.ru/indicator/57319",
+            dimensions=["OKATO", "period"],
+            description="SNA 2008 methodology",
+            why_matched="CKAN discovery by indicator code.",
+        )
+
+        chunk = card.to_embedding_chunk()
+        dumped = chunk.model_dump()
+        self.assertEqual(card.embedding.provider_target.provider, "yandex_ai_studio")
+        self.assertEqual(card.embedding.provider_target.document_model, "text-search-doc")
+        self.assertEqual(card.embedding.provider_target.query_model, "text-search-query")
+        self.assertEqual(card.embedding.index_boundary, "source_card_metadata_only")
+        self.assertEqual(dumped["card_id"], "ckan:emiss_57319:57319.parquet")
+        self.assertEqual(dumped["source_family"], "ckan")
+        self.assertEqual(dumped["metadata_version"], "source-card-v1")
+        self.assertEqual(dumped["provenance_url"], "https://fedstat.ru/indicator/57319")
+        self.assertRegex(dumped["chunk_id"], r"^ckan:emiss_57319:57319\\.parquet:source-card-v1:")
+        self.assertRegex(dumped["content_hash"], r"^[0-9a-f]{64}$")
+        self.assertIn("title: Gross domestic product in market prices", dumped["embedding_text"])
+        self.assertIn("dataset_id: emiss_57319", dumped["embedding_text"])
+        self.assertIn("dimensions: OKATO; period", dumped["embedding_text"])
+        self.assertNotIn("numeric_answer", dumped["embedding_text"])
+
 
 if __name__ == "__main__":
     unittest.main()

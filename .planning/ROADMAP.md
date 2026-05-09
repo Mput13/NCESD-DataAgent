@@ -12,6 +12,13 @@
 
 **Covers:** NLU-01, NLU-02, NLU-03, NLU-04, SRCH-01, SRCH-02, SRCH-03, SRCH-04
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Shared Phase 1 foundation: requirements map, data map verification, and golden cases
+- [ ] 01-02-PLAN.md — Metadata search, source cards, retrieval comparison, and coverage/extraction probes
+- [ ] 01-03-PLAN.md — Structured NLU evaluation and MVP scope recommendation package
+
 **Исследовательские вопросы (спайки):**
 - Какой инструмент поиска по 29K метаданных даёт лучшее качество? (FAISS / DuckDB FTS / AI Studio File Search)
 - DuckDB SQL vs pandas для чтения Parquet — что удобнее для генерации кода агентом?

@@ -87,6 +87,64 @@ def test_fedstat_wide_parquet_preview_and_extracts_canonical_rows(tmp_path: Path
     assert dataset.csv_path and Path(dataset.csv_path).exists()
 
 
+def test_fedstat_source_level_indicator_and_russia_aliases(tmp_path: Path) -> None:
+    from app.data.fedstat_adapter import (
+        extract_fedstat_dataset,
+        preview_fedstat_coverage,
+    )
+
+    parquet_path = tmp_path / "fedstat-russia-wide.parquet"
+    _write_parquet(
+        parquet_path,
+        [
+            {
+                "column00": "Классификатор объектов административно-территориального деления (ОКАТО)",
+                "column01": "Единица измерения",
+                "column02": "Период",
+                "column03": "2023.0",
+                "column04": "2024.0",
+            },
+            {
+                "column00": "643 Российская Федерация",
+                "column01": "383 рубль",
+                "column02": "1558883 значение показателя за год",
+                "column03": None,
+                "column04": None,
+            },
+            {
+                "column00": "643004.АГ Российская Федерация без учета новых субъектов (с 01.01.2023)",
+                "column01": "383 рубль",
+                "column02": "1558883 значение показателя за год",
+                "column03": "1205841.9",
+                "column04": "1376477.9",
+            },
+        ],
+    )
+    source_card = {
+        "dataset_id": "57395",
+        "title": "Валовой внутренний продукт в рыночных ценах",
+        "resource_id": str(parquet_path),
+        "provenance_url": "https://fedstat.ru/indicator/57395",
+        "frequency": "annual",
+        "units": "рубль",
+    }
+
+    preview = preview_fedstat_coverage(source_card, filters={"indicator": "gdp"})
+    dataset = extract_fedstat_dataset(
+        source_card,
+        filters={"indicator": "gdp", "geography": "Russia", "periods": ["2024"]},
+        output_dir=tmp_path / "out-russia",
+        artifact_id="fedstat-russia-test",
+    )
+
+    assert preview.available_periods == ["2023", "2024"]
+    assert preview.evidence["row_count"] == 2
+    assert dataset.rows == 2
+    assert dataset.records[1]["geo_name"] == "Российская Федерация без учета новых субъектов (с 01.01.2023)"
+    assert dataset.records[1]["period"] == "2024"
+    assert dataset.records[1]["value"] == 1376477.9
+
+
 def test_world_bank_extracts_country_sets_and_normalizes_by_first_available(
     tmp_path: Path,
 ) -> None:

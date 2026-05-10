@@ -16,12 +16,12 @@ This file records the required Streamlit manual UAT checkpoint for plan 02-08. T
 
 ### Pipeline traversal
 
-- 2026-05-10 GC-001: Enter `Kakoy VVP Rossii v 2024 godu?`; expect the workflow path to run from user query through final response and preserve trace events.
-- 2026-05-10 GC-003: Enter `Sravni dinamiku VVP stran BRICS za 2015-2024 gody.`; expect selected World Bank/FedStat evidence, deterministic dataset, script, and visualization when available.
-- 2026-05-10 GC-009: Enter `Day dannye po inflyatsii.`; expect `needs_clarification` with a concrete question.
+- 2026-05-10 GC-001: Enter `Какой ВВП России в 2024 году?`; expect the workflow path to run from user query through final response and preserve trace events.
+- 2026-05-10 GC-003: Enter `Сравни динамику ВВП стран БРИКС за 2015-2024 годы.`; expect selected World Bank/FedStat evidence, deterministic dataset, script, and visualization when available.
+- 2026-05-10 GC-009: Enter `Дай данные по инфляции.`; expect `needs_clarification` with a concrete question.
 - 2026-05-10 GC-009 follow-up: Answer the clarification with geography and period; expect `continue_user_query` path and a terminal `passed` or `not_found` outcome.
-- 2026-05-10 GC-011: Enter `Naydi ofitsialnuyu inflyatsiyu v Severnoy Koree za 2024 god.`; expect honest `not_found` evidence.
-- 2026-05-10 GC-013: Enter `Naydi pokazatel EMISS 57319 i pokazhi dostupnye resursy.`; expect CKAN/scout evidence and a terminal accepted outcome.
+- 2026-05-10 GC-011: Enter `Найди официальную инфляцию в Северной Корее за 2024 год.`; expect honest `not_found` evidence.
+- 2026-05-10 GC-013: Enter `Найди показатель ЕМИСС 57319 и покажи доступные ресурсы.`; expect CKAN/scout evidence and a terminal accepted outcome.
 
 ### Trace readability
 

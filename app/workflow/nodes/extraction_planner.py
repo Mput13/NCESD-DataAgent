@@ -117,8 +117,8 @@ def build_extraction_plan(
         operations = _select_operations(intent, ok_reports)
         filters = _safe_filters_from_intent(intent)
 
-    # Pick the first ok report for dispatch routing
-    primary_report = ok_reports[0]
+    # Pick the best covered report for dispatch routing.
+    primary_report = _select_primary_report(ok_reports, filters)
     source_id = primary_report.source_id
 
     # Determine output columns from canonical adapter schema
@@ -187,6 +187,10 @@ def _safe_filters_from_intent(intent: IntentFrame) -> dict[str, Any]:
             safe["periods"] = [str(p) for p in periods if str(p).isdigit() or _is_date_like(str(p))]
         elif isinstance(periods, str) and (_is_date_like(periods) or periods.isdigit()):
             safe["periods"] = [periods]
+    elif "period" in known:
+        period = str(known["period"]).strip()
+        if _is_date_like(period) or period.isdigit():
+            safe["periods"] = [period]
 
     # Geography
     if "geography" in known:
@@ -209,6 +213,22 @@ def _safe_filters_from_intent(intent: IntentFrame) -> dict[str, Any]:
                 break
 
     return safe
+
+
+def _select_primary_report(
+    ok_reports: list[CoverageReport],
+    filters: dict[str, Any],
+) -> CoverageReport:
+    requested_periods = {str(period) for period in filters.get("periods", [])}
+
+    def score(report: CoverageReport) -> tuple[int, int]:
+        available_periods = {str(period) for period in report.available_periods}
+        evidence = report.evidence or {}
+        row_count = int(evidence.get("row_count") or 0)
+        period_score = 1 if not requested_periods or requested_periods <= available_periods else 0
+        return (period_score, row_count)
+
+    return max(ok_reports, key=score)
 
 
 def _is_date_like(value: str) -> bool:

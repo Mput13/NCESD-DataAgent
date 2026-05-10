@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+import zipfile
 
 import duckdb
 import pyarrow.parquet as pq
@@ -312,7 +313,45 @@ def _parquet_path(source_card: dict[str, Any]) -> Path:
             path = Path(str(candidate))
             if path.exists():
                 return path
+    archived = _extract_archived_parquet(source_card)
+    if archived is not None:
+        return archived
     raise FileNotFoundError(f"No readable World Bank parquet path in source card: {source_card!r}")
+
+
+def _extract_archived_parquet(source_card: dict[str, Any]) -> Path | None:
+    member = _archive_member(source_card)
+    if not member:
+        return None
+    for archive in source_card.get("local_paths") or []:
+        archive_path = Path(str(archive))
+        if not archive_path.exists() or archive_path.suffix.lower() != ".zip":
+            continue
+        try:
+            with zipfile.ZipFile(archive_path) as zf:
+                if member not in zf.namelist():
+                    continue
+                output = Path(".local/dataagent/phase1/extracted") / member
+                output.parent.mkdir(parents=True, exist_ok=True)
+                if not output.exists():
+                    output.write_bytes(zf.read(member))
+                return output
+        except zipfile.BadZipFile:
+            continue
+    return None
+
+
+def _archive_member(source_card: dict[str, Any]) -> str | None:
+    resource_id = _optional_text(source_card.get("resource_id"))
+    if resource_id and resource_id.endswith(".parquet"):
+        return resource_id
+    card_id = _optional_text(source_card.get("card_id"))
+    if card_id:
+        parts = card_id.split(":")
+        for part in reversed(parts):
+            if part.endswith(".parquet"):
+                return part
+    return None
 
 
 def _source_url(source_card: dict[str, Any], indicator_id: str) -> str:

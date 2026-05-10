@@ -78,7 +78,7 @@ async function sendMessage() {
       ...(isContinuation
         ? { run_id: latestWorkflow.runId, answer: text }
         : { query: text }),
-      local_mode: true,
+      local_mode: false,
     });
     typing.remove();
     renderWorkflowResponse(response);
@@ -139,8 +139,12 @@ function workflowViewModel(response) {
   if (questions.length) {
     blocks.push(card("Нужно уточнение", "Ответьте следующим сообщением", list(questions)));
   }
+  if (response.answer_blocks?.length) {
+    blocks.push(answerBlocksCard(response.answer_blocks));
+  }
   if (datasets.length) {
     blocks.push(datasetSummaryCard(datasets));
+    blocks.push(...datasets.map(datasetPreviewCard).filter(Boolean));
   }
   if (selectedSources.length) {
     blocks.push(sourcesStrip(selectedSources.slice(0, 6)));
@@ -223,6 +227,52 @@ function datasetSummaryCard(datasets) {
   return card("Данные результата", `${datasets.length} artifact(s) · ${totalRows} строк`, list(items), "table");
 }
 
+function datasetPreviewCard(dataset) {
+  const records = (dataset.records || []).slice(0, 5);
+  if (!records.length) return "";
+  const rows = records.map((record) => [
+    record.geo_name || record.geo_id || "",
+    record.period || "",
+    record.value ?? "",
+    record.unit || "",
+    (record.quality_flags || []).join(", "),
+  ]);
+  return card(
+    "Строки датасета",
+    dataset.artifact_id || dataset.source_id || "",
+    table(["География", "Период", "Значение", "Ед.", "Качество"], rows),
+    "table",
+  );
+}
+
+function answerBlocksCard(blocks) {
+  const html = blocks
+    .map((block) => {
+      if (block.type === "summary" && block.text) {
+        return `<p>${escapeHtml(block.text)}</p>`;
+      }
+      if (block.type === "methodology" && block.text) {
+        return `<p><strong>Методология:</strong> ${escapeHtml(block.text)}</p>`;
+      }
+      if (block.type === "how_found" && block.text) {
+        return `<p><strong>Как найдено:</strong> ${escapeHtml(block.text)}</p>`;
+      }
+      if (block.type === "limitations" && block.items?.length) {
+        return `<p><strong>Ограничения:</strong></p>${list(block.items)}`;
+      }
+      if (block.type === "not_found") {
+        return `<p>${escapeHtml(block.summary || "Данные не найдены")}</p>`;
+      }
+      if (block.type === "clarification_request" && block.questions?.length) {
+        return list(block.questions);
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("");
+  return html ? card("Ответ", "Сводка, методология и ограничения", `<div class="answer-blocks">${html}</div>`, "doc") : "";
+}
+
 function sourcesStrip(sources) {
   return `
     <div class="sources-strip">
@@ -261,6 +311,20 @@ function list(items) {
   return `<div class="table-wrap"><table class="data-table"><tbody>${items
     .map((item) => `<tr><td>${escapeHtml(item)}</td></tr>`)
     .join("")}</tbody></table></div>`;
+}
+
+function table(headers, rows) {
+  return `
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${rows
+            .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+            .join("")}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function syncArtifacts(response) {

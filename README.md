@@ -28,6 +28,20 @@ PYTHONPATH=. python3 -m streamlit run app/ui/streamlit_app.py --server.port 8501
 
 The UI calls `app.workflow.service.run_user_query`, `continue_user_query`, and `apply_feedback`. It renders the shared `WorkflowResponse` contract: answer, citations, selected/rejected sources, coverage, extraction plan, dataset/script downloads, visualization, trace, limitations, clarification questions, not-found evidence, and feedback actions.
 
+## Run One Workflow Query Without UI
+
+```bash
+PYTHONPATH=. python3 scripts/run_workflow_query.py "Какой ВВП России в 2024 году?"
+```
+
+The command calls the same `app.workflow.service.run_user_query` entrypoint as Streamlit and writes the full `WorkflowResponse` JSON under `.planning/phases/02-jury-mvp/manual-runs/<run_id>/response.json`.
+
+For clarification flows:
+
+```bash
+PYTHONPATH=. python3 scripts/run_workflow_query.py "Дай данные по инфляции." --follow-up "Россия, 2024 год"
+```
+
 ## Run All-20 Golden Acceptance
 
 ```bash

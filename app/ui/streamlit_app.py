@@ -20,11 +20,11 @@ from app.workflow.service import (
 
 PHASE1_DIR = Path(".planning/phases/01-data-architecture-research")
 EXAMPLE_PROMPTS = [
-    "Kakoy VVP Rossii v 2024 godu?",
-    "Sravni dinamiku VVP stran BRICS za 2015-2024 gody.",
-    "Day dannye po inflyatsii.",
-    "Naydi ofitsialnuyu inflyatsiyu v Severnoy Koree za 2024 god.",
-    "Naydi pokazatel EMISS 57319 i pokazhi dostupnye resursy.",
+    "Какой ВВП России в 2024 году?",
+    "Сравни динамику ВВП стран БРИКС за 2015-2024 годы.",
+    "Дай данные по инфляции.",
+    "Найди официальную инфляцию в Северной Корее за 2024 год.",
+    "Найди показатель ЕМИСС 57319 и покажи доступные ресурсы.",
 ]
 
 

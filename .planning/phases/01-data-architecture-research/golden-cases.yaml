@@ -5,17 +5,19 @@
   expected_sources:
     - "FedStat"
     - "World Bank"
-  needs_clarification: true
+  needs_clarification: false
   expected_artifacts:
     - "IntentArtifact with metric=GDP, geography=Russia, period=2024"
     - "SourceCandidateCard for FedStat GDP and World Bank GDP"
-    - "Clarification question about Rosstat rubles vs World Bank current USD"
+    - "CoverageReport before extraction"
+    - "DatasetArtifact or not_found evidence if 2024 coverage is unavailable"
   expected_rejection_or_no_data:
-    - "Do not extract a value until the source/methodology choice is resolved."
+    - "Prefer a default official/current GDP source instead of asking for methodology when the user gave metric, geography, and period."
+    - "If a candidate source lacks 2024 coverage, reject it with a coverage reason."
   trace_expectations:
     - "intent classification is simple"
     - "candidate sources show source, unit, period, geography, and provenance"
-    - "trace records why clarification blocks extraction"
+    - "trace records source selection, coverage, and extraction/not-found evidence"
 
 - id: GC-002
   category: simple

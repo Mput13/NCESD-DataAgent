@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -204,15 +205,17 @@ def _filter_rows(
     if indicator:
         needle = indicator.casefold()
         indicator_column = metadata.get("indicator_column") if metadata else None
-        result = [
+        indicator_matches = [
             row
             for row in result
             if needle in (_optional_text(row.get(indicator_column)) or "").casefold()
             or any(needle == (_optional_text(value) or "").casefold() for value in row.values())
         ]
+        if indicator_matches or indicator_column:
+            result = indicator_matches
     if geography and metadata:
-        needle = geography.casefold()
-        result = [row for row in result if _geo_name(row, metadata).casefold() == needle]
+        aliases = _geography_aliases(geography)
+        result = [row for row in result if _geo_matches(_geo_name(row, metadata), aliases)]
     return result
 
 
@@ -230,7 +233,45 @@ def _parquet_path(source_card: dict[str, Any]) -> Path:
             path = Path(str(candidate))
             if path.exists():
                 return path
+    archived = _extract_archived_parquet(source_card)
+    if archived is not None:
+        return archived
     raise FileNotFoundError(f"No readable FedStat parquet path in source card: {source_card!r}")
+
+
+def _extract_archived_parquet(source_card: dict[str, Any]) -> Path | None:
+    member = _archive_member(source_card)
+    if not member:
+        return None
+    for archive in source_card.get("local_paths") or []:
+        archive_path = Path(str(archive))
+        if not archive_path.exists() or archive_path.suffix.lower() != ".zip":
+            continue
+        try:
+            with zipfile.ZipFile(archive_path) as zf:
+                if member not in zf.namelist():
+                    continue
+                output = Path(".local/dataagent/phase1/extracted") / member
+                output.parent.mkdir(parents=True, exist_ok=True)
+                if not output.exists():
+                    output.write_bytes(zf.read(member))
+                return output
+        except zipfile.BadZipFile:
+            continue
+    return None
+
+
+def _archive_member(source_card: dict[str, Any]) -> str | None:
+    resource_id = _optional_text(source_card.get("resource_id"))
+    if resource_id and resource_id.endswith(".parquet"):
+        return resource_id
+    card_id = _optional_text(source_card.get("card_id"))
+    if card_id:
+        parts = card_id.split(":")
+        for part in reversed(parts):
+            if part.endswith(".parquet"):
+                return part
+    return None
 
 
 def _has_technical_columns(columns: list[str]) -> bool:
@@ -239,6 +280,10 @@ def _has_technical_columns(columns: list[str]) -> bool:
 
 def _safe_column_name(value: Any, index: int) -> str:
     text = _optional_text(value)
+    if text:
+        year = re.fullmatch(r"((?:19|20)\d{2})(?:\.0+)?", text)
+        if year:
+            return year.group(1)
     return text or f"column_{index}"
 
 
@@ -259,7 +304,34 @@ def _optional_text(value: Any) -> str | None:
 
 def _geo_name(row: dict[str, Any], metadata: dict[str, Any]) -> str:
     geo_column = metadata.get("geo_column")
-    return _optional_text(row.get(geo_column)) if geo_column else ""
+    return _clean_geo_name(_optional_text(row.get(geo_column))) if geo_column else ""
+
+
+def _clean_geo_name(value: str | None) -> str:
+    if not value:
+        return ""
+    text = re.sub(r"\s+", " ", value).strip()
+    text = re.sub(r"^\d+(?:[\w.]+)?\s+", "", text)
+    return text.strip()
+
+
+def _geography_aliases(geography: str) -> set[str]:
+    normalized = _normalize_match_text(geography)
+    aliases = {normalized}
+    if normalized in {"russia", "russian federation", "россия", "российская федерация", "rf"}:
+        aliases.update({"russia", "russian federation", "россия", "российская федерация"})
+    return aliases
+
+
+def _geo_matches(value: str, aliases: set[str]) -> bool:
+    normalized = _normalize_match_text(value)
+    if normalized in aliases:
+        return True
+    return any(alias and alias in normalized for alias in aliases)
+
+
+def _normalize_match_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value.casefold()).strip()
 
 
 def _indicator_name(row: dict[str, Any], metadata: dict[str, Any]) -> str | None:

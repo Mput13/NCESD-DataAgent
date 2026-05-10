@@ -197,6 +197,8 @@ def _resolve_source_family(plan: ExtractionPlan) -> str:
         sid = plan.source_id.lower()
         if "fedstat" in sid or "emiss" in sid or "емисс" in sid:
             return "fedstat"
+        if sid.isdigit():
+            return "fedstat"
         if "world_bank" in sid or "wb" in sid or any(
             c.isupper() for c in plan.source_id[:3]
         ):
@@ -269,9 +271,10 @@ def extract_fedstat_dataset(
 ) -> DatasetArtifact | NoDataExplanationArtifact:
     """Dispatch to the FedStat deterministic adapter."""
     from app.data.fedstat_adapter import extract_fedstat_dataset as _extract
+    from app.data.source_card_lookup import lookup_source_card
 
     # Build a minimal source_card from the plan
-    source_card = {
+    source_card = lookup_source_card(extraction_plan.source_id) or {
         "source_family": "fedstat",
         "dataset_id": extraction_plan.source_id or "fedstat_unknown",
         "resource_id": extraction_plan.source_id or "fedstat_unknown",
@@ -304,8 +307,9 @@ def extract_world_bank_dataset(
 ) -> DatasetArtifact | NoDataExplanationArtifact:
     """Dispatch to the World Bank deterministic adapter."""
     from app.data.world_bank_adapter import extract_world_bank_dataset as _extract
+    from app.data.source_card_lookup import lookup_source_card
 
-    source_card = {
+    source_card = lookup_source_card(extraction_plan.source_id) or {
         "source_family": "world_bank",
         "dataset_id": extraction_plan.source_id or "wb_unknown",
         "resource_id": extraction_plan.source_id or "wb_unknown",

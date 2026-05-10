@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.artifacts.workflow_artifacts import CoverageReport, EvidenceBundleArtifact
+from app.data.source_card_lookup import hydrate_source_card
 
 
 def run_coverage_preview(
@@ -144,6 +145,7 @@ def _preview_one_source(
     intent_fields: dict[str, Any],
 ) -> CoverageReport:
     """Dispatch coverage preview to the correct adapter by source_family."""
+    source_card = hydrate_source_card(source_card)
     family = str(source_card.get("source_family") or "").lower().strip()
 
     if family == "fedstat":
@@ -225,7 +227,9 @@ def _world_bank_coverage(
         countries = intent_fields.get("countries") or intent_fields.get("geography") or []
         if isinstance(countries, str):
             countries = [countries]
-        periods = intent_fields.get("periods") or []
+        periods = intent_fields.get("periods") or intent_fields.get("period") or []
+        if isinstance(periods, str):
+            periods = [periods]
         indicator_id = str(
             intent_fields.get("indicator_id")
             or source_card.get("dataset_id")

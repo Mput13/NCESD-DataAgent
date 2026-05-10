@@ -27,17 +27,18 @@
         "period": "2024",
         "indicator": "GDP"
       },
-      "expected_terminal_outcome": "needs_clarification",
+      "expected_terminal_outcome": "passed",
       "required_adapter": "world_bank_adapter",
       "artifact_expectations": [
         "IntentArtifact with metric=GDP, geography=Russia, period=2024",
         "SourceCandidateCard for FedStat GDP and World Bank GDP",
-        "Clarification question about Rosstat rubles vs World Bank current USD"
+        "CoverageReport before extraction",
+        "DatasetArtifact or not_found evidence if 2024 coverage is unavailable"
       ],
-      "missing_data_evidence": "Clarification required: two valid sources (FedStat rubles vs World Bank USD/PPP) offer different methodologies; extraction cannot proceed without user choice.",
+      "missing_data_evidence": "Do not ask for methodology when metric, geography, and period are present; select a default official/current GDP source and record coverage/extraction evidence.",
       "query_ru": "Какой ВВП России в 2024 году?",
       "category": "simple",
-      "needs_clarification": true
+      "needs_clarification": false
     },
     {
       "case_id": "GC-002",

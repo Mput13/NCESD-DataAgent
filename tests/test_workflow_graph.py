@@ -85,6 +85,7 @@ def test_graph_contract_names_roles_budgets_and_trace_owner() -> None:
 
 
 def test_run_graph_emits_machine_readable_trace(tmp_path: Path) -> None:
+    """Phase 2: run_golden_case uses Phase2State with finalization_pending."""
     from app.workflow.run_graph import run_golden_case
 
     goldens = tmp_path / "golden.yaml"
@@ -99,29 +100,20 @@ def test_run_graph_emits_machine_readable_trace(tmp_path: Path) -> None:
 """,
         encoding="utf-8",
     )
-    manifest = tmp_path / "embedding-index-manifest.json"
-    manifest.write_text(
-        json.dumps(
-            {
-                "status": "gated_skip",
-                "dense_status": "gated_skip",
-                "vector_store": "qdrant",
-                "collection_name": "phase1_source_cards_test",
-                "corpus_artifact_path": str(tmp_path / "missing.jsonl"),
-                "missing_env_vars": ["YANDEX_AI_STUDIO_API_KEY"],
-            }
-        ),
-        encoding="utf-8",
-    )
+    json_output = tmp_path / "output.json"
 
     result = run_golden_case(
         goldens_path=goldens,
         case_index=0,
-        index_manifest_path=manifest,
+        json_output=json_output,
+        live_llm=False,
+        live_embeddings=False,
+        artifact_dir=tmp_path / "artifacts",
     )
 
-    assert result["status"] == "gated"
-    assert result["qdrant_status"] == "gated_skip"
+    # Phase 2: status is finalization_pending (not gated)
+    assert result["status"] == "finalization_pending"
+    assert result.get("finalization_pending") is True
+    assert result.get("run_id", "").startswith("phase2-")
     assert result["trace_events"]
-    assert result["rejected_sources"] or result["selected_sources"] or result["no_data_reason"]
     assert "unsupported_numeric_claim" not in json.dumps(result)

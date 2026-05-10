@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-05-10T11:53:31.083Z"
+stopped_at: Completed 02-09-PLAN.md
+last_updated: "2026-05-10T11:57:09.038Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 15
-  completed_plans: 6
+  completed_plans: 8
 ---
 
 # Project State: DataAgent
@@ -143,6 +143,21 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 - **2026-05-10 — Plan 02-01 defines one guarded workflow service entrypoint.**
   `run_user_query` is the shared frontend/eval/CLI import path and deliberately raises until plan `02-06` implements real final `WorkflowResponse` assembly.
 
+- **2026-05-10 — Plan 02-03 normalizes FedStat wide Parquet deterministically.**
+  FedStat technical-column Parquet tables are converted by treating the first row as logical headers, then extracting canonical source-bound long rows through code.
+
+- **2026-05-10 — Plan 02-03 keeps World Bank geographies deterministic.**
+  Russia/Kazakhstan/China aliases and BRICS/EAEU sets resolve to ISO3 country lists; aggregate rows are excluded unless explicitly requested.
+
+- **2026-05-10 — Plan 02-03 exports typed reproducibility scripts.**
+  Dataset exports now pair `DatasetArtifact` output with downloadable `ScriptArtifact` objects carrying path, checksum, and source dataset metadata.
+
+- **2026-05-10 — Plan 02-09 requires Qdrant server manifest evidence.**
+  Dense retrieval readiness for Phase 2 now depends on `.planning/phases/02-jury-mvp/qdrant-server-manifest.json` with matching corpus hash, server URL, collection, vector count, and reproduce command.
+
+- **2026-05-10 — Plan 02-09 promotes cached embeddings by default.**
+  `scripts/promote_qdrant_server.py` reuses `.local/dataagent/phase1/embedding-cache.jsonl`; missing cache coverage fails unless `--allow-reembed` is explicitly passed.
+
 - **2026-05-10 — Plan 04 keeps Qwen as the target with explicit credential gates.**
   The verified AI Studio host is `https://llm.api.cloud.yandex.net/v1` with `Api-Key` auth. Missing Qwen credentials produce `gated_skip` evidence instead of silent success; DeepSeek remains historical fallback evidence only.
 
@@ -199,7 +214,7 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Recommended Next Action
 
-Phase 1 plans are complete and accepted only as infrastructure. Phase 2 execution has completed plan `02-01`; continue through the accepted 10-plan Phase 2 set. Next:
+Phase 1 plans are complete and accepted only as infrastructure. Phase 2 execution has completed plans `02-01`, `02-03`, and `02-09`; continue through the accepted 10-plan Phase 2 set. Next:
 
 1. Stay on `codex/phase-2-jury-mvp-planning`.
 2. Keep unrelated embedding-experiment dirty files isolated from Phase 2 planning commits.
@@ -208,14 +223,16 @@ Phase 1 plans are complete and accepted only as infrastructure. Phase 2 executio
 
 ## Session Continuity
 
-Last session: 2026-05-10T11:53:31.081Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-05-10T11:57:09.036Z
+Stopped at: Completed 02-09-PLAN.md
 Resume file: None
 
 ---
 ## Performance Metrics
 
 - 2026-05-10 — Phase `02-jury-mvp`, Plan `01`: 3 min, 3 tasks, 4 artifact/code/test files.
+- 2026-05-10 — Phase `02-jury-mvp`, Plan `03`: 6 min, 3 tasks, 6 artifact/code/test files.
+- 2026-05-10 — Phase `02-jury-mvp`, Plan `09`: 6 min, 3 tasks, 7 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `01`: 1 min, 3 tasks, 3 artifact files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `02`: 5 min, 2 tasks, 15 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `03`: 7 min, 2 tasks, 12 artifact/code/test files.

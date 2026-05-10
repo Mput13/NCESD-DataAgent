@@ -67,7 +67,7 @@
 
 **Canonical directory:** `.planning/phases/02-jury-mvp`
 
-**Status:** In Progress; plan `02-01` completed.
+**Status:** In Progress; plans `02-01`, `02-03`, and `02-09` completed.
 
 **Why this phase exists:** Phase 1 is accepted only as infrastructure. The acceptance report `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` shows the current system is not a functional MVP: pytest is 26/27, demo readiness is blocked/stale, dense retrieval is gated for all 20 golden cases, extraction is probe-level, data relevance eval is 0 passed / 20 gated, and the current Streamlit UI is diagnostic rather than a jury UI.
 
@@ -94,9 +94,9 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 ### Plans
 
 - [x] `02-01-PLAN.md` — Response/status/artifact contract and shared workflow service interface
-- [ ] `02-09-PLAN.md` — Operational Qdrant server promotion, population, and readiness evidence
+- [x] `02-09-PLAN.md` — Operational Qdrant server promotion, population, and readiness evidence
 - [ ] `02-02-PLAN.md` — Source retrieval ranking hardening and all-20 retrieval evidence
-- [ ] `02-03-PLAN.md` — FedStat and World Bank deterministic extraction adapters
+- [x] `02-03-PLAN.md` — FedStat and World Bank deterministic extraction adapters
 - [ ] `02-04-PLAN.md` — CKAN promotion/extraction, source scouts, coverage, and safe extraction planning nodes
 - [ ] `02-10-PLAN.md` — All-20 golden coverage/extraction matrix over Phase 1 cards and dumps
 - [ ] `02-05-PLAN.md` — LangGraph workflow runtime through extraction with explicit finalization pending
@@ -134,7 +134,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 **Total v1 requirements:** 27  
 **Coverage:** 100% mapped; functional acceptance deferred to Phase 2  
 **Phase 1 status:** accepted as infrastructure, not product MVP  
-**Phase 2 status:** in progress; 1/10 plans complete  
+**Phase 2 status:** in progress; 3/10 plans complete  
 
 ---
-*Last updated: 2026-05-10 — Phase 2 plan 02-01 completed*
+*Last updated: 2026-05-10 — Phase 2 plans 02-01, 02-03, and 02-09 completed*

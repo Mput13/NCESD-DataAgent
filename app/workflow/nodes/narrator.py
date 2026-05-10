@@ -262,6 +262,16 @@ def _build_response_live(
         max_tokens=1024,
     )
 
+    no_data_evidence: NoDataExplanationArtifact | None = None
+    if final_outcome == "not_found":
+        no_data_evidence = NoDataExplanationArtifact(
+            artifact_id=f"not-found-{uuid4().hex[:8]}",
+            checked_sources=selected_sources[:10] or [{"source_id": "no_sources_checked"}],
+            rejected_sources=rejected_sources[:10],
+            rejection_reasons=critique.warnings or ["not_found"],
+            search_strategy="fedstat/world_bank/ckan_source_scouts",
+        )
+
     return _assemble_response(
         state=state,
         final_outcome=final_outcome,
@@ -276,6 +286,7 @@ def _build_response_live(
         dataset_artifacts=dataset_artifacts,
         script_artifacts=script_artifacts,
         coverage_reports=coverage_reports,
+        no_data_evidence=no_data_evidence,
         extra_statuses={},
     )
 
@@ -285,121 +296,24 @@ def _build_response_live(
 # ---------------------------------------------------------------------------
 
 
-def _build_response_fallback(
-    state: dict[str, Any],
-    *,
-    final_outcome: TerminalOutcome,
-    critique: CritiqueReport,
-    visualization: VisualizationSpec | None,
-) -> WorkflowResponse:
-    """Deterministic narrator fallback for tests. Marks test_only_narrator_fallback.
-
-    Plan 02-07 must exclude this marker from jury readiness checks.
-    """
-    dataset_artifacts: list[DatasetArtifact] = list(state.get("dataset_artifacts") or [])
-    script_artifacts: list[ScriptArtifact] = list(state.get("script_artifacts") or [])
-    coverage_reports: list[Any] = list(state.get("coverage_reports") or [])
-    intent: Any = state.get("intent")
-    query: str = str(state.get("query") or "")
-
-    extra_statuses = {"narrator": "test_only_narrator_fallback"}
-
-    if final_outcome == "passed":
-        # Validate guardrails
-        ok_datasets = [d for d in dataset_artifacts if d.status == "ok" and (d.rows or 0) > 0]
-        if not ok_datasets:
-            # Downgrade to not_found if no ok dataset
-            return _build_not_found_response(
-                state=state,
-                critique=critique,
-                visualization=visualization,
-                dataset_artifacts=dataset_artifacts,
-                script_artifacts=script_artifacts,
-                coverage_reports=coverage_reports,
-                extra_statuses=extra_statuses,
-                reason="no_ok_dataset_available",
-            )
-
-        source_ids = list({d.source_id for d in ok_datasets if d.source_id})
-        message = (
-            f"[test_only_narrator_fallback] "
-            f"Запрос: {query}. "
-            f"Данные получены из источников: {', '.join(source_ids) or 'unknown'}. "
-            f"Датасеты: {len(ok_datasets)} шт., строк: {sum(d.rows or 0 for d in ok_datasets)}."
-        )
-        return _assemble_response(
-            state=state,
-            final_outcome="passed",
-            critique=critique,
-            visualization=visualization,
-            message=message,
-            summary=f"Данные получены: {len(ok_datasets)} датасет(ов) из {', '.join(source_ids) or 'unknown'}.",
-            methodology="Детерминированное извлечение через DuckDB/PyArrow адаптеры.",
-            limitations=critique.warnings or [],
-            how_found=f"Источники: {', '.join(source_ids) or 'unknown'}",
-            clarification_questions=[],
-            dataset_artifacts=dataset_artifacts,
-            script_artifacts=script_artifacts,
-            coverage_reports=coverage_reports,
-            extra_statuses=extra_statuses,
-        )
-
-    elif final_outcome == "needs_clarification":
-        missing_fields = list(getattr(intent, "missing_fields", []) or []) if intent else []
-        clarification_questions = _derive_clarification_questions(missing_fields, query)
-
-        message = f"[test_only_narrator_fallback] Уточните запрос: {query}."
-        return _assemble_response(
-            state=state,
-            final_outcome="needs_clarification",
-            critique=critique,
-            visualization=None,
-            message=message,
-            summary="Требуется уточнение запроса.",
-            methodology="",
-            limitations=[],
-            how_found="",
-            clarification_questions=clarification_questions,
-            dataset_artifacts=[],
-            script_artifacts=[],
-            coverage_reports=coverage_reports,
-            extra_statuses=extra_statuses,
-        )
-
-    else:
-        # not_found
-        return _build_not_found_response(
-            state=state,
-            critique=critique,
-            visualization=visualization,
-            dataset_artifacts=dataset_artifacts,
-            script_artifacts=script_artifacts,
-            coverage_reports=coverage_reports,
-            extra_statuses=extra_statuses,
-            reason="sources_checked_not_found",
-        )
+def _build_response_fallback(*_: object, **__: object) -> WorkflowResponse:
+    raise RuntimeError(
+        "Narrator requires a live LLM call (Yandex AI Studio / Qwen). "
+        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
+        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
+    )
 
 
 def _derive_clarification_questions(missing_fields: list[str], query: str) -> list[str]:
-    """Derive concrete clarification questions from missing_fields."""
     field_to_question = {
         "geography": "Для какой страны или региона нужны данные?",
         "period": "За какой период нужны данные (годы, кварталы)?",
-        "indicator": "Какой именно показатель вас интересует?",
+        "indicator": "Какой именно экономический показатель вас интересует?",
         "unit": "В каких единицах измерения нужны данные?",
-        "source": "Какой источник данных предпочтителен (Росстат, World Bank, НЦСЭД)?",
+        "source": "Какой источник данных предпочтителен: Росстат, World Bank или НЦСЭД?",
     }
-    questions = []
-    for field in missing_fields:
-        if field in field_to_question:
-            questions.append(field_to_question[field])
-        else:
-            questions.append(f"Уточните '{field}' для запроса: {query}")
-
-    if not questions:
-        questions = [f"Уточните ваш запрос: '{query}'. Укажите период, географию и показатель."]
-
-    return questions
+    questions = [field_to_question.get(field, f"Уточните поле '{field}' для запроса: {query}") for field in missing_fields]
+    return questions or [f"Уточните запрос: '{query}'. Укажите период, географию и показатель."]
 
 
 def _build_not_found_response(

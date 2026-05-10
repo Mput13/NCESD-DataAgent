@@ -118,40 +118,39 @@ class TestAnalyzeIntent:
         assert result.query == "ВВП России 2024"
         assert result.category == "simple"
 
-    def test_analyze_intent_fallback_marks_test_only(self) -> None:
-        from app.workflow.state import analyze_intent
-        from app.artifacts.workflow_artifacts import IntentFrame
-
-        result = analyze_intent("ВВП России 2024", live_llm_required=False)
-        assert isinstance(result, IntentFrame)
-        # Fallback must mark as test_only
-        assert any(
-            "test_only" in r for r in result.open_reasoning
-        ), f"Expected test_only in open_reasoning, got {result.open_reasoning}"
-
-    def test_analyze_intent_fallback_marks_test_only_intent_fallback(self) -> None:
+    def test_analyze_intent_live_llm_required_false_raises(self) -> None:
+        """live_llm_required=False must raise — no silent keyword fallback allowed."""
+        import pytest
         from app.workflow.state import analyze_intent
 
-        result = analyze_intent("Инфляция", live_llm_required=False)
-        assert any(
-            "test_only_intent_fallback" in r for r in result.open_reasoning
-        ), f"Expected test_only_intent_fallback marker, got {result.open_reasoning}"
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            analyze_intent("ВВП России 2024", live_llm_required=False)
 
-    def test_analyze_intent_ambiguous_cases_need_clarification(self) -> None:
-        from app.workflow.state import analyze_intent
+    def test_analyze_intent_live_path_calls_yandex_client(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """live_llm_required=True must call YandexAIStudioClient, not keyword matching."""
+        from unittest.mock import MagicMock
+        from app.workflow.state import analyze_intent, _IntentAnalysisSchema
 
-        # Ambiguous queries should be detectable via fallback
-        result = analyze_intent("Какой ВВП?", live_llm_required=False)
-        assert isinstance(result.needs_clarification, bool)
+        mock_result = _IntentAnalysisSchema(
+            category="simple",
+            needs_clarification=False,
+            geography="Россия",
+            period="2024",
+            indicator="ВВП",
+            source_preferences=["world_bank"],
+            missing_fields=[],
+        )
+        mock_client = MagicMock()
+        mock_client.structured_chat.return_value = mock_result
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient",
+                            lambda: mock_client)
 
-    def test_analyze_intent_component_status_test_only_when_fallback(self) -> None:
-        """Fallback component_status must expose test_only so plan 02-07 can exclude it."""
-        from app.workflow.state import analyze_intent
-
-        result = analyze_intent("test", live_llm_required=False)
-        # The open_reasoning should include the test_only marker
-        joined = " ".join(result.open_reasoning)
-        assert "test_only" in joined
+        result = analyze_intent("ВВП России 2024", live_llm_required=True)
+        assert result.category == "simple"
+        assert result.known_fields.get("geography") == "Россия"
+        mock_client.structured_chat.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -160,37 +159,58 @@ class TestAnalyzeIntent:
 
 
 class TestDesignResearch:
-    """design_research: Qwen structured output target path + test fallback."""
+    """design_research: Qwen structured output is the only path."""
 
-    def test_design_research_fallback_marks_test_only_research_design_fallback(self) -> None:
-        from app.workflow.state import design_research, analyze_intent
-        from app.artifacts.workflow_artifacts import ResearchDesignArtifact
+    def test_design_research_live_llm_required_false_raises(self) -> None:
+        """live_llm_required=False must raise — no silent keyword fallback allowed."""
+        import pytest
+        from app.workflow.state import design_research
+        from app.artifacts.workflow_artifacts import IntentFrame
 
-        intent = analyze_intent("ВВП БРИКС", live_llm_required=False)
-        result = design_research(intent, live_llm_required=False)
-        assert isinstance(result, ResearchDesignArtifact)
-        # Must use test_only_research_design_fallback marker
-        all_text = " ".join(result.assumptions + result.hypotheses)
-        assert "test_only_research_design_fallback" in all_text, (
-            f"Expected test_only_research_design_fallback in design, got: {all_text!r}"
+        intent = IntentFrame(
+            query="ВВП БРИКС",
+            category="comparative",
+            known_fields={},
+            missing_fields=[],
+            needs_clarification=False,
+            source_preferences=[],
+            open_reasoning=[],
         )
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            design_research(intent, live_llm_required=False)
 
-    def test_design_research_returns_research_design_artifact(self) -> None:
-        from app.workflow.state import design_research, analyze_intent
-        from app.artifacts.workflow_artifacts import ResearchDesignArtifact
+    def test_design_research_live_path_calls_yandex_client(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """live_llm_required=True must call YandexAIStudioClient."""
+        from unittest.mock import MagicMock
+        from app.workflow.state import design_research, _ResearchDesignSchema
+        from app.artifacts.workflow_artifacts import IntentFrame
 
-        intent = analyze_intent("Торговля России и Казахстана", live_llm_required=False)
-        result = design_research(intent, live_llm_required=False)
-        assert isinstance(result, ResearchDesignArtifact)
-        assert result.artifact_id
+        intent = IntentFrame(
+            query="ВВП России",
+            category="simple",
+            known_fields={"geography": "Россия"},
+            missing_fields=[],
+            needs_clarification=False,
+            source_preferences=["world_bank"],
+            open_reasoning=[],
+        )
+        mock_result = _ResearchDesignSchema(
+            hypotheses=["ВВП России растёт"],
+            dimensions=["geography", "period"],
+            indicators=["NY.GDP.MKTP.CD"],
+            grouping_policy=None,
+            assumptions=[],
+        )
+        mock_client = MagicMock()
+        mock_client.structured_chat.return_value = mock_result
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient",
+                            lambda: mock_client)
 
-    def test_design_research_with_matrix_hint(self) -> None:
-        from app.workflow.state import design_research, analyze_intent
-
-        intent = analyze_intent("Инфляция", live_llm_required=False)
-        hint = {"source_family": "world_bank", "source_id": "FP.CPI.TOTL.ZG"}
-        result = design_research(intent, live_llm_required=False, matrix_hint=hint)
-        assert result is not None
+        result = design_research(intent, live_llm_required=True)
+        assert result.hypotheses == ["ВВП России растёт"]
+        mock_client.structured_chat.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

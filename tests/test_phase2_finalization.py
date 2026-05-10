@@ -164,100 +164,86 @@ class TestMethodologyCriticModule:
         src = Path(critic_module.__file__).read_text(encoding="utf-8")
         assert "passed outcome requires" in src
 
-    def test_critic_source_contains_test_only_critic_fallback(self) -> None:
-        import app.workflow.nodes.critic as critic_module
-        from pathlib import Path
+    def test_critic_live_llm_required_false_raises(self) -> None:
+        """live_llm_required=False must raise RuntimeError — no silent keyword fallback."""
+        import pytest
+        from app.workflow.nodes.critic import run_methodology_critic
 
-        src = Path(critic_module.__file__).read_text(encoding="utf-8")
-        assert "test_only_critic_fallback" in src
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            run_methodology_critic({}, live_llm_required=False)
 
 
 class TestRunMethodologyCritic:
     """run_methodology_critic produces a CritiqueReport."""
 
-    def test_gated_coverage_maps_away_from_pass(self) -> None:
-        """Coverage with status != ok must prevent passed outcome."""
+    def test_gated_coverage_live_llm_false_raises(self) -> None:
+        """live_llm_required=False always raises — no keyword fallback."""
+        import pytest
         from app.workflow.nodes.critic import run_methodology_critic
 
         state = _make_state(
             dataset_artifacts=[_make_ok_dataset()],
             coverage_reports=[_make_gated_coverage()],
         )
-        critique = run_methodology_critic(state, live_llm_required=False)
-        # Verdict must not be "pass" when coverage is gated
-        assert critique.verdict != "pass", (
-            f"Expected non-pass verdict for gated coverage, got {critique.verdict}"
-        )
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            run_methodology_critic(state, live_llm_required=False)
 
-    def test_no_ok_dataset_maps_away_from_pass(self) -> None:
-        """No dataset artifact with status=ok must prevent passed verdict."""
+    def test_no_ok_dataset_live_llm_false_raises(self) -> None:
+        """live_llm_required=False always raises."""
+        import pytest
         from app.artifacts.workflow_artifacts import DatasetArtifact
         from app.workflow.nodes.critic import run_methodology_critic
 
-        bad_dataset = DatasetArtifact(
-            artifact_id="dataset-bad",
-            status="gated",
-            rows=0,
-        )
-        state = _make_state(
-            dataset_artifacts=[bad_dataset],
-            coverage_reports=[_make_ok_coverage()],
-        )
-        critique = run_methodology_critic(state, live_llm_required=False)
-        assert critique.verdict != "pass"
+        bad_dataset = DatasetArtifact(artifact_id="dataset-bad", status="gated", rows=0)
+        state = _make_state(dataset_artifacts=[bad_dataset], coverage_reports=[_make_ok_coverage()])
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            run_methodology_critic(state, live_llm_required=False)
 
-    def test_empty_provenance_maps_away_from_pass(self) -> None:
-        """Dataset artifact with empty provenance must prevent passed verdict."""
+    def test_empty_provenance_live_llm_false_raises(self) -> None:
+        """live_llm_required=False always raises."""
+        import pytest
         from app.artifacts.workflow_artifacts import DatasetArtifact
         from app.workflow.nodes.critic import run_methodology_critic
 
-        dataset_no_prov = DatasetArtifact(
-            artifact_id="dataset-noprov",
-            status="ok",
-            rows=2,
-            provenance=[],
-        )
-        state = _make_state(
-            dataset_artifacts=[dataset_no_prov],
-            coverage_reports=[_make_ok_coverage()],
-        )
-        critique = run_methodology_critic(state, live_llm_required=False)
-        assert critique.verdict != "pass"
+        dataset_no_prov = DatasetArtifact(artifact_id="dataset-noprov", status="ok", rows=2, provenance=[])
+        state = _make_state(dataset_artifacts=[dataset_no_prov], coverage_reports=[_make_ok_coverage()])
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            run_methodology_critic(state, live_llm_required=False)
 
-    def test_all_ok_coverage_and_dataset_produces_critique_report(self) -> None:
-        """All OK inputs produce a CritiqueReport (any valid verdict)."""
+    def test_all_ok_coverage_and_dataset_produces_critique_report(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With mocked LLM, all-OK inputs produce a valid CritiqueReport."""
+        from pydantic import BaseModel
         from app.artifacts.workflow_artifacts import CritiqueReport
         from app.workflow.nodes.critic import run_methodology_critic
 
-        state = _make_state(
-            dataset_artifacts=[_make_ok_dataset()],
-            coverage_reports=[_make_ok_coverage()],
-        )
-        critique = run_methodology_critic(state, live_llm_required=False)
+        class FakeCritiqueSchema(BaseModel):
+            verdict: str = "pass"
+            warnings: list[str] = []
+            repair_plan: list[str] = []
+
+        mock_client = FakeCritiqueSchema()
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        from unittest.mock import MagicMock
+        fake = MagicMock()
+        fake.structured_chat.return_value = FakeCritiqueSchema()
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: fake)
+
+        state = _make_state(dataset_artifacts=[_make_ok_dataset()], coverage_reports=[_make_ok_coverage()])
+        critique = run_methodology_critic(state, live_llm_required=True)
         assert isinstance(critique, CritiqueReport)
         assert critique.artifact_id
 
-    def test_no_datasets_no_coverage_maps_to_not_found_or_needs_repair(self) -> None:
-        """Empty state should not produce pass verdict."""
+    def test_no_datasets_no_coverage_live_llm_required_false_raises(self) -> None:
+        """live_llm_required=False must raise regardless of state contents."""
+        import pytest
         from app.workflow.nodes.critic import run_methodology_critic
 
         state = _make_state(dataset_artifacts=[], coverage_reports=[])
-        critique = run_methodology_critic(state, live_llm_required=False)
-        assert critique.verdict in ("not_found", "needs_repair", "needs_user_clarification")
-
-    def test_live_llm_required_false_marks_test_only_critic_fallback(self) -> None:
-        """Fallback must mark test_only_critic_fallback in warnings or repair_plan."""
-        from app.workflow.nodes.critic import run_methodology_critic
-
-        state = _make_state(
-            dataset_artifacts=[_make_ok_dataset()],
-            coverage_reports=[_make_ok_coverage()],
-        )
-        critique = run_methodology_critic(state, live_llm_required=False)
-        all_text = " ".join(critique.warnings + critique.repair_plan)
-        assert "test_only_critic_fallback" in all_text, (
-            f"Expected test_only_critic_fallback in critique, got warnings={critique.warnings}"
-        )
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            run_methodology_critic(state, live_llm_required=False)
 
     def test_monkeypatched_llm_returns_pass_verdict_when_all_ok(
         self, monkeypatch: pytest.MonkeyPatch
@@ -540,12 +526,16 @@ class TestNarratorModule:
         src = Path(narrator_module.__file__).read_text(encoding="utf-8")
         assert "assert_message_numbers_are_supported" in src
 
-    def test_narrator_source_contains_test_only_narrator_fallback(self) -> None:
-        import app.workflow.nodes.narrator as narrator_module
-        from pathlib import Path
+    def test_narrator_live_llm_required_false_raises(self) -> None:
+        """live_llm_required=False must raise RuntimeError — no silent keyword fallback."""
+        import pytest
+        from app.workflow.nodes.narrator import build_workflow_response
+        from app.artifacts.workflow_artifacts import CritiqueReport
 
-        src = Path(narrator_module.__file__).read_text(encoding="utf-8")
-        assert "test_only_narrator_fallback" in src
+        critique = CritiqueReport(artifact_id="c-001", verdict="pass")
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            build_workflow_response({}, final_outcome="not_found", critique=critique,
+                                    visualization=None, live_llm_required=False)
 
     def test_narrator_source_contains_script_artifacts(self) -> None:
         import app.workflow.nodes.narrator as narrator_module
@@ -619,9 +609,29 @@ class TestAssertMessageNumbersAreSupported:
 class TestBuildWorkflowResponse:
     """build_workflow_response produces a WorkflowResponse."""
 
+    def _mock_narrator(self, monkeypatch: pytest.MonkeyPatch, message: str = "Ответ LLM") -> None:
+        """Patch YandexAIStudioClient so narrator returns a predictable response."""
+        from unittest.mock import MagicMock
+        from pydantic import BaseModel
+
+        class FakeNarratorSchema(BaseModel):
+            message: str = "Ответ LLM"
+            summary: str = "summary"
+            methodology: str = "det"
+            limitations: list[str] = []
+            how_found: str = "scouts"
+            clarification_questions: list[str] = ["Уточните запрос?"]
+
+        fake = MagicMock()
+        fake.structured_chat.return_value = FakeNarratorSchema(message=message)
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: fake)
+
     def test_passed_response_includes_dataset_and_script(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        self._mock_narrator(monkeypatch, message="Данные из Росстат: ВВП 100 трлн руб.")
         from app.artifacts.workflow_artifacts import CritiqueReport, WorkflowResponse
         from app.workflow.nodes.narrator import build_workflow_response
         from app.workflow.nodes.visualization import build_visualization
@@ -630,27 +640,18 @@ class TestBuildWorkflowResponse:
         script_path.write_text("# script", encoding="utf-8")
         script = _make_script_artifact(str(script_path))
         dataset = _make_ok_dataset()
-        coverage = _make_ok_coverage()
-
-        critique = CritiqueReport(
-            artifact_id="critique-001",
-            verdict="pass",
-        )
+        critique = CritiqueReport(artifact_id="critique-001", verdict="pass")
         visualization = build_visualization(dataset, query_category="simple")
-
         state = _make_state(
             dataset_artifacts=[dataset],
             script_artifacts=[script],
-            coverage_reports=[coverage],
+            coverage_reports=[_make_ok_coverage()],
             tmp_path=tmp_path,
         )
 
         response = build_workflow_response(
-            state,
-            final_outcome="passed",
-            critique=critique,
-            visualization=visualization,
-            live_llm_required=False,
+            state, final_outcome="passed", critique=critique,
+            visualization=visualization, live_llm_required=True,
         )
 
         assert isinstance(response, WorkflowResponse)
@@ -659,8 +660,9 @@ class TestBuildWorkflowResponse:
         assert len(response.script_artifacts) >= 1
 
     def test_passed_response_script_artifact_path_is_downloadable(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        self._mock_narrator(monkeypatch, message="ВВП 100")
         from app.artifacts.workflow_artifacts import CritiqueReport
         from app.workflow.nodes.narrator import build_workflow_response
         from app.workflow.nodes.visualization import build_visualization
@@ -669,109 +671,90 @@ class TestBuildWorkflowResponse:
         script_path.write_text("# script", encoding="utf-8")
         script = _make_script_artifact(str(script_path))
         dataset = _make_ok_dataset()
-
         critique = CritiqueReport(artifact_id="critique-001", verdict="pass")
         visualization = build_visualization(dataset, query_category="simple")
-
         state = _make_state(
-            dataset_artifacts=[dataset],
-            script_artifacts=[script],
+            dataset_artifacts=[dataset], script_artifacts=[script],
             coverage_reports=[_make_ok_coverage()],
         )
 
         response = build_workflow_response(
-            state,
-            final_outcome="passed",
-            critique=critique,
-            visualization=visualization,
-            live_llm_required=False,
+            state, final_outcome="passed", critique=critique,
+            visualization=visualization, live_llm_required=True,
         )
 
-        # At least one script artifact must have a downloadable path that exists
         downloadable_scripts = [
             sa for sa in response.script_artifacts
             if sa.downloadable and sa.path and Path(sa.path).exists()
         ]
         assert len(downloadable_scripts) >= 1
 
-    def test_needs_clarification_response_has_questions(self) -> None:
+    def test_needs_clarification_response_has_questions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._mock_narrator(monkeypatch)
         from app.artifacts.workflow_artifacts import CritiqueReport, IntentFrame
         from app.workflow.nodes.narrator import build_workflow_response
 
         intent = IntentFrame(
-            query="Какой ВВП?",
-            category="ambiguous",
-            missing_fields=["geography", "period"],
-            needs_clarification=True,
+            query="Какой ВВП?", category="ambiguous",
+            missing_fields=["geography", "period"], needs_clarification=True,
         )
         critique = CritiqueReport(
-            artifact_id="critique-001",
-            verdict="needs_user_clarification",
+            artifact_id="critique-001", verdict="needs_user_clarification",
             warnings=["ambiguous query"],
         )
         state = _make_state(
-            dataset_artifacts=[],
-            script_artifacts=[],
-            query="Какой ВВП?",
-            intent=intent,
+            dataset_artifacts=[], script_artifacts=[],
+            query="Какой ВВП?", intent=intent,
         )
 
         response = build_workflow_response(
-            state,
-            final_outcome="needs_clarification",
-            critique=critique,
-            visualization=None,
-            live_llm_required=False,
+            state, final_outcome="needs_clarification", critique=critique,
+            visualization=None, live_llm_required=True,
         )
 
         assert response.final_outcome == "needs_clarification"
         assert len(response.clarification_questions) >= 1
 
-    def test_not_found_response_has_no_data_evidence(self) -> None:
+    def test_not_found_response_has_no_data_evidence(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._mock_narrator(monkeypatch)
         from app.artifacts.workflow_artifacts import CritiqueReport
         from app.workflow.nodes.narrator import build_workflow_response
 
         critique = CritiqueReport(
-            artifact_id="critique-001",
-            verdict="not_found",
+            artifact_id="critique-001", verdict="not_found",
             warnings=["no trusted source covers this indicator"],
         )
         state = _make_state(dataset_artifacts=[], script_artifacts=[])
 
         response = build_workflow_response(
-            state,
-            final_outcome="not_found",
-            critique=critique,
-            visualization=None,
-            live_llm_required=False,
+            state, final_outcome="not_found", critique=critique,
+            visualization=None, live_llm_required=True,
         )
 
         assert response.final_outcome == "not_found"
         assert response.not_found_evidence is not None
 
-    def test_fallback_marks_test_only_narrator_fallback(self) -> None:
+    def test_fallback_raises_not_silently_returns(self) -> None:
+        """live_llm_required=False must raise, never silently return a fake response."""
+        import pytest
         from app.artifacts.workflow_artifacts import CritiqueReport
         from app.workflow.nodes.narrator import build_workflow_response
 
-        critique = CritiqueReport(
-            artifact_id="critique-001",
-            verdict="not_found",
-        )
+        critique = CritiqueReport(artifact_id="critique-001", verdict="not_found")
         state = _make_state(dataset_artifacts=[], script_artifacts=[])
 
-        response = build_workflow_response(
-            state,
-            final_outcome="not_found",
-            critique=critique,
-            visualization=None,
-            live_llm_required=False,
-        )
-
-        # Response component_statuses or message must indicate test_only
-        assert "test_only_narrator_fallback" in str(response.component_statuses) or \
-               any("test_only" in str(v) for v in response.component_statuses.values()) or \
-               "test_only" in response.message or \
-               any("test_only" in str(b) for b in response.answer_blocks)
+        with pytest.raises(RuntimeError, match="live LLM call"):
+            build_workflow_response(
+                state,
+                final_outcome="not_found",
+                critique=critique,
+                visualization=None,
+                live_llm_required=False,
+            )
 
 
 # ===========================================================================

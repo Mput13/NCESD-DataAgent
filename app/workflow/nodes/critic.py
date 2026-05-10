@@ -8,9 +8,8 @@ Implements final-outcome guardrails:
 - Ambiguous missing critical fields -> needs_user_clarification
 - Bounded checked/rejected sources with no usable coverage -> not_found
 
-Qwen/Yandex structured output is the target path for Methodology Critic (D-37).
-Deterministic fallback is explicitly marked test_only_critic_fallback.
-Plan 02-07 must exclude test_only_critic_fallback from jury readiness checks.
+Qwen/Yandex structured output is the only execution path for Methodology Critic (D-37).
+In tests, mock YandexAIStudioClient.structured_chat — do not rely on deterministic fallbacks.
 """
 from __future__ import annotations
 
@@ -90,9 +89,8 @@ def run_methodology_critic(
 ) -> CritiqueReport:
     """Run the Methodology Critic and return a CritiqueReport.
 
-    The target path calls YandexAIStudioClient.structured_chat for Qwen-based critique.
-    When live_llm_required=False, falls back to a deterministic critic marked
-    test_only_critic_fallback. Plan 02-07 must exclude this marker from jury readiness.
+    Calls YandexAIStudioClient.structured_chat (Qwen) for critique.
+    When live_llm_required=False, raises RuntimeError — use mock in tests.
 
     Enforces concrete checks after the LLM critique:
     - passed outcome requires: coverage statuses all ok, at least one dataset artifact
@@ -272,76 +270,9 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
 # ---------------------------------------------------------------------------
 
 
-def _run_critic_fallback(state: dict[str, Any]) -> CritiqueReport:
-    """Deterministic critic fallback for tests. Always marks test_only_critic_fallback.
-
-    Plan 02-07 must exclude this marker from jury readiness checks.
-    """
-    dataset_artifacts: list[Any] = list(state.get("dataset_artifacts") or [])
-    coverage_reports: list[Any] = list(state.get("coverage_reports") or [])
-
-    warnings: list[str] = ["test_only_critic_fallback"]
-    repair_plan: list[str] = []
-
-    # Deterministic checks
-    if not coverage_reports:
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="not_found",
-            warnings=warnings + ["no_coverage_reports"],
-            repair_plan=["Run source scouts and coverage to obtain coverage reports"],
-        )
-
-    if not _coverage_all_ok(coverage_reports):
-        bad_sources = [
-            getattr(r, "source_id", "?")
-            for r in coverage_reports
-            if getattr(r, "status", None) != "ok"
-        ]
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="needs_repair",
-            warnings=warnings + [f"coverage_not_ok: {bad_sources}"],
-            repair_plan=[f"Fix coverage for sources: {bad_sources}"],
-        )
-
-    if not dataset_artifacts:
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="not_found",
-            warnings=warnings + ["no_dataset_artifacts"],
-            repair_plan=["Run deterministic extraction to produce dataset artifacts"],
-        )
-
-    if not _has_ok_dataset(dataset_artifacts):
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="needs_repair",
-            warnings=warnings + ["no_ok_dataset_with_rows"],
-            repair_plan=["Check extraction results — all datasets have status != ok or rows == 0"],
-        )
-
-    if not _all_datasets_have_provenance(dataset_artifacts):
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="needs_repair",
-            warnings=warnings + ["missing_provenance"],
-            repair_plan=["Add provenance to all ok DatasetArtifacts"],
-        )
-
-    # Check for unit/frequency warnings
-    if _has_unit_warnings(coverage_reports):
-        return CritiqueReport(
-            artifact_id=f"critique-{uuid4().hex[:8]}",
-            verdict="pass_with_warnings",
-            warnings=warnings + ["unit_or_frequency_issues_detected"],
-            repair_plan=[],
-        )
-
-    # All checks pass
-    return CritiqueReport(
-        artifact_id=f"critique-{uuid4().hex[:8]}",
-        verdict="pass",
-        warnings=warnings,
-        repair_plan=[],
+def _run_critic_fallback(*_: object) -> CritiqueReport:
+    raise RuntimeError(
+        "Methodology Critic requires a live LLM call (Yandex AI Studio / Qwen). "
+        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
+        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
     )

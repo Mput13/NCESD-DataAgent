@@ -161,9 +161,6 @@ def run_user_query(
     passed | needs_clarification | not_found
     """
     config = run_config or WorkflowRunConfig.default()
-    clarification_response = _preflight_clarification_response(query, config=config)
-    if clarification_response is not None:
-        return clarification_response
 
     # Step 1: Run graph through extraction
     state = run_user_query_to_pending_finalization(query, run_config=config)
@@ -200,11 +197,15 @@ def _finalize_state(
         critique = CritiqueReport(
             artifact_id=f"critique-{uuid4().hex[:8]}",
             verdict="needs_repair",
-            warnings=[f"critic_error:{exc}", "test_only_critic_fallback"],
+            warnings=[f"critic_error:{exc}"],
         )
 
-    # Derive terminal outcome
-    final_outcome = derive_final_outcome(state, critique)
+    # Derive terminal outcome. Intent-level ambiguity must stay a
+    # clarification request even when retrieval/extraction have no data.
+    if intent is not None and getattr(intent, "needs_clarification", False):
+        final_outcome = "needs_clarification"
+    else:
+        final_outcome = derive_final_outcome(state, critique)
 
     # Step 3: Visualization
     ok_datasets = [d for d in dataset_artifacts if d.status == "ok" and (d.rows or 0) > 0]
@@ -492,83 +493,6 @@ def continue_user_query(
 
     return response
 
-
-def _preflight_clarification_response(
-    query: str,
-    *,
-    config: WorkflowRunConfig,
-) -> WorkflowResponse | None:
-    case_id = config.case_id
-    query_l = query.casefold()
-    ambiguous_case_ids = {"GC-001", "GC-006", "GC-009", "GC-010"}
-    ambiguous_markers = (
-        "day dannye po inflyatsii",
-        "данные по инфляции",
-        "dohod",
-        "доход",
-        "region",
-        "регион",
-        "kakoy vvp",
-        "какой ввп",
-    )
-    if case_id is not None and case_id not in ambiguous_case_ids:
-        return None
-    if case_id is None and not any(marker in query_l for marker in ambiguous_markers):
-        return None
-
-    run_id = new_run_id()
-    if case_id:
-        run_id = f"{run_id}-{case_id}"
-    questions = _clarification_questions_for_query(query, case_id=case_id)
-    trace_events = [
-        TraceEvent(
-            run_id=run_id,
-            state="intent_analyst",
-            agent="IntentAnalyst",
-            input_summary=query[:200],
-            decision="needs_clarification",
-            payload={"case_id": case_id, "preflight": True},
-        )
-    ]
-    response = WorkflowResponse(
-        run_id=run_id,
-        final_outcome="needs_clarification",
-        message="Уточните запрос, чтобы выбрать источник, период, географию или показатель до извлечения данных.",
-        answer_blocks=[{"type": "clarification_request", "questions": questions}],
-        clarification_questions=questions,
-        trace_events=trace_events,
-        component_statuses={"intent_analyst": "needs_clarification_preflight"},
-    )
-    state: Phase2State = {
-        "run_id": run_id,
-        "query": query,
-        "intent": None,
-        "research_design": None,
-        "evidence": None,  # type: ignore[typeddict-item]
-        "coverage_reports": [],
-        "extraction_plan": None,
-        "dataset_artifacts": [],
-        "script_artifacts": [],
-        "final_outcome": "needs_clarification",
-        "finalization_pending": False,
-        "pending_reason": "preflight_clarification",
-        "trace_events": trace_events,
-        "component_statuses": response.component_statuses,
-    }
-    _write_pending_clarification_state(state, response, config=config)
-    return response
-
-
-def _clarification_questions_for_query(query: str, *, case_id: str | None) -> list[str]:
-    if case_id == "GC-001":
-        return ["Какой источник ВВП использовать: World Bank, Росстат/ЕМИСС или оба для сравнения?"]
-    if case_id == "GC-006":
-        return ["Какие факторы доходов проверять и за какой период: реальные доходы, инфляция, занятость или ВВП?"]
-    if case_id == "GC-009":
-        return ["Для какой страны или региона и за какой период нужны данные по инфляции?"]
-    if case_id == "GC-010":
-        return ["Какие регионы, показатель доходов и период нужно использовать?"]
-    return [f"Уточните период, географию и показатель для запроса: {query}"]
 
 
 EXECUTABLE_FEEDBACK_ACTIONS = {

@@ -1,8 +1,7 @@
 """Phase 2 typed workflow state and LLM service functions.
 
 Defines Phase2State(TypedDict) as the single state object through the graph,
-plus analyze_intent and design_research with real Qwen target paths and
-explicit test-only deterministic fallbacks.
+plus analyze_intent and design_research backed by real Qwen (Yandex AI Studio) calls.
 """
 from __future__ import annotations
 
@@ -72,18 +71,6 @@ class _IntentAnalysisSchema(BaseModel):
     source_preferences: list[str] = []
     missing_fields: list[str] = []
 
-
-_AMBIGUOUS_KEYWORDS = {
-    "?", "какой", "что такое", "сколько", "как", "почему", "зачем",
-    "compare", "сравн", "исследов", "analyse", "анализ",
-}
-
-_CLARIFICATION_KEYWORDS = {
-    "инфляция": True,    # multiple possible methodologies
-    "ввп": True,         # rosstat rubles vs world bank USD
-    "inflation": True,
-    "gdp": True,
-}
 
 
 def analyze_intent(
@@ -168,50 +155,11 @@ def _analyze_intent_live(query: str) -> IntentFrame:
     )
 
 
-def _analyze_intent_fallback(query: str) -> IntentFrame:
-    """Deterministic intent classifier for tests. Always marks test_only_intent_fallback."""
-    query_lower = query.lower()
-
-    # Detect category
-    if any(kw in query_lower for kw in {"сравн", "compare", "vs", "между", "и ", "и\n"}):
-        category = "comparative"
-    elif any(kw in query_lower for kw in {"исследов", "анализ", "тренд", "динамика"}):
-        category = "research"
-    elif any(kw in query_lower for kw in {"нет данных", "нет информации", "отсутств"}):
-        category = "no_data"
-    else:
-        category = "simple"
-
-    # Detect needs_clarification
-    needs_clarification = any(
-        kw in query_lower for kw in _CLARIFICATION_KEYWORDS
-    ) and category == "simple"
-
-    # Extract basic known fields
-    known_fields: dict[str, Any] = {}
-    for geo in ("россия", "russia", "казахстан", "kazakhstan", "китай", "china", "бразилия", "brazil"):
-        if geo in query_lower:
-            known_fields["geography"] = geo
-            break
-
-    # Extract year-like periods
-    import re
-    years = re.findall(r"\b(19|20)\d{2}\b", query)
-    if years:
-        known_fields["period"] = years[0] if len(years) == 1 else f"{years[0]}-{years[-1]}"
-
-    return IntentFrame(
-        query=query,
-        category=category,  # type: ignore[arg-type]
-        known_fields=known_fields,
-        missing_fields=[],
-        needs_clarification=needs_clarification,
-        source_preferences=[],
-        open_reasoning=[
-            "test_only_intent_fallback",
-            "deterministic_classifier_test_only",
-            "component_status:test_only",
-        ],
+def _analyze_intent_fallback(*_: object) -> IntentFrame:
+    raise RuntimeError(
+        "Intent analysis requires a live LLM call (Yandex AI Studio / Qwen). "
+        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
+        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
     )
 
 
@@ -315,40 +263,9 @@ def _design_research_live(
     )
 
 
-def _design_research_fallback(
-    intent: IntentFrame,
-    *,
-    matrix_hint: dict[str, Any] | None = None,
-) -> ResearchDesignArtifact:
-    """Deterministic research design for tests. Always marks test_only_research_design_fallback."""
-    artifact_id = f"research-design-{uuid4().hex[:8]}"
-
-    indicators: list[str] = []
-    if matrix_hint:
-        if matrix_hint.get("source_id"):
-            indicators.append(str(matrix_hint["source_id"]))
-        if matrix_hint.get("source_family"):
-            indicators.append(str(matrix_hint["source_family"]))
-
-    dimensions = ["geography", "period", "indicator"]
-    if intent.known_fields.get("geography"):
-        dimensions.append(f"geo:{intent.known_fields['geography']}")
-    if intent.known_fields.get("period"):
-        dimensions.append(f"period:{intent.known_fields['period']}")
-
-    return ResearchDesignArtifact(
-        artifact_id=artifact_id,
-        route=intent.category,
-        hypotheses=[
-            f"Deterministic fallback: retrieve data for '{intent.query}'",
-            "Source-bound extraction required; no LLM numeric interpretation",
-        ],
-        dimensions=dimensions,
-        indicators=indicators or [intent.query[:60]],
-        grouping_policy=None,
-        assumptions=[
-            "test_only_research_design_fallback",
-            "component_status:test_only",
-            "Use real Qwen call in production (live_llm_required=True)",
-        ],
+def _design_research_fallback(*_: object, **__: object) -> ResearchDesignArtifact:
+    raise RuntimeError(
+        "Research design requires a live LLM call (Yandex AI Studio / Qwen). "
+        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
+        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
     )

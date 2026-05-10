@@ -115,6 +115,7 @@ class DatasetArtifact(BaseModel):
     csv_path: str | None = None
     parquet_path: str | None = None
     manifest_path: str | None = None
+    records: list[dict[str, Any]] = Field(default_factory=list)
     provenance: list[dict[str, Any]] = Field(default_factory=list)
     quality_flags: list[str] = Field(default_factory=list)
 

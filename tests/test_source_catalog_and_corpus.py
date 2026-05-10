@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import gc
 import sqlite3
 import tempfile
 import unittest
@@ -37,13 +38,18 @@ class SourceCatalogAndCorpusTest(unittest.TestCase):
             self.assertEqual(catalog.source_families(), ["FedStat"])
             self.assertTrue(catalog.queryable())
 
-            with sqlite3.connect(db_path) as conn:
+            conn = sqlite3.connect(db_path)
+            try:
                 tables = {
                     row[0]
                     for row in conn.execute(
                         "select name from sqlite_master where type = 'table'"
                     )
                 }
+            finally:
+                conn.close()
+                del conn
+                gc.collect()
             self.assertIn("source_cards", tables)
             self.assertIn("embedding_chunks", tables)
             self.assertIn("rejection_metadata", tables)

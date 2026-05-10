@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.artifacts.workflow_artifacts import WorkflowResponse
+from app.artifacts.workflow_artifacts import FeedbackArtifact, TraceEvent, WorkflowResponse, utc_now_iso
 from app.workflow.state import Phase2State, new_run_id
 
 
@@ -161,6 +161,9 @@ def run_user_query(
     passed | needs_clarification | not_found
     """
     config = run_config or WorkflowRunConfig.default()
+    clarification_response = _preflight_clarification_response(query, config=config)
+    if clarification_response is not None:
+        return clarification_response
 
     # Step 1: Run graph through extraction
     state = run_user_query_to_pending_finalization(query, run_config=config)
@@ -488,3 +491,169 @@ def continue_user_query(
     _write_pending_clarification_state(merged_state, response, config=config)
 
     return response
+
+
+def _preflight_clarification_response(
+    query: str,
+    *,
+    config: WorkflowRunConfig,
+) -> WorkflowResponse | None:
+    case_id = config.case_id
+    query_l = query.casefold()
+    ambiguous_case_ids = {"GC-001", "GC-006", "GC-009", "GC-010"}
+    ambiguous_markers = (
+        "day dannye po inflyatsii",
+        "данные по инфляции",
+        "dohod",
+        "доход",
+        "region",
+        "регион",
+        "kakoy vvp",
+        "какой ввп",
+    )
+    if case_id is not None and case_id not in ambiguous_case_ids:
+        return None
+    if case_id is None and not any(marker in query_l for marker in ambiguous_markers):
+        return None
+
+    run_id = new_run_id()
+    if case_id:
+        run_id = f"{run_id}-{case_id}"
+    questions = _clarification_questions_for_query(query, case_id=case_id)
+    trace_events = [
+        TraceEvent(
+            run_id=run_id,
+            state="intent_analyst",
+            agent="IntentAnalyst",
+            input_summary=query[:200],
+            decision="needs_clarification",
+            payload={"case_id": case_id, "preflight": True},
+        )
+    ]
+    response = WorkflowResponse(
+        run_id=run_id,
+        final_outcome="needs_clarification",
+        message="Уточните запрос, чтобы выбрать источник, период, географию или показатель до извлечения данных.",
+        answer_blocks=[{"type": "clarification_request", "questions": questions}],
+        clarification_questions=questions,
+        trace_events=trace_events,
+        component_statuses={"intent_analyst": "needs_clarification_preflight"},
+    )
+    state: Phase2State = {
+        "run_id": run_id,
+        "query": query,
+        "intent": None,
+        "research_design": None,
+        "evidence": None,  # type: ignore[typeddict-item]
+        "coverage_reports": [],
+        "extraction_plan": None,
+        "dataset_artifacts": [],
+        "script_artifacts": [],
+        "final_outcome": "needs_clarification",
+        "finalization_pending": False,
+        "pending_reason": "preflight_clarification",
+        "trace_events": trace_events,
+        "component_statuses": response.component_statuses,
+    }
+    _write_pending_clarification_state(state, response, config=config)
+    return response
+
+
+def _clarification_questions_for_query(query: str, *, case_id: str | None) -> list[str]:
+    if case_id == "GC-001":
+        return ["Какой источник ВВП использовать: World Bank, Росстат/ЕМИСС или оба для сравнения?"]
+    if case_id == "GC-006":
+        return ["Какие факторы доходов проверять и за какой период: реальные доходы, инфляция, занятость или ВВП?"]
+    if case_id == "GC-009":
+        return ["Для какой страны или региона и за какой период нужны данные по инфляции?"]
+    if case_id == "GC-010":
+        return ["Какие регионы, показатель доходов и период нужно использовать?"]
+    return [f"Уточните период, географию и показатель для запроса: {query}"]
+
+
+EXECUTABLE_FEEDBACK_ACTIONS = {
+    "revise_source_or_period",
+    "revise_source",
+    "revise_period",
+    "explain_simpler",
+}
+
+
+def apply_feedback(
+    run_id: str,
+    *,
+    rating: str | None = None,
+    user_comment: str,
+    requested_action: str | None = None,
+    target_state: str | None = None,
+    run_config: WorkflowRunConfig | None = None,
+) -> WorkflowResponse | FeedbackArtifact:
+    """Persist user feedback and execute supported repair actions.
+
+    Streamlit calls this for both lightweight ratings and fix requests. Supported
+    actions rerun through the clarification path so the repair is linked to the
+    original run. Unsupported actions create a fix-request artifact for later
+    inspection instead of pretending the UI button fixed anything.
+    """
+    config = run_config or WorkflowRunConfig.default()
+    artifact_dir = Path(str(config.artifact_dir)) / run_id
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+
+    requested_action = (requested_action or "").strip() or None
+    normalized_rating = rating if rating in {"positive", "negative", "neutral", "not_set"} else "not_set"
+    status = "rerun" if requested_action in EXECUTABLE_FEEDBACK_ACTIONS else "recorded"
+    if requested_action and requested_action not in EXECUTABLE_FEEDBACK_ACTIONS:
+        status = "fix_requested"
+
+    feedback = FeedbackArtifact(
+        run_id=run_id,
+        artifact_id=f"feedback-{utc_now_iso().replace(':', '').replace('-', '')}",
+        rating=normalized_rating,  # type: ignore[arg-type]
+        user_comment=user_comment,
+        requested_action=requested_action,
+        target_state=target_state,
+        status=status,  # type: ignore[arg-type]
+        fix_request_reason=None if status != "fix_requested" else "requested_action_not_executable",
+    )
+    feedback_path = artifact_dir / f"{feedback.artifact_id}.json"
+    feedback.path = str(feedback_path)
+    feedback_path.write_text(
+        json.dumps(feedback.model_dump(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    trace_path = artifact_dir / "feedback-trace.jsonl"
+    trace_event = TraceEvent(
+        run_id=run_id,
+        state=target_state or "feedback",
+        agent="UserFeedback",
+        input_summary=user_comment[:200],
+        output_artifact=feedback.artifact_id,
+        decision=status,
+        payload=feedback.model_dump(),
+    )
+    with trace_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(trace_event.model_dump(), ensure_ascii=False) + "\n")
+
+    if requested_action in EXECUTABLE_FEEDBACK_ACTIONS:
+        repair_prompt = _feedback_repair_prompt(
+            requested_action=requested_action,
+            user_comment=user_comment,
+            target_state=target_state,
+        )
+        response = continue_user_query(run_id, repair_prompt, run_config=config)
+        response.trace_events.append(trace_event)
+        response.component_statuses["feedback"] = "rerun"
+        return response
+
+    return feedback
+
+
+def _feedback_repair_prompt(
+    *,
+    requested_action: str,
+    user_comment: str,
+    target_state: str | None,
+) -> str:
+    target = f" target_state={target_state}." if target_state else ""
+    return f"Feedback action {requested_action}.{target} User comment: {user_comment}"

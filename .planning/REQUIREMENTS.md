@@ -98,11 +98,11 @@ All v1 requirements map to Phase 2 for functional acceptance across all 20 golde
 | NLU-01..04 | Phase 2 | Infrastructure exists from Phase 1; functional acceptance pending across all 20 golden cases |
 | SRCH-01..04 | Phase 2 | Source-card/catalog/retrieval infrastructure exists; reliable source selection pending |
 | DATA-01..05 | Phase 2 | Probe/tool contracts exist; deterministic end-to-end extraction pending |
-| ART-01..06 | Phase 2 | Pending |
-| RBST-01..03 | Phase 2 | Pending |
+| ART-01..06 | Phase 2 | Implemented in execution plans; pending phase verification/manual UAT |
+| RBST-01..03 | Phase 2 | Implemented in execution plans; pending phase verification/manual UAT |
 | RBST-04 | Phase 2 | Invariant established in Phase 1; must hold in final MVP |
-| UI-01..04 | Phase 2 | Diagnostic shell exists; jury UI pending |
-| ENG-01..04 | Phase 2 | Pending final reproducibility and architecture docs |
+| UI-01..04 | Phase 2 | Streamlit workflow surface implemented; pending manual UAT approval |
+| ENG-01..04 | Phase 2 | README/project workflow docs implemented; pending phase verification |
 
 **Coverage:**
 - v1 requirements: 27 total

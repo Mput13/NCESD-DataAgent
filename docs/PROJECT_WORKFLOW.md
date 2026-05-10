@@ -60,3 +60,11 @@ For this DataAgent, verification is not just "tests pass". A phase is not done u
 
 GSD is the development workflow, not the runtime architecture of the DataAgent. The application can still use LangGraph, source adapters, DuckDB, CKAN, embeddings, Streamlit, and deterministic extraction. GSD only governs how we plan, implement, and verify those pieces.
 
+## Phase 2 Jury Commands
+
+Use `README.md` as the runnable command source for Phase 2. The key paths are:
+
+- Qdrant server promotion: `docker compose -f docker-compose.qdrant.yml up -d qdrant` and `python3 scripts/promote_qdrant_server.py --start-server --manifest-output .planning/phases/02-jury-mvp/qdrant-server-manifest.json`
+- Streamlit jury UI: `PYTHONPATH=. python3 -m streamlit run app/ui/streamlit_app.py --server.port 8501`
+- All-20 acceptance: `python3 scripts/run_phase2_acceptance.py --goldens .planning/phases/01-data-architecture-research/golden-cases.yaml --coverage-matrix .planning/phases/02-jury-mvp/golden-coverage-matrix.json --json-output .planning/phases/02-jury-mvp/phase2-golden-results.json --markdown-output .planning/phases/02-jury-mvp/phase2-golden-results.md --artifact-dir .planning/phases/02-jury-mvp/workflow-runs`
+

@@ -178,6 +178,9 @@ class FeedbackArtifact(BaseModel):
     user_comment: str | None = None
     requested_action: str | None = None
     target_state: str | None = None
+    status: Literal["recorded", "rerun", "fix_requested"] = "recorded"
+    fix_request_reason: str | None = None
+    path: str | None = None
     created_at: str = Field(default_factory=utc_now_iso)
 
     model_config = ConfigDict(extra="forbid")

@@ -210,7 +210,7 @@ def build_trace_view_model(
 
 def _source_cards_status(manifest: dict[str, Any]) -> str:
     artifact = Path(str(manifest.get("artifact_path") or ""))
-    if not artifact.exists():
+    if not artifact.exists() and not manifest.get("card_hashes"):
         return "missing"
     if int(manifest.get("card_count") or 0) <= 0:
         return "blocked"

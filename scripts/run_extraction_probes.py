@@ -28,9 +28,11 @@ def run_extraction_probes(
     cards_manifest = json.loads(
         Path(manifest["source_cards_manifest"]).read_text(encoding="utf-8")
     )
-    cards_payload = json.loads(
-        Path(cards_manifest["artifact_path"]).read_text(encoding="utf-8")
-    )
+    cards_artifact = Path(cards_manifest.get("artifact_path") or "")
+    if cards_artifact.exists():
+        cards_payload = json.loads(cards_artifact.read_text(encoding="utf-8"))
+    else:
+        cards_payload = _cards_payload_from_manifest(cards_manifest)
     cards = cards_payload.get("cards", [])
     artifact_dir = report_path.parent / "extraction-probe-artifacts"
     artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -52,6 +54,32 @@ def run_extraction_probes(
     )
     report_path.write_text(_render_report(evidence), encoding="utf-8")
     return evidence
+
+
+def _cards_payload_from_manifest(cards_manifest: dict[str, Any]) -> dict[str, Any]:
+    """Build minimal probe cards from a committed manifest when .local data is absent."""
+    cards: list[dict[str, Any]] = []
+    for card_id in (cards_manifest.get("card_hashes") or {}).keys():
+        parts = str(card_id).split(":")
+        source = parts[0] if parts else ""
+        if source not in {"fedstat", "world_bank", "ckan"}:
+            continue
+        dataset_id = parts[1] if len(parts) > 1 else card_id
+        resource_id = ":".join(parts[2:]) if len(parts) > 2 else None
+        cards.append(
+            {
+                "source": source,
+                "dataset_id": dataset_id,
+                "resource_id": resource_id,
+                "title": dataset_id,
+                "dimensions": [],
+                "period_coverage": {},
+                "metadata": {},
+            }
+        )
+        if {str(card.get("source")).lower() for card in cards} >= {"fedstat", "world_bank"}:
+            break
+    return {"cards": cards}
 
 
 def _first_card(cards: list[dict[str, Any]], source: str) -> dict[str, Any]:

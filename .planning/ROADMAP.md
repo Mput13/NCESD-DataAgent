@@ -67,7 +67,7 @@
 
 **Canonical directory:** `.planning/phases/02-jury-mvp`
 
-**Status:** In Progress; plans `02-01`, `02-03`, and `02-09` completed.
+**Status:** Execution complete; verification/manual UAT checkpoint pending.
 
 **Why this phase exists:** Phase 1 is accepted only as infrastructure. The acceptance report `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` shows the current system is not a functional MVP: pytest is 26/27, demo readiness is blocked/stale, dense retrieval is gated for all 20 golden cases, extraction is probe-level, data relevance eval is 0 passed / 20 gated, and the current Streamlit UI is diagnostic rather than a jury UI.
 
@@ -102,7 +102,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 - [ ] `02-05-PLAN.md` — LangGraph workflow runtime through extraction with explicit finalization pending
 - [ ] `02-06-PLAN.md` — Methodology critic, visualization, narrator, final service response, and clarification follow-up
 - [ ] `02-07-PLAN.md` — Matrix-backed all-20 golden acceptance eval and strict demo readiness gate
-- [ ] `02-08-PLAN.md` — Streamlit workflow/clarification surface, reproducibility docs, and manual UAT
+- [x] `02-08-PLAN.md` — Streamlit workflow/clarification surface, reproducibility docs, and manual UAT
 
 ### Required Capabilities
 
@@ -120,10 +120,10 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 
 ### Validation
 
-- [ ] `python3 -m pytest -q` passes.
-- [ ] Golden-case eval covers all 20 cases and records no unacceptable final states.
+- [x] `python3 -m pytest -q` passes.
+- [x] Golden-case eval covers all 20 cases and records no unacceptable final states.
 - [ ] Demo readiness is `ready`, not `blocked`, `stale`, or `gated`.
-- [ ] UI can run at `http://localhost:8501` and execute the real workflow from user input.
+- [x] UI can run at `http://localhost:8501` and execute the real workflow from user input.
 - [ ] Each passed case has sources, coverage, deterministic dataset, generated script, answer, and trace.
 - [ ] Each `needs_clarification` or `not_found` case has explicit evidence and is not counted as a hidden failure.
 - [ ] All Phase 2 decisions and limitations are recorded before jury-demo readiness is claimed.
@@ -134,7 +134,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 **Total v1 requirements:** 27  
 **Coverage:** 100% mapped; functional acceptance deferred to Phase 2  
 **Phase 1 status:** accepted as infrastructure, not product MVP  
-**Phase 2 status:** in progress; 3/10 plans complete  
+**Phase 2 status:** execution complete; verification/manual UAT checkpoint pending; 10/10 plans complete  
 
 ---
-*Last updated: 2026-05-10 — Phase 2 plans 02-01, 02-03, and 02-09 completed*
+*Last updated: 2026-05-10 — Phase 2 plan 02-08 completed; all 10 execution plans now have summaries*

@@ -398,3 +398,209 @@ class TestRunGraphCLI:
         assert "finalization_pending" in data or data.get("status") == "finalization_pending", (
             f"Expected finalization_pending in output, got keys: {list(data.keys())}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Plan 02-08: clarification and feedback service/UI wiring
+# ---------------------------------------------------------------------------
+
+
+class TestPhase208WorkflowSurface:
+    def test_streamlit_module_uses_workflow_service_entrypoints(self) -> None:
+        src = Path("app/ui/streamlit_app.py").read_text(encoding="utf-8")
+        assert "run_user_query" in src
+        assert "continue_user_query" in src
+        assert "apply_feedback" in src
+        assert "pending_clarification" in src
+        assert "WorkflowRunConfig.default" in src
+        assert "st.download_button" in src
+        assert "active_query" not in src
+
+    def test_continue_user_query_preserves_run_and_can_change_outcome(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.artifacts.workflow_artifacts import (
+            CoverageReport,
+            CritiqueReport,
+            DatasetArtifact,
+            IntentFrame,
+            ScriptArtifact,
+            TraceEvent,
+            WorkflowResponse,
+        )
+        from app.workflow import service
+        from app.workflow.service import WorkflowRunConfig, continue_user_query, run_user_query
+
+        def fake_pending(query: str, *, run_config: WorkflowRunConfig | None = None) -> dict[str, Any]:
+            return {
+                "run_id": "phase2-test-clarify",
+                "query": query,
+                "intent": IntentFrame(
+                    query=query,
+                    category="ambiguous",
+                    missing_fields=["geography"],
+                    needs_clarification=True,
+                ),
+                "evidence": None,
+                "coverage_reports": [
+                    CoverageReport(source_id="test-source", status="ok", checks=["test"])
+                ],
+                "dataset_artifacts": [
+                    DatasetArtifact(
+                        artifact_id="dataset-test",
+                        status="ok",
+                        source_id="test-source",
+                        rows=1,
+                        records=[{"year": 2024, "value": 1}],
+                    )
+                ],
+                "script_artifacts": [
+                    ScriptArtifact(artifact_id="script-test", path="script.py")
+                ],
+                "trace_events": [
+                    TraceEvent(run_id="phase2-test-clarify", state="intent_analyst", agent="IntentAnalyst")
+                ],
+                "component_statuses": {},
+            }
+
+        def fake_finalize(state: dict[str, Any], *, config: WorkflowRunConfig) -> WorkflowResponse:
+            intent = state.get("intent")
+            if getattr(intent, "missing_fields", []):
+                return WorkflowResponse(
+                    run_id=str(state["run_id"]),
+                    final_outcome="needs_clarification",
+                    message="Need geography.",
+                    clarification_questions=["Which geography?"],
+                    trace_events=list(state.get("trace_events") or []),
+                )
+            return WorkflowResponse(
+                run_id=str(state["run_id"]),
+                final_outcome="not_found",
+                message="Checked sources; no data found.",
+                not_found_evidence={
+                    "artifact_id": "not-found-test",
+                    "checked_sources": [{"source_id": "test"}],
+                    "rejected_sources": [],
+                    "rejection_reasons": ["test"],
+                    "search_strategy": "test",
+                },
+                trace_events=list(state.get("trace_events") or []),
+                component_statuses={"critic": CritiqueReport(artifact_id="c", verdict="not_found").verdict},
+            )
+
+        monkeypatch.setattr(service, "run_user_query_to_pending_finalization", fake_pending)
+        monkeypatch.setattr(service, "_finalize_state", fake_finalize)
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+
+        first = run_user_query("ambiguous inflation", run_config=config)
+        assert first.final_outcome == "needs_clarification"
+        assert (tmp_path / "artifacts" / first.run_id / "pending-clarification.json").exists()
+
+        follow_up = continue_user_query(first.run_id, "Russia, 2024", run_config=config)
+        assert follow_up.final_outcome == "not_found"
+        assert any(event.decision == "clarification_merged" for event in follow_up.trace_events)
+
+    def test_apply_feedback_persists_run_linked_artifact(self, tmp_path: Path) -> None:
+        from app.artifacts.workflow_artifacts import FeedbackArtifact
+        from app.workflow.service import WorkflowRunConfig, apply_feedback
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+        result = apply_feedback(
+            "phase2-feedback-test",
+            rating="negative",
+            user_comment="Please check the source.",
+            run_config=config,
+        )
+        assert isinstance(result, FeedbackArtifact)
+        assert result.run_id == "phase2-feedback-test"
+        assert result.path is not None
+        persisted = json.loads(Path(result.path).read_text(encoding="utf-8"))
+        assert persisted["run_id"] == "phase2-feedback-test"
+
+    def test_apply_feedback_fix_request_creates_artifact(self, tmp_path: Path) -> None:
+        from app.artifacts.workflow_artifacts import FeedbackArtifact
+        from app.workflow.service import WorkflowRunConfig, apply_feedback
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+        result = apply_feedback(
+            "phase2-fix-test",
+            user_comment="Needs a new source family.",
+            requested_action="manual_fix_request",
+            target_state="source_scouts",
+            run_config=config,
+        )
+        assert isinstance(result, FeedbackArtifact)
+        assert result.status == "fix_requested"
+        assert result.fix_request_reason == "requested_action_not_executable"
+        assert result.path is not None
+
+    def test_apply_feedback_executable_action_invokes_rerun(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.artifacts.workflow_artifacts import NoDataExplanationArtifact, WorkflowResponse
+        from app.workflow import service
+        from app.workflow.service import WorkflowRunConfig, apply_feedback
+
+        calls: list[tuple[str, str]] = []
+
+        def fake_continue(
+            run_id: str,
+            clarification_answer: str,
+            *,
+            run_config: WorkflowRunConfig | None = None,
+        ) -> WorkflowResponse:
+            calls.append((run_id, clarification_answer))
+            return WorkflowResponse(
+                run_id="phase2-rerun-test-2",
+                final_outcome="not_found",
+                message="Rerun completed.",
+                not_found_evidence=NoDataExplanationArtifact(
+                    artifact_id="not-found-rerun",
+                    checked_sources=[],
+                    rejected_sources=[],
+                    rejection_reasons=["rerun"],
+                    search_strategy="test",
+                ),
+            )
+
+        monkeypatch.setattr(service, "continue_user_query", fake_continue)
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+
+        result = apply_feedback(
+            "phase2-rerun-test",
+            user_comment="Use World Bank instead.",
+            requested_action="revise_source",
+            target_state="source_scouts",
+            run_config=config,
+        )
+        assert isinstance(result, WorkflowResponse)
+        assert calls and calls[0][0] == "phase2-rerun-test"
+        assert result.component_statuses["feedback"] == "rerun"

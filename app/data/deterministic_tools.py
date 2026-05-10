@@ -225,12 +225,19 @@ def render_visualization_from_dataset_artifact(
     try:
         import altair as alt
 
-        chart_repr = alt.Chart({"values": dataset.records}).mark_table().to_dict()
+        chart_repr = (
+            alt.Chart({"values": dataset.records})
+            .mark_text()
+            .encode(text=alt.value(f"{dataset.rows or 0} rows"))
+            .to_dict()
+        )
     except Exception:
-        import plotly.graph_objects as go
-
-        renderer = "Plotly"
-        chart_repr = go.Figure(data=[go.Table(header={"values": dataset.columns})]).to_dict()
+        renderer = "Altair-compatible"
+        chart_repr = {
+            "mark": "table",
+            "data": {"values": dataset.records},
+            "columns": dataset.columns,
+        }
     return VisualizationSpec(
         artifact_id=f"{dataset.artifact_id}:visualization",
         chart_type="table",

@@ -39,6 +39,17 @@ from app.workflow.state import (
 )
 
 # ---------------------------------------------------------------------------
+# Runtime helpers
+# ---------------------------------------------------------------------------
+
+
+def _llm_is_ready() -> bool:
+    """Return True if Yandex credentials are configured in the environment."""
+    from app.llm.yandex_ai_studio import qwen_credential_gate
+    return qwen_credential_gate()["status"] == "ready"
+
+
+# ---------------------------------------------------------------------------
 # Node implementations
 # ---------------------------------------------------------------------------
 
@@ -54,7 +65,7 @@ def _node_supervisor(state: Phase2State) -> Phase2State:
 
     run_id = state.get("run_id") or new_run_id()
     query = str(state.get("query") or "")
-    live_llm = bool(state.get("_live_llm_required", False))
+    live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
     trace_events = list(state.get("trace_events") or [])
     component_statuses = dict(state.get("component_statuses") or {})
 
@@ -129,7 +140,7 @@ def _node_intent_analyst(state: Phase2State) -> Phase2State:
     """Intent Analyst: classify and structure the user query."""
     run_id = str(state.get("run_id") or "")
     query = str(state.get("query") or "")
-    live_llm = bool(state.get("_live_llm_required", False))
+    live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
     trace_events = list(state.get("trace_events") or [])
     component_statuses = dict(state.get("component_statuses") or {})
 
@@ -186,7 +197,7 @@ def _node_research_designer(state: Phase2State) -> Phase2State:
     """Research Designer: expand complex intent into design structure."""
     run_id = str(state.get("run_id") or "")
     intent = state.get("intent")
-    live_llm = bool(state.get("_live_llm_required", False))
+    live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
     trace_events = list(state.get("trace_events") or [])
     component_statuses = dict(state.get("component_statuses") or {})
 
@@ -349,7 +360,7 @@ def _node_coverage_schema(state: Phase2State) -> Phase2State:
     if not evidence.selected_sources:
         status = "skipped_no_sources"
     else:
-        live_llm = bool(state.get("_live_llm_required", False))
+        live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
         try:
             from app.workflow.nodes.coverage import run_coverage_preview
             new_reports = run_coverage_preview(
@@ -401,7 +412,7 @@ def _node_extraction_planner(state: Phase2State) -> Phase2State:
     trace_events = list(state.get("trace_events") or [])
     component_statuses = dict(state.get("component_statuses") or {})
 
-    live_llm = bool(state.get("_live_llm_required", False))
+    live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
     try:
         from app.workflow.nodes.extraction_planner import build_extraction_plan
         extraction_plan = build_extraction_plan(

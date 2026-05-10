@@ -118,3 +118,33 @@ def test_not_found_workflow_response_requires_no_data_evidence() -> None:
 
     assert response.final_outcome == "not_found"
     assert response.not_found_evidence == evidence
+
+
+def test_workflow_run_config_default_points_to_phase2_artifacts() -> None:
+    from app.workflow.service import WorkflowRunConfig
+
+    config = WorkflowRunConfig.default()
+
+    assert str(config.goldens_path) == ".planning/phases/01-data-architecture-research/golden-cases.yaml"
+    assert (
+        str(config.phase1_index_manifest)
+        == ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
+    )
+    assert (
+        str(config.phase1_source_catalog_manifest)
+        == ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
+    )
+    assert str(config.artifact_dir) == ".planning/phases/02-jury-mvp/workflow-runs"
+
+
+def test_run_user_query_contract_is_not_fake_before_finalizer_plan() -> None:
+    from app.workflow.service import WorkflowRunConfig, run_user_query
+
+    with pytest.raises(
+        NotImplementedError,
+        match="Phase 2 final WorkflowResponse implementation is provided by plan 02-06",
+    ):
+        run_user_query(
+            "Какая динамика ВВП России?",
+            run_config=WorkflowRunConfig.default(),
+        )

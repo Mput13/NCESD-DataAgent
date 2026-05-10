@@ -1,5 +1,6 @@
 altair>=5.5.0
 duckdb>=1.4.0
+langgraph>=1.1.10
 openai>=1.109.0
 polars>=1.36.0
 pyarrow>=22.0.0

@@ -109,8 +109,8 @@ class EmbeddingIndexContract(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class SourceCardEmbeddingChunk(BaseModel):
-    """Deterministic chunk ready for source-card metadata embedding."""
+class EmbeddingDocument(BaseModel):
+    """Deterministic source-card chunk ready for document embedding."""
 
     source_id: str
     card_id: str
@@ -128,6 +128,36 @@ class SourceCardEmbeddingChunk(BaseModel):
     provider_target: EmbeddingProviderTarget = Field(default_factory=EmbeddingProviderTarget)
     index_boundary: str = "source_card_metadata_only"
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+SourceCardEmbeddingChunk = EmbeddingDocument
+
+
+class EmbeddingCorpusManifest(BaseModel):
+    """Durable manifest for generated source-card embedding documents."""
+
+    artifact_path: str
+    manifest_path: str
+    chunk_count: int
+    source_families: list[str] = Field(default_factory=list)
+    content_hash: str
+    chunk_hashes: dict[str, str] = Field(default_factory=dict)
+    provider: str = "yandex_ai_studio"
+    document_model: str = "text-search-doc"
+    query_model: str = "text-search-query"
+    metadata_version: str = "source-card-v1"
+    input_format_version: str = "source-card-embedding-text-v1"
+    provider_hints: dict[str, str] = Field(
+        default_factory=lambda: {
+            "document_model_env": "YANDEX_EMBEDDING_DOC_MODEL",
+            "query_model_env": "YANDEX_EMBEDDING_QUERY_MODEL",
+            "dimensions_env": "YANDEX_EMBEDDING_DIMENSIONS",
+            "default_dimensions": "256",
+        }
+    )
+    local_artifacts: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
 

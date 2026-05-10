@@ -14,8 +14,8 @@
 
 ### Поиск данных (SEARCH)
 
-- [ ] **SRCH-01**: RAG-индекс по метаданным Росстата (metadata.jsonl) для поиска релевантных показателей
-- [ ] **SRCH-02**: RAG-индекс по метаданным World Bank (indicators.json, 29K+ индикаторов)
+- [x] **SRCH-01**: RAG-индекс по метаданным Росстата (metadata.jsonl) для поиска релевантных показателей
+- [x] **SRCH-02**: RAG-индекс по метаданным World Bank (indicators.json, 29K+ индикаторов)
 - [x] **SRCH-03**: Инструмент `find_data` — поиск датасетов по ключевым словам, теме, стране, периоду
 - [x] **SRCH-04**: Результаты поиска включают метаданные: источник, период, география, единицы измерения
 
@@ -92,7 +92,7 @@ All v1 requirements map to Phase 1. Future phases must not be inferred from olde
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | NLU-01..04 | Phase 1 | Complete via `01-01-SUMMARY.md` |
-| SRCH-01..02 | Phase 1 | Pending |
+| SRCH-01..02 | Phase 1 | Complete via `01-03-SUMMARY.md` |
 | SRCH-03..04 | Phase 1 | Complete via `01-02-SUMMARY.md` |
 | DATA-01..05 | Phase 1 | Pending |
 | ART-01..06 | Phase 1 | Pending |
@@ -107,4 +107,4 @@ All v1 requirements map to Phase 1. Future phases must not be inferred from olde
 
 ---
 *Requirements defined: 2026-05-08*
-*Last updated: 2026-05-08 after initial definition*
+*Last updated: 2026-05-10 after completing Plan 03*

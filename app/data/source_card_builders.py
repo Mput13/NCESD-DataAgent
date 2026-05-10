@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import Any
 
 from app.artifacts.source_cards import (
@@ -100,6 +101,7 @@ def build_world_bank(
     *,
     countries: Iterable[Mapping[str, Any]],
     parquet_paths: set[str],
+    local_data_root: str | None = None,
     limit: int | None = None,
 ) -> list[SourceCandidateCard]:
     """Build World Bank candidate cards from indicator and country metadata."""
@@ -135,7 +137,9 @@ def build_world_bank(
                 ),
                 provenance_url=f"https://api.worldbank.org/v2/indicator/{indicator_id}",
                 provenance_note="World Bank indicator metadata joined with local parquet presence.",
-                local_paths=["/Users/a/Downloads/dumps/wb/data.zip"],
+                local_paths=[str(Path(local_data_root) / "wb" / "data.zip")]
+                if local_data_root
+                else [],
                 availability=AvailabilityFlags(
                     has_local_metadata=True,
                     has_local_data=has_parquet,

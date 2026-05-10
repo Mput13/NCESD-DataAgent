@@ -214,10 +214,16 @@ def append_trace(
     )
 
 
-class Phase1Graph:
-    """Small executable LangGraph-compatible slice with an invoke interface."""
+class Phase1GraphCheckpoint:
+    """Diagnostic checkpoint graph for Phase 1.
+
+    Validates state and records a trace event. Full LangGraph node wiring is Phase 2 work
+    (see .planning/phases/02-*).
+    """
 
     def invoke(self, state: GraphState) -> GraphState:
+        if state.route not in QUERY_BUDGETS:
+            raise ValueError(f"Unknown query route for Phase 1 checkpoint: {state.route}")
         append_trace(
             state,
             state_name="checkpoint",
@@ -228,7 +234,7 @@ class Phase1Graph:
         return state
 
 
-def build_graph() -> Phase1Graph:
-    """Return the runnable Phase 1 graph object."""
+def build_checkpoint_graph() -> Phase1GraphCheckpoint:
+    """Return the diagnostic Phase 1 checkpoint graph object."""
 
-    return Phase1Graph()
+    return Phase1GraphCheckpoint()

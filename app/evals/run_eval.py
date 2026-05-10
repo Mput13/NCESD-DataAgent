@@ -89,7 +89,13 @@ def _aggregate_extraction_status(extraction: dict[str, Any]) -> str:
     probes = extraction.get("probes", [])
     if not probes:
         return "failed"
-    statuses = {probe.get("extraction_status") for probe in probes}
+    statuses = {
+        probe.get("extraction_status")
+        for probe in probes
+        if probe.get("extraction_status")
+    }
+    if not statuses:
+        return "failed"
     if statuses == {"ok"}:
         return "ready"
     if "gated" in statuses:
@@ -164,8 +170,8 @@ def _score_case(
             score["no_data_honesty"] = 1
         if _contains_unsupported_numeric_claim(graph_output):
             fail_reasons.append("unsupported numeric claim detected in graph output")
-    elif case.get("id") in {"GC-001"}:
-        fail_reasons.append("representative graph output missing")
+    elif case.get("category") in {"simple", "comparative"}:
+        fail_reasons.append("representative graph output missing for direct-path case")
 
     if case.get("category") == "no_data" and retrieval_row and retrieval_row.get("rejection_reasons"):
         score["no_data_honesty"] = 1

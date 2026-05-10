@@ -61,9 +61,12 @@ class SourceCatalog:
         }
 
     def _scalar(self, query: str) -> int:
-        with sqlite3.connect(self.path) as conn:
-            value = conn.execute(query).fetchone()[0]
-        return int(value)
+        conn = sqlite3.connect(self.path)
+        try:
+            row = conn.execute(query).fetchone()
+        finally:
+            conn.close()
+        return int(row[0]) if row else 0
 
     def _create_schema(self, conn: sqlite3.Connection) -> None:
         conn.executescript(

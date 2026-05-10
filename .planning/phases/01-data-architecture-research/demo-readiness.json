@@ -1,19 +1,23 @@
 {
   "artifacts": {
     "build_log_path": ".planning/phases/01-data-architecture-research/embedding-index-build.md",
-    "data_relevance_eval": ".planning/phases/01-data-architecture-research/data-relevance-eval.json",
-    "embedding_corpus_manifest": ".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
-    "embedding_index_manifest": ".planning/phases/01-data-architecture-research/embedding-index-manifest.json",
-    "extraction_probes": ".planning/phases/01-data-architecture-research/extraction-probes.json",
+    "data_relevance_eval": ".planning\\phases\\01-data-architecture-research\\data-relevance-eval.json",
+    "embedding_corpus_manifest": ".planning\\phases\\01-data-architecture-research\\embedding-corpus-manifest.json",
+    "embedding_index_manifest": ".planning\\phases\\01-data-architecture-research\\embedding-index-manifest.json",
+    "extraction_probes": ".planning\\phases\\01-data-architecture-research\\extraction-probes.json",
     "rebuild_command": "PATH=\"$PWD/.local/bin:$PATH\" python scripts/build_embedding_index.py --corpus-manifest .planning/phases/01-data-architecture-research/embedding-corpus-manifest.json --manifest .planning/phases/01-data-architecture-research/embedding-index-manifest.json --build-log .planning/phases/01-data-architecture-research/embedding-index-build.md",
-    "retrieval_eval": ".planning/phases/01-data-architecture-research/retrieval-eval.csv",
-    "source_cards_manifest": ".planning/phases/01-data-architecture-research/source-cards-manifest.json",
-    "source_catalog_manifest": ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
+    "retrieval_eval": ".planning\\phases\\01-data-architecture-research\\retrieval-eval.csv",
+    "source_cards_manifest": ".planning\\phases\\01-data-architecture-research\\source-cards-manifest.json",
+    "source_catalog_manifest": ".planning\\phases\\01-data-architecture-research\\source-catalog-manifest.json"
   },
-  "blocked_components": [],
+  "blocked_components": [
+    "source_cards",
+    "source_catalog",
+    "embedding_corpus"
+  ],
   "data_relevance_eval_status": "gated",
   "dense_retrieval_ready": false,
-  "embedding_corpus_status": "ready",
+  "embedding_corpus_status": "missing",
   "evidence": {
     "data_relevance_failed": 12,
     "data_relevance_gated": 8,
@@ -31,23 +35,23 @@
     "qdrant",
     "retrieval_eval"
   ],
-  "overall_status": "gated",
+  "overall_status": "blocked",
   "prepared": {
-    "catalog_source_cards_count": 11,
-    "corpus_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
-    "embedding_chunk_count": 11,
-    "index_corpus_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
+    "catalog_source_cards_count": 36321,
+    "corpus_hash": "2eee2f17d877773569acdf695bd6f9b728dc0d088d4a0f487e46b7dff126da38",
+    "embedding_chunk_count": 36321,
+    "index_corpus_hash": "2eee2f17d877773569acdf695bd6f9b728dc0d088d4a0f487e46b7dff126da38",
     "qdrant_collection": "phase1_source_cards",
     "qdrant_vector_count": 0,
-    "source_card_count": 11,
+    "source_card_count": 36321,
     "vector_store": "qdrant"
   },
   "qdrant_reason": "Yandex embedding credentials are unavailable; Qdrant collection abstraction is preserved.",
   "qdrant_status": "gated_skip",
   "rebuild_policy": "Do not rebuild or re-embed by default; use the recorded rebuild_command only when a manifest is missing or stale.",
   "retrieval_eval_status": "gated",
-  "source_cards_status": "ready",
-  "source_catalog_status": "ready",
+  "source_cards_status": "missing",
+  "source_catalog_status": "missing",
   "trace_ui_status": "ready",
   "trace_view_model": {
     "artifacts": [
@@ -158,7 +162,7 @@
           "prepared index": true
         },
         "run_id": "phase1-demo-readiness",
-        "started_at": "2026-05-10T04:34:32Z",
+        "started_at": "2026-05-10T07:51:41Z",
         "state": "prepared_index_check",
         "tool_calls": [
           "source-cards-manifest",
@@ -172,7 +176,7 @@
       },
       {
         "agent": "Data relevance and deterministic extraction checks",
-        "decision": "gated",
+        "decision": "blocked",
         "duration_ms": 0,
         "input_summary": null,
         "output_artifact": "prepared-data-readiness.md",
@@ -182,7 +186,7 @@
           "retrieval_eval_status": "gated"
         },
         "run_id": "phase1-demo-readiness",
-        "started_at": "2026-05-10T04:34:32Z",
+        "started_at": "2026-05-10T07:51:41Z",
         "state": "evidence_gate",
         "tool_calls": [
           "retrieval-eval.csv",

@@ -6,6 +6,7 @@ import hashlib
 import csv
 import io
 import json
+import os
 import sys
 from pathlib import Path
 from zipfile import ZipFile
@@ -18,7 +19,7 @@ from app.data.source_card_builders import build_ckan, build_fedstat, build_world
 
 
 DEFAULT_FEDSTAT_ZIP = Path("/Users/a/Downloads/dumps/fedstatru/fedstatru.zip")
-DEFAULT_WORLD_BANK_ZIP = Path("/Users/a/Downloads/dumps/wb/data.zip")
+DEFAULT_WORLD_BANK_ZIP = Path(os.getenv("LOCAL_DATA_ROOT", ".local/data")) / "wb" / "data.zip"
 DEFAULT_CKAN_ENDPOINT = "https://repository.nsedc.ru/api/3/action/package_search"
 DEFAULT_ARTIFACT = Path(".local/dataagent/phase1/source-cards.json")
 DEFAULT_MANIFEST = Path(
@@ -37,6 +38,12 @@ def main() -> None:
     )
     parser.add_argument("--fedstat-zip", type=Path, default=DEFAULT_FEDSTAT_ZIP)
     parser.add_argument("--world-bank-zip", type=Path, default=DEFAULT_WORLD_BANK_ZIP)
+    parser.add_argument(
+        "--local-data-root",
+        type=Path,
+        default=Path(os.environ["LOCAL_DATA_ROOT"]) if os.getenv("LOCAL_DATA_ROOT") else None,
+        help="Root containing local source dumps, e.g. <root>/wb/data.zip.",
+    )
     parser.add_argument(
         "--limit",
         type=int,
@@ -80,9 +87,11 @@ def main() -> None:
 
 def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, object]]:
     cards = []
+    world_bank_local_data_root = resolve_world_bank_local_data_root(args)
     source_notes: dict[str, object] = {
         "fedstat_zip": str(args.fedstat_zip),
         "world_bank_zip": str(args.world_bank_zip),
+        "local_data_root": world_bank_local_data_root,
         "ckan_endpoint": DEFAULT_CKAN_ENDPOINT,
         "ckan_rows": args.ckan_rows,
         "ckan_resource_limit": args.ckan_resource_limit,
@@ -113,6 +122,7 @@ def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, objec
                 indicators,
                 countries=countries,
                 parquet_paths=wb_parquet,
+                local_data_root=world_bank_local_data_root,
                 limit=args.world_bank_limit
                 if args.world_bank_limit is not None
                 else args.limit,
@@ -151,6 +161,15 @@ def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, objec
     source_notes["duplicate_source_card_ids"] = len(duplicate_ids)
     source_notes["duplicate_source_card_id_examples"] = duplicate_ids[:20]
     return deduped_cards, source_notes
+
+
+def resolve_world_bank_local_data_root(args: argparse.Namespace) -> str | None:
+    if args.local_data_root:
+        return str(args.local_data_root)
+    zip_path = Path(args.world_bank_zip)
+    if zip_path.name == "data.zip" and zip_path.parent.name == "wb":
+        return str(zip_path.parent.parent)
+    return None
 
 
 def serialize_cards_payload(cards: list[object]) -> dict[str, object]:

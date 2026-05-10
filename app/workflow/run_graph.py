@@ -21,10 +21,12 @@ from app.retrieval.hybrid_retrieval import HybridRetriever
 from app.workflow.graph_contract import (
     GraphState,
     append_trace,
-    build_graph,
+    build_checkpoint_graph,
     build_initial_state,
     route_from_category,
 )
+
+VALID_CATEGORIES = {"simple", "comparative", "research", "derived_metric", "ambiguous", "no_data"}
 
 
 def run_golden_case(
@@ -69,7 +71,7 @@ def run_golden_case(
         )
     _run_retrieval(state, case, index_manifest_path=index_manifest_path)
     _plan_coverage_and_extraction(state)
-    graph = build_graph()
+    graph = build_checkpoint_graph()
     state = graph.invoke(state)
     return _state_to_output(state)
 
@@ -78,9 +80,11 @@ def _intent_from_case(case: dict[str, Any]) -> IntentFrame:
     missing_fields: list[str] = []
     if case.get("needs_clarification"):
         missing_fields = ["source/methodology choice or missing query bounds"]
+    raw_category = str(case.get("category", "simple"))
+    category = raw_category if raw_category in VALID_CATEGORIES else "simple"
     return IntentFrame(
         query=str(case["query_ru"]),
-        category=str(case.get("category", "simple")),  # type: ignore[arg-type]
+        category=category,
         known_fields={
             "expected_route": case.get("expected_route"),
             "expected_sources": case.get("expected_sources", []),
@@ -164,7 +168,7 @@ def _run_retrieval(
 
 def _plan_coverage_and_extraction(state: GraphState) -> None:
     selected = state.evidence.selected_sources
-    first_source = selected[0]["card_id"] if selected else None
+    first_source = selected[0].get("card_id", "") if selected else None
     if not first_source:
         state.coverage_report = CoverageReport(
             source_id="none",

@@ -44,10 +44,64 @@ from app.workflow.state import (
 
 
 def _node_supervisor(state: Phase2State) -> Phase2State:
-    """Supervisor: initialize run, log trace event."""
+    """Supervisor: triage query complexity and decide routing budget.
+
+    Calls Qwen to classify query as simple/complex/research/no_data and sets
+    _supervisor_route in state so _route_after_intent can use it.
+    Simple/direct queries skip Research Designer (direct path per ARCHITECTURE_STACK.md).
+    """
+    from pydantic import BaseModel
+
     run_id = state.get("run_id") or new_run_id()
     query = str(state.get("query") or "")
+    live_llm = bool(state.get("_live_llm_required", False))
     trace_events = list(state.get("trace_events") or [])
+    component_statuses = dict(state.get("component_statuses") or {})
+
+    supervisor_route = "research"  # default: full research path
+
+    if live_llm:
+        try:
+            from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
+
+            gate = qwen_credential_gate()
+            if gate["status"] != "gated_skip":
+                class _TriageSchema(BaseModel):
+                    route: str = "research"  # direct | research | no_data
+                    reasoning: str = ""
+
+                client = YandexAIStudioClient()
+                result = client.structured_chat(
+                    [
+                        {
+                            "role": "system",
+                            "content": (
+                                "Ты — супервизор DataAgent. Определи тип запроса:\n"
+                                "- direct: простой прямой поиск одного показателя для одной страны/периода\n"
+                                "- research: сравнение, исследование, производная метрика, несколько источников\n"
+                                "- no_data: запрос явно о данных, которых нет или не может быть\n"
+                                "Отвечай только в формате JSON."
+                            ),
+                        },
+                        {"role": "user", "content": f"Запрос: {query}"},
+                    ],
+                    schema=_TriageSchema,
+                    temperature=0.0,
+                    max_tokens=128,
+                )
+                if result.route in ("direct", "research", "no_data"):
+                    supervisor_route = result.route
+        except Exception as exc:
+            trace_events.append(
+                TraceEvent(
+                    run_id=run_id,
+                    state="supervisor",
+                    agent="Supervisor",
+                    decision="triage_llm_failed_using_research_default",
+                    warnings=[str(exc)],
+                    payload={"error": str(exc)},
+                )
+            )
 
     trace_events.append(
         TraceEvent(
@@ -55,16 +109,16 @@ def _node_supervisor(state: Phase2State) -> Phase2State:
             state="supervisor",
             agent="Supervisor",
             input_summary=query[:200],
-            decision="start",
-            payload={"run_id": run_id},
+            decision=supervisor_route,
+            payload={"run_id": run_id, "route": supervisor_route},
         )
     )
-    component_statuses = dict(state.get("component_statuses") or {})
     component_statuses["supervisor"] = "ok"
 
     return {
         **state,
         "run_id": run_id,
+        "_supervisor_route": supervisor_route,  # type: ignore[typeddict-unknown-key]
         "trace_events": trace_events,
         "component_statuses": component_statuses,
         "finalization_pending": False,
@@ -82,22 +136,27 @@ def _node_intent_analyst(state: Phase2State) -> Phase2State:
     try:
         intent = analyze_intent(query, live_llm_required=live_llm)
         status = "ok"
-        if any("test_only" in r for r in intent.open_reasoning):
-            status = "test_only"
     except Exception as exc:
-        # Fallback on credential or network errors
-        intent = analyze_intent(query, live_llm_required=False)
-        status = "gated_fallback"
+        # LLM unavailable — gate this run, do not silently fall back to keyword matching
         trace_events.append(
             TraceEvent(
                 run_id=run_id,
                 state="intent_analyst",
                 agent="Intent Analyst",
-                decision="live_qwen_failed_using_fallback",
+                decision="gated",
                 warnings=[str(exc)],
                 payload={"error": str(exc)},
             )
         )
+        component_statuses["intent_analyst"] = "gated"
+        return {
+            **state,
+            "intent": None,
+            "finalization_pending": True,
+            "pending_reason": f"intent_llm_gated:{exc}",
+            "trace_events": trace_events,
+            "component_statuses": component_statuses,
+        }
 
     trace_events.append(
         TraceEvent(
@@ -157,21 +216,27 @@ def _node_research_designer(state: Phase2State) -> Phase2State:
     try:
         design = design_research(intent, live_llm_required=live_llm, matrix_hint=matrix_hint)
         status = "ok"
-        if any("test_only" in a for a in design.assumptions):
-            status = "test_only"
     except Exception as exc:
-        design = design_research(intent, live_llm_required=False, matrix_hint=matrix_hint)
-        status = "gated_fallback"
+        # LLM unavailable — gate this run
         trace_events.append(
             TraceEvent(
                 run_id=run_id,
                 state="research_designer",
                 agent="Research Designer",
-                decision="live_qwen_failed_using_fallback",
+                decision="gated",
                 warnings=[str(exc)],
                 payload={"error": str(exc)},
             )
         )
+        component_statuses["research_designer"] = "gated"
+        return {
+            **state,
+            "research_design": None,
+            "finalization_pending": True,
+            "pending_reason": f"research_designer_llm_gated:{exc}",
+            "trace_events": trace_events,
+            "component_statuses": component_statuses,
+        }
 
     trace_events.append(
         TraceEvent(
@@ -284,9 +349,12 @@ def _node_coverage_schema(state: Phase2State) -> Phase2State:
     if not evidence.selected_sources:
         status = "skipped_no_sources"
     else:
+        live_llm = bool(state.get("_live_llm_required", False))
         try:
             from app.workflow.nodes.coverage import run_coverage_preview
-            new_reports = run_coverage_preview(evidence, intent_fields=intent_fields)
+            new_reports = run_coverage_preview(
+                evidence, intent_fields=intent_fields, live_llm_required=live_llm
+            )
             coverage_reports.extend(new_reports)
             status = "ok"
         except Exception as exc:
@@ -333,9 +401,12 @@ def _node_extraction_planner(state: Phase2State) -> Phase2State:
     trace_events = list(state.get("trace_events") or [])
     component_statuses = dict(state.get("component_statuses") or {})
 
+    live_llm = bool(state.get("_live_llm_required", False))
     try:
         from app.workflow.nodes.extraction_planner import build_extraction_plan
-        extraction_plan = build_extraction_plan(intent, coverage_reports)  # type: ignore[arg-type]
+        extraction_plan = build_extraction_plan(
+            intent, coverage_reports, live_llm_required=live_llm  # type: ignore[arg-type]
+        )
         status = extraction_plan.status
     except Exception as exc:
         from app.artifacts.workflow_artifacts import ExtractionPlan
@@ -431,10 +502,21 @@ def _node_finalization_pending(state: Phase2State) -> Phase2State:
 
 
 def _route_after_intent(state: Phase2State) -> str:
-    """Route after intent analysis: ambiguous -> finalization_pending, else continue."""
+    """Route after intent analysis.
+
+    - needs_clarification -> finalization_pending
+    - finalization_pending already set (LLM gated) -> finalization_pending
+    - supervisor_route=direct -> source_scouts (skip Research Designer)
+    - otherwise -> research_designer
+    """
+    if state.get("finalization_pending"):
+        return "finalization_pending_gated"
     intent = state.get("intent")
     if intent and intent.needs_clarification:
         return "finalization_pending_clarification"
+    supervisor_route = state.get("_supervisor_route", "research")  # type: ignore[call-overload]
+    if supervisor_route == "direct":
+        return "source_scouts_direct"
     return "research_designer"
 
 
@@ -484,7 +566,9 @@ def build_phase2_graph():
         _route_after_intent,
         {
             "research_designer": "research_designer",
+            "source_scouts_direct": "source_scouts",   # direct path: skip Research Designer
             "finalization_pending_clarification": "finalization_pending",
+            "finalization_pending_gated": "finalization_pending",
         },
     )
 

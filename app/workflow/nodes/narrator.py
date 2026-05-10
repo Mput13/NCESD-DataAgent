@@ -272,6 +272,32 @@ def _build_response_live(
             search_strategy="fedstat/world_bank/ckan_source_scouts",
         )
 
+    # Enforce: all numbers in message must appear in dataset records or provenance
+    # Per ARCHITECTURE_STACK.md and D-30: unsupported numeric claims are hard failures
+    if final_outcome == "passed" and result.message:
+        ok_datasets = [d for d in dataset_artifacts if d.status == "ok"]
+        try:
+            assert_message_numbers_are_supported(result.message, ok_datasets)
+        except ValueError as num_err:
+            # Downgrade to not_found — narrator produced unsupported numeric claim
+            final_outcome = "not_found"
+            no_data_evidence = NoDataExplanationArtifact(
+                artifact_id=f"not-found-numeric-{uuid4().hex[:8]}",
+                checked_sources=selected_sources[:10],
+                rejected_sources=rejected_sources[:10],
+                rejection_reasons=[f"unsupported_numeric_claim: {num_err}"],
+                search_strategy="numeric_assertion_guard",
+            )
+            result = type(result)(  # rebuild with safe message
+                **{
+                    **result.model_dump(),
+                    "message": (
+                        "Данные найдены, но ответ содержал числа не из источников. "
+                        "Пожалуйста, уточните запрос для получения проверяемых данных."
+                    ),
+                }
+            )
+
     return _assemble_response(
         state=state,
         final_outcome=final_outcome,

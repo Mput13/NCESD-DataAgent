@@ -1,7 +1,9 @@
 """Coverage preview node for Phase 2 workflow.
 
-run_coverage_preview routes each selected source card to the appropriate
-adapter (FedStat, World Bank, or CKAN) and returns a list of CoverageReports.
+Two-phase process per ARCHITECTURE_STACK.md:
+1. Deterministic: route each source card to the adapter for real metadata inspection.
+2. LLM: Qwen assesses the collected coverage maps — best slice, alternatives,
+   risks, whether to continue without asking the user — and updates report status/evidence.
 """
 from __future__ import annotations
 
@@ -14,21 +16,126 @@ def run_coverage_preview(
     evidence: EvidenceBundleArtifact,
     *,
     intent_fields: dict[str, Any],
+    live_llm_required: bool = True,
 ) -> list[CoverageReport]:
     """Run coverage preview for each selected source card.
 
-    Routes by source_family:
-    - 'fedstat' -> fedstat_adapter.preview_fedstat_coverage (if parquet available)
-    - 'world_bank' -> world_bank_adapter.preview_world_bank_coverage
-    - 'ckan' -> ckan_adapter.preview_ckan_coverage
-
-    Always includes 'source_specific_risks' in the evidence dict.
+    Phase 1 — deterministic adapter inspection per source_family.
+    Phase 2 — LLM (Qwen) assesses coverage quality, proposes best slice,
+               alternatives, and whether extraction can proceed.
     """
     reports: list[CoverageReport] = []
     for source_card in evidence.selected_sources:
         report = _preview_one_source(source_card, intent_fields=intent_fields)
         reports.append(report)
+
+    if live_llm_required and reports:
+        reports = _llm_assess_coverage(reports, intent_fields=intent_fields)
+
     return reports
+
+
+def _llm_assess_coverage(
+    reports: list[CoverageReport],
+    *,
+    intent_fields: dict[str, Any],
+) -> list[CoverageReport]:
+    """Ask Qwen to assess coverage quality and enrich reports.
+
+    Per ARCHITECTURE_STACK.md Coverage & Schema Agent:
+    - best available slice
+    - alternative slices
+    - quality trade-offs
+    - whether to continue without asking user
+    - methodology risks
+    """
+    try:
+        from pydantic import BaseModel
+        from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
+
+        gate = qwen_credential_gate()
+        if gate["status"] == "gated_skip":
+            return reports
+
+        class _CoverageAssessment(BaseModel):
+            source_id: str = ""
+            can_proceed: bool = True
+            best_slice: str = ""
+            alternative_slices: list[str] = []
+            quality_risks: list[str] = []
+            ask_user: bool = False
+            ask_user_reason: str = ""
+
+        class _CoverageAssessmentList(BaseModel):
+            assessments: list[_CoverageAssessment] = []
+
+        coverage_summaries = [
+            {
+                "source_id": r.source_id,
+                "status": r.status,
+                "checks": r.checks[:10],
+                "available_periods": r.available_periods[:10],
+                "available_geographies": r.available_geographies[:10],
+                "unit": r.unit,
+                "frequency": r.frequency,
+                "evidence": {k: v for k, v in (r.evidence or {}).items()
+                             if k in ("source_specific_risks", "missing_values_pct",
+                                      "period_range", "coverage_pct")},
+            }
+            for r in reports
+        ]
+
+        client = YandexAIStudioClient()
+        result = client.structured_chat(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты — Coverage & Schema Agent DataAgent. "
+                        "Оцени покрытие источников и определи: "
+                        "можно ли продолжить извлечение данных, какой срез лучший, "
+                        "какие есть риски и нужно ли уточнение у пользователя. "
+                        "Отвечай строго в формате JSON."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Запрос: {intent_fields}\n"
+                        f"Покрытие источников:\n{coverage_summaries}"
+                    ),
+                },
+            ],
+            schema=_CoverageAssessmentList,
+            temperature=0.0,
+            max_tokens=1024,
+        )
+
+        # Merge LLM assessments back into CoverageReports
+        assessment_map = {a.source_id: a for a in result.assessments}
+        enriched: list[CoverageReport] = []
+        for report in reports:
+            assessment = assessment_map.get(report.source_id)
+            if assessment:
+                evidence = dict(report.evidence or {})
+                evidence["llm_best_slice"] = assessment.best_slice
+                evidence["llm_alternative_slices"] = assessment.alternative_slices
+                evidence["llm_quality_risks"] = assessment.quality_risks
+                evidence["llm_ask_user"] = assessment.ask_user
+                if assessment.ask_user_reason:
+                    evidence["llm_ask_user_reason"] = assessment.ask_user_reason
+                # Override status if LLM says cannot proceed
+                status = report.status
+                if not assessment.can_proceed and status == "ok":
+                    status = "skipped_with_reason"
+                enriched.append(report.model_copy(update={"evidence": evidence, "status": status}))
+            else:
+                enriched.append(report)
+        return enriched
+
+    except Exception:
+        # LLM assessment failed — return deterministic reports as-is
+        return reports
 
 
 def _preview_one_source(

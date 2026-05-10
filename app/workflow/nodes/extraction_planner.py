@@ -40,8 +40,16 @@ _EXTRACTOR_DISPATCH: dict[str, str] = {
 def build_extraction_plan(
     intent: IntentFrame,
     coverage_reports: list[CoverageReport],
+    *,
+    live_llm_required: bool = True,
 ) -> ExtractionPlan:
     """Build a safe structured extraction plan from intent and coverage reports.
+
+    Per ARCHITECTURE_STACK.md Extraction Planner Agent:
+    LLM (Qwen) chooses which allowlist operations to apply and which filters to use.
+    The allowlist guarantees safety; LLM provides the reasoning for the choice.
+
+    Falls back to rule-based selection if LLM is unavailable.
 
     Returns:
     - status='ok' with allowlist operations when coverage is sufficient
@@ -102,11 +110,12 @@ def build_extraction_plan(
             skip_reason="intent_requires_clarification",
         )
 
-    # Determine operations from allowlist based on intent
-    operations = _select_operations(intent, ok_reports)
-
-    # Build safe filters from intent known_fields only (no user SQL)
-    filters = _safe_filters_from_intent(intent)
+    # LLM chooses operations and filters; falls back to rule-based if unavailable
+    if live_llm_required:
+        operations, filters = _llm_select_plan(intent, ok_reports)
+    else:
+        operations = _select_operations(intent, ok_reports)
+        filters = _safe_filters_from_intent(intent)
 
     # Pick the first ok report for dispatch routing
     primary_report = ok_reports[0]
@@ -226,3 +235,87 @@ def _canonical_output_columns() -> list[str]:
         "retrieved_at",
         "quality_flags",
     ]
+
+
+def _llm_select_plan(
+    intent: IntentFrame,
+    ok_reports: list[CoverageReport],
+) -> tuple[list[str], dict[str, Any]]:
+    """Ask Qwen to select extraction operations and filters from the allowlist.
+
+    Per ARCHITECTURE_STACK.md: LLM chooses plan operations, not writes pipeline.
+    Returns (operations, filters). Falls back to rule-based on LLM error.
+    """
+    try:
+        from pydantic import BaseModel
+        from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
+
+        gate = qwen_credential_gate()
+        if gate["status"] == "gated_skip":
+            return _select_operations(intent, ok_reports), _safe_filters_from_intent(intent)
+
+        class _PlanChoice(BaseModel):
+            operations: list[str] = []
+            filters: dict[str, Any] = {}
+            reasoning: str = ""
+
+        coverage_summary = [
+            {
+                "source_id": r.source_id,
+                "status": r.status,
+                "available_periods": r.available_periods[:5],
+                "available_geographies": r.available_geographies[:5],
+                "unit": r.unit,
+                "llm_best_slice": (r.evidence or {}).get("llm_best_slice", ""),
+                "llm_quality_risks": (r.evidence or {}).get("llm_quality_risks", []),
+            }
+            for r in ok_reports
+        ]
+
+        client = YandexAIStudioClient()
+        result = client.structured_chat(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты — Extraction Planner Agent DataAgent. "
+                        f"Разрешённые операции: {sorted(ALLOWED_OPERATIONS)}. "
+                        "Выбери операции и фильтры для извлечения данных. "
+                        "ЗАПРЕЩЕНО: произвольный SQL, строки из запроса пользователя в фильтрах. "
+                        "Фильтры только из проверенных полей: geography, indicator, period, countries. "
+                        "Отвечай строго в формате JSON."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Запрос: {intent.query}\n"
+                        f"Категория: {intent.category}\n"
+                        f"Известные поля: {intent.known_fields}\n"
+                        f"Покрытие источников: {coverage_summary}"
+                    ),
+                },
+            ],
+            schema=_PlanChoice,
+            temperature=0.0,
+            max_tokens=512,
+        )
+
+        # Enforce allowlist — LLM output cannot add unsafe operations
+        safe_ops = [op for op in result.operations if op in ALLOWED_OPERATIONS]
+        if not safe_ops:
+            safe_ops = _select_operations(intent, ok_reports)
+
+        # Enforce safe filters — only known typed keys
+        safe_filters = _safe_filters_from_intent(intent)
+        for key in ("geography", "indicator", "period", "countries", "indicator_id",
+                    "indicator_name", "periods"):
+            if key in result.filters:
+                val = result.filters[key]
+                if isinstance(val, (str, list)) and val:
+                    safe_filters[key] = val
+
+        return safe_ops, safe_filters
+
+    except Exception:
+        return _select_operations(intent, ok_reports), _safe_filters_from_intent(intent)

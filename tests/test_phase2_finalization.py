@@ -631,7 +631,8 @@ class TestBuildWorkflowResponse:
     def test_passed_response_includes_dataset_and_script(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        self._mock_narrator(monkeypatch, message="Данные из Росстат: ВВП 100 трлн руб.")
+        # Message with no numbers — passes numeric assertion guardrail
+        self._mock_narrator(monkeypatch, message="Данные получены из источников Росстат.")
         from app.artifacts.workflow_artifacts import CritiqueReport, WorkflowResponse
         from app.workflow.nodes.narrator import build_workflow_response
         from app.workflow.nodes.visualization import build_visualization
@@ -662,7 +663,8 @@ class TestBuildWorkflowResponse:
     def test_passed_response_script_artifact_path_is_downloadable(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        self._mock_narrator(monkeypatch, message="ВВП 100")
+        # Message with no numbers — passes numeric assertion guardrail
+        self._mock_narrator(monkeypatch, message="Данные получены из источников Росстат.")
         from app.artifacts.workflow_artifacts import CritiqueReport
         from app.workflow.nodes.narrator import build_workflow_response
         from app.workflow.nodes.visualization import build_visualization

@@ -510,6 +510,19 @@ class TestPhase208WorkflowSurface:
                 component_statuses={"critic": CritiqueReport(artifact_id="c", verdict="not_found").verdict},
             )
 
+        # Mock analyze_intent so continue_user_query LLM re-analysis succeeds
+        from app.artifacts.workflow_artifacts import IntentFrame as _IntentFrame
+        def fake_analyze_intent(query: str, *, live_llm_required: bool = True) -> _IntentFrame:
+            return _IntentFrame(
+                query=query, category="simple",
+                known_fields={"geography": "Russia", "period": "2024"},
+                missing_fields=[],
+                needs_clarification=False,
+                source_preferences=["world_bank"],
+                open_reasoning=["mocked"],
+            )
+        monkeypatch.setattr("app.workflow.state.analyze_intent", fake_analyze_intent)
+
         monkeypatch.setattr(service, "run_user_query_to_pending_finalization", fake_pending)
         monkeypatch.setattr(service, "_finalize_state", fake_finalize)
         config = WorkflowRunConfig.default().model_copy(

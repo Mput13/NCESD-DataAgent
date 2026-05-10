@@ -361,32 +361,31 @@ def continue_user_query(
     intent_raw = saved_state.get("intent")
     intent = _safe_pydantic(IntentFrame, intent_raw)
 
-    # Merge clarification answer into intent
-    if intent is not None:
-        merged_known = dict(intent.known_fields or {})
-        merged_known["clarification_answer"] = clarification_answer
-        # Parse geo/period from clarification_answer
-        import re
-        years = re.findall(r"\b(19|20)\d{2}\b", clarification_answer)
-        if years:
-            merged_known["period"] = years[0] if len(years) == 1 else f"{years[0]}-{years[-1]}"
-        for geo_kw in ("россия", "russia", "казахстан", "kazakhstan", "китай", "china", "бразилия", "brazil"):
-            if geo_kw in clarification_answer.lower():
-                merged_known["geography"] = geo_kw
-                break
-
-        updated_missing = [f for f in (intent.missing_fields or [])
-                           if f not in merged_known]
-
-        intent = IntentFrame(
-            query=f"{intent.query} | Уточнение: {clarification_answer}",
-            category=intent.category,
-            known_fields=merged_known,
-            missing_fields=updated_missing,
-            needs_clarification=bool(updated_missing),
-            source_preferences=list(intent.source_preferences or []),
-            open_reasoning=list(intent.open_reasoning or []) + ["clarification_merged"],
-        )
+    # Merge clarification answer into intent via LLM re-analysis
+    # Per ARCHITECTURE_STACK.md: clarification parsing must go through Intent Analyst,
+    # not keyword matching. Re-run analyze_intent on the combined query.
+    from app.workflow.state import analyze_intent as _analyze_intent
+    combined_query = (
+        f"{saved_state.get('query', '')} | Уточнение пользователя: {clarification_answer}"
+    )
+    try:
+        intent = _analyze_intent(combined_query, live_llm_required=config.live_llm_required)
+    except Exception:
+        # LLM unavailable — merge clarification manually and continue
+        if intent is not None:
+            merged_known = dict(intent.known_fields or {})
+            merged_known["clarification_answer"] = clarification_answer
+            updated_missing = [f for f in (intent.missing_fields or [])
+                               if f not in merged_known]
+            intent = IntentFrame(
+                query=combined_query,
+                category=intent.category,
+                known_fields=merged_known,
+                missing_fields=updated_missing,
+                needs_clarification=bool(updated_missing),
+                source_preferences=list(intent.source_preferences or []),
+                open_reasoning=list(intent.open_reasoning or []) + ["clarification_merged_no_llm"],
+            )
 
     # Reconstruct trace events
     trace_events_raw = saved_state.get("trace_events") or []

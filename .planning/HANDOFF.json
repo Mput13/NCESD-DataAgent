@@ -1,90 +1,94 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-10T10:20:00Z",
+  "timestamp": "2026-05-10T15:29:59.550Z",
   "phase": "02",
-  "phase_name": "Full Jury MVP",
+  "phase_name": "jury-mvp",
   "phase_dir": ".planning/phases/02-jury-mvp",
-  "status": "ready_for_gsd_discuss_phase_2",
+  "plan": 8,
+  "task": "minimal_real_frontend_prep",
+  "total_tasks": 3,
+  "status": "paused",
   "completed_tasks": [
     {
       "id": 1,
-      "name": "Phase 1 accepted as infrastructure, not product MVP",
+      "name": "Phase 2 execution through 02-08",
       "status": "done",
-      "evidence": ".planning/phases/01-data-architecture-research/phase1-test-acceptance.md"
+      "commit": "e140e35"
     },
     {
       "id": 2,
-      "name": "Remote workstream-1/core-integration reviewed",
-      "status": "done",
-      "progress": "Do not merge wholesale. Treat as reference only because it deletes current Phase 1 artifacts/tests/scripts, rewinds planning, leaves scouts/extraction stubbed, and regresses verified Yandex endpoint/auth."
-    },
-    {
-      "id": 3,
-      "name": "Phase 2 added to roadmap",
-      "status": "done",
-      "evidence": ".planning/ROADMAP.md"
-    },
-    {
-      "id": 4,
-      "name": "Phase 2 seed context created",
-      "status": "done",
-      "evidence": ".planning/phases/02-jury-mvp/02-SEED-CONTEXT.md"
+      "name": "Minimal non-Streamlit web scaffold",
+      "status": "in_progress",
+      "progress": "Created app/web/server.py, static HTML/CSS/JS, tests/test_web_frontend.py, and README run instructions. Focused tests passed: python -m pytest tests/test_web_frontend.py tests/test_phase2_workflow_service.py -q -> 33 passed."
     }
   ],
   "remaining_tasks": [
     {
-      "id": 1,
-      "name": "Run $gsd-discuss-phase 2 in the next session",
-      "status": "not_started"
-    },
-    {
-      "id": 2,
-      "name": "Keep full embedding build/heartbeat active until cache reaches the 36,321 chunk corpus and index/readiness artifacts are refreshed",
-      "status": "in_progress"
-    },
-    {
       "id": 3,
-      "name": "Plan Phase 2 only after discussion captures unresolved decisions",
+      "name": "Smoke minimal web UI",
+      "status": "not_started",
+      "detail": "Run PYTHONPATH=. python -m app.web.server --port 8787, open http://127.0.0.1:8787, submit a query, verify /api/query, /api/continue, and /api/feedback render correctly."
+    },
+    {
+      "id": 4,
+      "name": "Decide whether to keep Streamlit during transition",
+      "status": "not_started",
+      "detail": "Current scaffold is additive and does not remove app/ui/streamlit_app.py."
+    },
+    {
+      "id": 5,
+      "name": "Commit frontend scaffold if accepted",
       "status": "not_started"
     }
   ],
-  "blockers": [
+  "blockers": [],
+  "human_actions_pending": [
     {
-      "description": "Current Phase 1 system is infrastructure only: data relevance eval is 0 passed / 20 gated and demo readiness is blocked/stale.",
-      "type": "acceptance",
-      "workaround": "Phase 2 acceptance target is all 20 golden cases with correct terminal outcomes."
+      "action": "Review minimal web UI direction",
+      "context": "User wants to replace Streamlit with real frontend using JS/HTML/CSS. Current scaffold is minimal and additive.",
+      "blocking": false
     },
     {
-      "description": "Remote workstream branch is not directly mergeable.",
-      "type": "integration",
-      "workaround": "Port reviewed ideas selectively during Phase 2 planning and execution."
+      "action": "Manual UAT for Phase 2",
+      "context": ".planning/phases/02-jury-mvp/manual-uat.md still needs human approval before full phase completion.",
+      "blocking": true
     }
   ],
   "decisions": [
     {
-      "decision": "Phase 2 acceptance target is all 20 golden cases, not a small demo subset.",
+      "decision": "Prepare a zero-new-dependency Python HTTP server plus static frontend instead of adding a JS framework immediately.",
+      "rationale": "Keeps workflow service as source of truth and makes future migration to Vite/React or plain JS possible without disturbing Phase 2 logic.",
       "phase": "02"
     },
     {
-      "decision": "Valid terminal outcomes are passed, needs_clarification, or not_found. Gated/stale/skipped/no_candidate states are not acceptable final outcomes.",
-      "phase": "02"
-    },
-    {
-      "decision": "Do not merge origin/workstream-1/core-integration wholesale.",
-      "phase": "02"
-    },
-    {
-      "decision": "Keep Phase 2 seed context as 02-SEED-CONTEXT.md, not 02-CONTEXT.md, so $gsd-discuss-phase 2 still runs.",
+      "decision": "Stop the interrupted app.web.server process on port 8787 during pause.",
+      "rationale": "The user interrupted the smoke run; leaving a fresh background server running would make resume state muddy.",
       "phase": "02"
     }
   ],
-  "human_actions_pending": [
+  "uncommitted_files": [
+    "README.md",
+    "app/web/__init__.py",
+    "app/web/server.py",
+    "app/web/static/app.js",
+    "app/web/static/index.html",
+    "app/web/static/styles.css",
+    "tests/test_web_frontend.py",
+    ".planning/HANDOFF.json",
+    ".planning/phases/02-jury-mvp/.continue-here.md"
+  ],
+  "background_processes": [
     {
-      "action": "Start the next session with $gsd-discuss-phase 2.",
-      "context": "The roadmap and seed context now contain the required state.",
-      "blocking": true
+      "pid": 29972,
+      "command": "streamlit run app/ui/streamlit_app.py --server.headless true",
+      "status": "running before pause"
+    },
+    {
+      "pid": 28584,
+      "command": "python -m streamlit run app/ui/streamlit_app.py --server.port 8502 --server.headless true",
+      "status": "running before pause"
     }
   ],
-  "next_action": "Run $gsd-discuss-phase 2. Read .planning/phases/02-jury-mvp/02-SEED-CONTEXT.md, .planning/phases/01-data-architecture-research/phase1-test-acceptance.md, .planning/ARCHITECTURE_STACK.md, .planning/ROADMAP.md, and .planning/STATE.md.",
-  "context_notes": "Phase 1 artifacts are not to be deleted or overwritten by stale remote planning. The full jury MVP must implement the real workflow behind Streamlit and pass all 20 golden cases with source-bound deterministic outputs or correct clarification/not-found outcomes."
+  "next_action": "Run the minimal web server smoke: $env:PYTHONPATH='.'; python -m app.web.server --port 8787, then open http://127.0.0.1:8787 and submit 'Kakoy VVP Rossii v 2024 godu'.",
+  "context_notes": "Do not restart Phase 2 execution. Phase 2 plan set is complete and committed at e140e35. The active work is a user-requested pivot from Streamlit to a minimal real frontend. Keep app.workflow.service as the API boundary."
 }

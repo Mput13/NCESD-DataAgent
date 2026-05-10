@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_for_phase_2_discussion
-stopped_at: Phase 1 accepted as infrastructure; Phase 2 jury MVP added to roadmap
-last_updated: "2026-05-10T10:20:00Z"
+status: phase_2_planning_paused_for_branch_isolation
+stopped_at: Phase 2 plan-phase paused after second checker revision; branch isolation required before final checker pass
+last_updated: "2026-05-10T13:55:00Z"
 progress:
   total_phases: 2
   completed_phases: 1
@@ -19,16 +19,16 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код, не LLM  
-**Current focus:** Phase 02 — jury MVP discussion
+**Current focus:** Phase 02 — jury MVP planning
 
 ## Current Phase
 
 **Phase:** 2  
 **Slug:** `02-jury-mvp`  
 **Name:** Full Jury MVP  
-**Status:** Ready for `$gsd-discuss-phase 2`
+**Status:** Planning paused for branch isolation
 **Canonical directory:** `.planning/phases/02-jury-mvp`  
-**Next action:** run `$gsd-discuss-phase 2`; use `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md`, `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md`, and `.planning/ARCHITECTURE_STACK.md` as the starting context.
+**Next action:** resume plan verification on branch `codex/phase-2-jury-mvp-planning`; run the third `gsd-plan-checker` pass against `.planning/phases/02-jury-mvp/*-PLAN.md`. See `.planning/phases/02-jury-mvp/02-PLAN-PAUSE.md`.
 
 ## Phase Boundary
 
@@ -46,7 +46,7 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 Phase 2 is now explicitly added in `.planning/ROADMAP.md`. It is the full jury MVP phase, not a small demo subset. Acceptance target: all 20 golden cases must reach a correct terminal outcome (`passed`, `needs_clarification`, or `not_found`). `gated`, `stale`, `skipped_with_reason`, `no_candidate`, or `final_answer.status=ok` while coverage/extraction is gated are not acceptable final states.
 
-The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 must make Streamlit submit user queries into the real evaluated workflow:
+The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 must expose a real evaluated workflow and a frontend-facing response contract suitable for a chat-like LLM UI. Streamlit remains a simple fast test surface rather than the polished frontend deliverable.
 
 `User query → Supervisor → Intent Analyst → Research Designer / Direct path → FedStat/WB/CKAN Scouts → Coverage & Schema → Extraction Planner → Deterministic Tools → Methodology Critic → Visualization → Narrator → answer + dataset + script + sources + trace`.
 
@@ -86,6 +86,18 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 - **2026-05-10 — Phase 2 explicitly added for full jury MVP.**
   Roadmap now has canonical Phase 2 at `.planning/phases/02-jury-mvp`. The next session should run `$gsd-discuss-phase 2`. The user explicitly rejected a low acceptance bar; all 20 golden cases are the target. Remote branch `origin/workstream-1/core-integration` was reviewed and is not directly mergeable because it deletes current Phase 1 artifacts/tests/scripts, rewinds `.planning`, keeps scout/extraction stubs, and regresses Yandex AI Studio endpoint/auth. Treat it as reference only.
 
+- **2026-05-10 — Phase 2 context captured and scope locked.**
+  `.planning/phases/02-jury-mvp/02-CONTEXT.md` records the user decision that Phase 2 must implement the full functionality described in `.planning/ARCHITECTURE_STACK.md`. The architecture stack is the minimum jury-prototype baseline, not a future wishlist or a reduced MVP. Planning must target all 20 golden cases and the full source-bound workflow: user query through Supervisor, Intent Analyst, Research Designer/direct path, FedStat/WB/CKAN scouts, Coverage & Schema, Extraction Planner, Deterministic Tools, Methodology Critic, Visualization, Narrator, answer, dataset, script, sources, and trace.
+
+- **2026-05-10 — Phase 2 discussion decisions expanded.**
+  User delegated implementation wave ordering to the planner with preference for parallel work and fast delivery. Target path must use real Yandex/Qwen LLM calls and real embedding calls where specified by the architecture stack; mocks or deterministic fallbacks may be test-only and cannot count as jury readiness. Minimum success includes full pipeline traversal and an answer. Manual testing and user feedback after implementation are required in addition to automatic tests. Do not build a polished frontend now; implement a chat-like frontend response format, with Streamlit retained as a quick testing surface.
+
+- **2026-05-10 — Qdrant server mode chosen for Phase 2 runtime.**
+  Local embedded Qdrant (`QdrantClient(path=".local/qdrant")`) is acceptable for small tests and isolated development only. Phase 2 should use Docker/server Qdrant through `QDRANT_URL` so parallel scouts, evals, workflow smoke runs, and Streamlit can safely query one shared collection without embedded storage locks. The 36,321-point corpus is above the local-mode 20,000-point warning threshold, so jury readiness should not depend on embedded local mode.
+
+- **2026-05-10 — Phase 2 planning paused for branch isolation.**
+  Plan-phase for Phase 2 created/revised 10 plan files and reached checker iteration 2. The latest revision resolved deterministic tools dispatch, `ScriptArtifact` propagation, and executable feedback/fix paths. Planning stopped before the third `gsd-plan-checker` pass because the worktree was on `codex/feat-openai-compatible-embeddings` and contained unrelated embedding-experiment changes. Correct planning branch: `codex/phase-2-jury-mvp-planning`. Resume by reading `.planning/phases/02-jury-mvp/02-PLAN-PAUSE.md` and rerunning the plan checker, not by restarting discussion or planning from scratch.
+
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
   Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
@@ -97,10 +109,11 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 - `app/data/deterministic_tools.py` and `scripts/run_extraction_probes.py` — DuckDB SQL-first deterministic tool contracts and source-family extraction probes.
 - `app/evals/run_eval.py` — data relevance and extraction evaluation gate over golden cases.
 - `app/demo/run_demo.py` — prepared-data demo readiness runner that consumes corpus/catalog/index/eval/probe artifacts and refuses false dense readiness.
-- `app/ui/streamlit_app.py` — minimal diagnostic Streamlit shell exposing chat input, examples, state machine, trace, artifacts, rejection details, index readiness, and feedback/fix requests.
+- `app/ui/streamlit_app.py` — minimal diagnostic Streamlit shell exposing chat input, examples, state machine, trace, artifacts, rejection details, index readiness, and feedback/fix requests; Phase 2 should keep Streamlit as quick test surface while producing a chat-like frontend response contract.
 - `.planning/phases/01-data-architecture-research/phase1-actual-state-verification.md` — actual-state verification report for the Phase 1 runnable surface, test results, interface, and incomplete/gated pieces.
 - `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` — full current acceptance report covering all pytest tests and Phase 1 gates.
-- `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md` — Phase 2 seed context for `$gsd-discuss-phase 2`; intentionally not named `02-CONTEXT.md` so the discussion workflow still runs.
+- `.planning/phases/02-jury-mvp/02-CONTEXT.md` — canonical Phase 2 context; locks full `.planning/ARCHITECTURE_STACK.md` functionality as the jury MVP minimum.
+- `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md` — seed context that fed the Phase 2 discussion; superseded by `02-CONTEXT.md` for planning.
 - `.planning/phases/02-jury-mvp/remote-workstream-review.md` — review of `origin/workstream-1/core-integration`; records why it is not directly mergeable and which ideas may be ported selectively.
 - `docs/PROJECT_WORKFLOW.md` — GSD workflow explanation for the project.
 - `requirements.txt` — includes Yandex/OpenAI client, Pydantic, Qdrant, DuckDB/PyArrow/Polars/Altair, Streamlit, and HTTP/runtime dependencies.
@@ -177,18 +190,18 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Recommended Next Action
 
-Phase 1 plans are complete and accepted only as infrastructure. Phase 2 is ready for discussion. Next:
+Phase 1 plans are complete and accepted only as infrastructure. Phase 2 planning is paused for branch isolation. Next:
 
-1. Keep the full embedding build and heartbeat monitor active until the cache reaches the 36,321-chunk corpus.
-2. Do not merge `origin/workstream-1/core-integration` wholesale; port only reviewed ideas into Phase 2 plans if they satisfy current acceptance gates.
-3. Run `$gsd-discuss-phase 2`.
-4. In Phase 2, target all 20 golden cases. Staged implementation order is allowed, but final acceptance is all cases with correct terminal outcomes.
-5. Refresh index/readiness artifacts and rerun `python3 -m pytest -q` before claiming MVP readiness.
+1. Stay on or return to `codex/phase-2-jury-mvp-planning`.
+2. Confirm unrelated embedding-experiment dirty files are isolated/stashed and not mixed into Phase 2 planning commits.
+3. Run the third `gsd-plan-checker` pass for `.planning/phases/02-jury-mvp/*-PLAN.md`.
+4. If checker passes, mark Phase 2 as planned and proceed later to `$gsd-execute-phase 2`.
+5. If checker finds issues, revise only the specific plan files it names.
 
 ## Session Continuity
 
-Last session: 2026-05-10T10:20:00Z
-Stopped at: Phase 1 accepted as infrastructure, Phase 2 jury MVP added, remote workstream reviewed as not directly mergeable
+Last session: 2026-05-10T13:55:00Z
+Stopped at: Phase 2 plan-phase paused after second checker revision, before third checker pass
 Resume file: None
 
 ---

@@ -1,7 +1,12 @@
 # Phase 2 Plan-Phase Pause
 
 **Paused:** 2026-05-10T13:55:00Z  
+**Resolved:** 2026-05-10  
 **Reason:** Branch isolation. Planning work was accidentally performed while the checkout was on `codex/feat-openai-compatible-embeddings`, which also had unrelated embedding-experiment changes.
+
+## Resolution
+
+The third `gsd-plan-checker` pass was run on `codex/phase-2-jury-mvp-planning` against the current 10 Phase 2 plan files. It returned `VERIFICATION PASSED` with no blockers before `$gsd-execute-phase 2`.
 
 ## Correct Branch
 
@@ -17,7 +22,7 @@ Do not continue Phase 2 planning on:
 codex/feat-openai-compatible-embeddings
 ```
 
-## Where Planning Stopped
+## Where Planning Had Stopped
 
 `$gsd-plan-phase 2` has already completed:
 
@@ -28,7 +33,7 @@ codex/feat-openai-compatible-embeddings
 5. Checker pass 2: found 3 blockers and 1 warning
 6. Revision 2: resolved deterministic tools dispatch, `ScriptArtifact` propagation, executable feedback/fix path, and missing verify command
 
-The next step is **not** to restart planning. The next step is to run the third plan-checker pass against the current plan files:
+This pause is now resolved. The third plan-checker pass was run against these current plan files and passed:
 
 ```text
 .planning/phases/02-jury-mvp/02-01-PLAN.md
@@ -54,12 +59,12 @@ The next step is **not** to restart planning. The next step is to run the third 
 
 The checkout had unrelated dirty files from the embedding experiment, including retrieval code, embedding build scripts/tests, and Phase 1 generated evidence. Those changes must stay isolated from Phase 2 planning. Do not stage them into Phase 2 planning commits unless the user explicitly asks to merge that experiment into this branch.
 
-## Resume Command
+## Historical Resume Command
 
-Resume with a checker pass equivalent to:
+This was the resume command before the pause was resolved:
 
 ```text
 $gsd-plan-phase 2
 ```
 
-But avoid re-running research/planning from scratch. Use the existing plans and run/continue verification.
+Do not use this pause file as the active next step anymore. Active next step is `$gsd-execute-phase 2`.

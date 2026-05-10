@@ -134,7 +134,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 **Total v1 requirements:** 27  
 **Coverage:** 100% mapped; functional acceptance deferred to Phase 2  
 **Phase 1 status:** accepted as infrastructure, not product MVP  
-**Phase 2 status:** ready for discussion  
+**Phase 2 status:** planned; ready for `$gsd-execute-phase 2`  
 
 ---
 *Last updated: 2026-05-10 — Phase 2 explicitly added after Phase 1 test acceptance*

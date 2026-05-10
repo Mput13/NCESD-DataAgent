@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: phase_2_planning_paused_for_branch_isolation
-stopped_at: Phase 2 plan-phase paused after second checker revision; branch isolation required before final checker pass
-last_updated: "2026-05-10T13:55:00Z"
+status: phase_2_planned_ready_for_execute
+stopped_at: Phase 2 planning complete; third checker pass accepted all 10 plans
+last_updated: "2026-05-10"
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 5
+  total_plans: 15
   completed_plans: 5
 ---
 
@@ -26,9 +26,9 @@ See: `.planning/PROJECT.md`
 **Phase:** 2  
 **Slug:** `02-jury-mvp`  
 **Name:** Full Jury MVP  
-**Status:** Planning paused for branch isolation
+**Status:** Planned; ready for `$gsd-execute-phase 2`
 **Canonical directory:** `.planning/phases/02-jury-mvp`  
-**Next action:** resume plan verification on branch `codex/phase-2-jury-mvp-planning`; run the third `gsd-plan-checker` pass against `.planning/phases/02-jury-mvp/*-PLAN.md`. See `.planning/phases/02-jury-mvp/02-PLAN-PAUSE.md`.
+**Next action:** execute the accepted 10-plan Phase 2 plan set with `$gsd-execute-phase 2`.
 
 ## Phase Boundary
 
@@ -97,6 +97,9 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 - **2026-05-10 — Phase 2 planning paused for branch isolation.**
   Plan-phase for Phase 2 created/revised 10 plan files and reached checker iteration 2. The latest revision resolved deterministic tools dispatch, `ScriptArtifact` propagation, and executable feedback/fix paths. Planning stopped before the third `gsd-plan-checker` pass because the worktree was on `codex/feat-openai-compatible-embeddings` and contained unrelated embedding-experiment changes. Correct planning branch: `codex/phase-2-jury-mvp-planning`. Resume by reading `.planning/phases/02-jury-mvp/02-PLAN-PAUSE.md` and rerunning the plan checker, not by restarting discussion or planning from scratch.
+
+- **2026-05-10 — Phase 2 planning verified.**
+  Third `gsd-plan-checker` pass on branch `codex/phase-2-jury-mvp-planning` returned `VERIFICATION PASSED` for all 10 plans. No blockers remain before `$gsd-execute-phase 2`. Requirements groups `NLU-01..04`, `SRCH-01..04`, `DATA-01..05`, `ART-01..06`, `RBST-01..04`, `UI-01..04`, and `ENG-01..04` are covered by plan frontmatter/tasks, and Revision 2 fixes for deterministic tool dispatch, `ScriptArtifact` propagation, Qdrant server mode, executable feedback/fix paths, and all-20 acceptance gates were confirmed present.
 
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
@@ -190,18 +193,17 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Recommended Next Action
 
-Phase 1 plans are complete and accepted only as infrastructure. Phase 2 planning is paused for branch isolation. Next:
+Phase 1 plans are complete and accepted only as infrastructure. Phase 2 planning is complete and verified. Next:
 
-1. Stay on or return to `codex/phase-2-jury-mvp-planning`.
-2. Confirm unrelated embedding-experiment dirty files are isolated/stashed and not mixed into Phase 2 planning commits.
-3. Run the third `gsd-plan-checker` pass for `.planning/phases/02-jury-mvp/*-PLAN.md`.
-4. If checker passes, mark Phase 2 as planned and proceed later to `$gsd-execute-phase 2`.
-5. If checker finds issues, revise only the specific plan files it names.
+1. Stay on `codex/phase-2-jury-mvp-planning`.
+2. Keep unrelated embedding-experiment dirty files isolated from Phase 2 planning commits.
+3. Run `$gsd-execute-phase 2`.
+4. During execution, preserve the all-20 golden acceptance target and do not accept stale/gated/skipped/no_candidate final states.
 
 ## Session Continuity
 
-Last session: 2026-05-10T13:55:00Z
-Stopped at: Phase 2 plan-phase paused after second checker revision, before third checker pass
+Last session: 2026-05-10
+Stopped at: Phase 2 planning verified; ready for execute-phase
 Resume file: None
 
 ---
@@ -214,4 +216,4 @@ Resume file: None
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `05`: 9 min, 2 tasks, 14 artifact/code/test files.
 
 ---
-*Last updated: 2026-05-10 after completing Plan 05*
+*Last updated: 2026-05-10 after Phase 2 plan-checker pass 3*

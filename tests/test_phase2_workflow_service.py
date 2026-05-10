@@ -79,19 +79,20 @@ class TestAnalyzeIntent:
         from app.workflow.state import analyze_intent
         from app.artifacts.workflow_artifacts import IntentFrame
 
-        fake_intent = IntentFrame(
-            query="ВВП России 2024",
-            category="simple",
-            known_fields={"geography": "Russia", "period": "2024"},
-            missing_fields=[],
-            needs_clarification=False,
-            source_preferences=[],
-            open_reasoning=["Qwen structured output"],
-        )
+        from pydantic import BaseModel
 
-        # Monkeypatch YandexAIStudioClient.structured_chat
+        class FakeIntentSchema(BaseModel):
+            category: str = "simple"
+            needs_clarification: bool = False
+            geography: str | None = "Russia"
+            period: str | None = "2024"
+            indicator: str | None = None
+            source_preferences: list[str] = []
+            missing_fields: list[str] = []
+
+        # Monkeypatch YandexAIStudioClient.structured_chat to return schema-compatible object
         def fake_structured_chat(self, messages, *, schema, **kwargs):
-            return fake_intent
+            return FakeIntentSchema()
 
         monkeypatch.setattr(
             "app.llm.yandex_ai_studio.YandexAIStudioClient.structured_chat",
@@ -106,10 +107,16 @@ class TestAnalyzeIntent:
                 {"api_key": "fake", "model": "gpt://x/q/latest", "base_url": "https://llm.api.cloud.yandex.net/v1"},
             )(),
         )
+        # Patch credential gate to appear ready
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.qwen_credential_gate",
+            lambda profile="QWEN": {"status": "ready", "missing_env_vars": []},
+        )
 
         result = analyze_intent("ВВП России 2024", live_llm_required=True)
         assert isinstance(result, IntentFrame)
         assert result.query == "ВВП России 2024"
+        assert result.category == "simple"
 
     def test_analyze_intent_fallback_marks_test_only(self) -> None:
         from app.workflow.state import analyze_intent
@@ -224,7 +231,7 @@ class TestRunUserQueryToPendingFinalization:
 
     def test_run_to_pending_returns_phase2_state(self, tmp_path: Path) -> None:
         from app.workflow.service import run_user_query_to_pending_finalization
-        from app.workflow.graph_contract import WorkflowRunConfig
+        from app.workflow.service import WorkflowRunConfig
 
         config = WorkflowRunConfig.default().model_copy(
             update={
@@ -242,7 +249,7 @@ class TestRunUserQueryToPendingFinalization:
 
     def test_run_to_pending_includes_run_id(self, tmp_path: Path) -> None:
         from app.workflow.service import run_user_query_to_pending_finalization
-        from app.workflow.graph_contract import WorkflowRunConfig
+        from app.workflow.service import WorkflowRunConfig
 
         config = WorkflowRunConfig.default().model_copy(
             update={
@@ -257,7 +264,7 @@ class TestRunUserQueryToPendingFinalization:
 
     def test_run_user_query_still_raises_not_implemented(self) -> None:
         from app.workflow.service import run_user_query
-        from app.workflow.graph_contract import WorkflowRunConfig
+        from app.workflow.service import WorkflowRunConfig
 
         with pytest.raises(NotImplementedError) as exc_info:
             run_user_query("test")

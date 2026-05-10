@@ -17,6 +17,29 @@ from app.retrieval.embedding_index import (
 
 TOKEN_RE = re.compile(r"[\wА-Яа-яЁё]+", re.UNICODE)
 
+# Contextual share/percent phrases that indicate a document is NOT a direct indicator
+# when the query is asking for an absolute metric (e.g., GDP value, not GDP share).
+_CONTEXTUAL_SHARE_PHRASES_RU = [
+    "удельный вес",
+    "доля",
+    "в процентах от",
+    "в % от",
+    "в процентах",
+    "отношение к",
+]
+_CONTEXTUAL_SHARE_PHRASES_EN = [
+    "share",
+    "percent of gdp",
+    "% of gdp",
+    "as a percentage",
+    "as a share",
+    "ratio to",
+]
+
+# Direct economic indicator keywords that boost exact-match cards
+_DIRECT_INDICATOR_KEYWORDS_RU = ["ввп", "валовой", "внутренний", "продукт", "ипц", "инфляция"]
+_DIRECT_INDICATOR_KEYWORDS_EN = ["gdp", "cpi", "population", "inflation", "unemployment"]
+
 
 @dataclass(frozen=True)
 class RetrievalCandidate:
@@ -153,11 +176,28 @@ class BGERerankerCompatible:
 
         query_tokens = set(_tokens(query))
         expected = {_normalize_source(source) for source in expected_sources}
+        query_asks_for_share = _query_asks_for_share(query)
+
         reranked: list[RetrievalCandidate] = []
         for candidate in candidates:
+            # Source family bonus (Phase 1 preserved)
             source_bonus = 0.5 if _normalize_source(candidate.source_family) in expected else 0.0
+            # Expected source family exact match bonus (D-20: direct indicator intent)
+            if expected and _normalize_source(candidate.source_family) in expected:
+                source_bonus = 0.75  # upgraded from Phase 1 0.5
+
+            # Keyword overlap bonus (Phase 1 preserved)
             keyword_bonus = len(query_tokens.intersection(candidate.evidence_keywords)) * 0.25
-            score = candidate.score + source_bonus + keyword_bonus
+
+            # Domain-aware bonuses (Phase 2 additions)
+            # +2.5 for exact indicator/code/title match
+            exact_match_bonus = _exact_indicator_match_bonus(query, candidate)
+            # +1.0 for direct GDP/CPI/population keyword match
+            direct_kw_bonus = _direct_keyword_bonus(query_tokens, candidate)
+            # -1.5 contextual penalty when title is a share/percent but query is not
+            contextual_penalty = _contextual_penalty(candidate, query_asks_for_share)
+
+            score = candidate.score + source_bonus + keyword_bonus + exact_match_bonus + direct_kw_bonus + contextual_penalty
             reranked.append(
                 RetrievalCandidate(
                     **{
@@ -198,7 +238,7 @@ class HybridRetriever:
             merged,
             expected_sources=expected_sources,
         )
-        accepted, rejected = split_rejections(reranked, expected_sources=expected_sources)
+        accepted, rejected = split_rejections(reranked, expected_sources=expected_sources, query=query)
         mode = "hybrid_lexical_dense"
         if self.dense.status != "ready":
             mode = "hybrid_lexical_dense_gated"
@@ -234,17 +274,35 @@ def load_documents_from_index_manifest(index_manifest: dict[str, Any]) -> list[d
 
 
 def split_rejections(
-    candidates: list[RetrievalCandidate], *, expected_sources: list[str]
+    candidates: list[RetrievalCandidate],
+    *,
+    expected_sources: list[str],
+    query: str = "",
 ) -> tuple[list[RetrievalCandidate], list[RetrievalCandidate]]:
+    """Split candidates into accepted and rejected, attaching concrete rejection reasons.
+
+    Rejection reasons:
+    - source_preference_mismatch: candidate source family does not match the expected
+      sources explicitly requested by the caller.
+    - source_family_mismatch: legacy alias (preserved for backward compatibility).
+    - contextual_match_not_direct_indicator: candidate title is a contextual share/percent
+      metric, but the query is asking for a direct absolute indicator.
+    - no_lexical_or_dense_evidence: candidate has zero or negative retrieval score.
+    """
     expected = {_normalize_source(source) for source in expected_sources}
+    query_asks_for_share = _query_asks_for_share(query) if query else False
     accepted: list[RetrievalCandidate] = []
     rejected: list[RetrievalCandidate] = []
     for candidate in candidates:
         reasons = list(candidate.rejection_reasons)
         if expected and _normalize_source(candidate.source_family) not in expected:
-            reasons.append("source_family_mismatch")
+            # Use source_preference_mismatch when explicit source preference was given
+            reasons.append("source_preference_mismatch")
         if candidate.score <= 0:
             reasons.append("no_lexical_or_dense_evidence")
+        # Add contextual rejection reason for share/percent titles when query is direct
+        if not query_asks_for_share and _title_is_contextual_share(candidate.title):
+            reasons.append("contextual_match_not_direct_indicator")
         if reasons:
             rejected.append(
                 RetrievalCandidate(**{**candidate.__dict__, "rejection_reasons": reasons})
@@ -311,3 +369,71 @@ def _tokens(text: str) -> list[str]:
 
 def _normalize_source(source: str) -> str:
     return source.strip().lower().replace(" ", "_")
+
+
+def _title_is_contextual_share(title: str) -> bool:
+    """Return True if the title describes a share/percent metric, not a direct absolute metric."""
+    title_lower = title.lower()
+    for phrase in _CONTEXTUAL_SHARE_PHRASES_RU:
+        if phrase in title_lower:
+            return True
+    for phrase in _CONTEXTUAL_SHARE_PHRASES_EN:
+        if phrase in title_lower:
+            return True
+    return False
+
+
+def _query_asks_for_share(query: str) -> bool:
+    """Return True if the query itself asks for a share or percentage."""
+    q_lower = query.lower()
+    for phrase in _CONTEXTUAL_SHARE_PHRASES_RU + _CONTEXTUAL_SHARE_PHRASES_EN:
+        if phrase in q_lower:
+            return True
+    return False
+
+
+def _exact_indicator_match_bonus(query: str, candidate: RetrievalCandidate) -> float:
+    """Return +2.5 bonus for exact indicator code/title matches in the candidate embedding text."""
+    query_lower = query.lower()
+    embedding_text = str(candidate.metadata.get("embedding_text", "")).lower()
+    title = candidate.title.lower()
+
+    # Check for indicator code match in query vs embedding text
+    indicator_code = ""
+    for line in embedding_text.splitlines():
+        if line.startswith("indicator_code:"):
+            indicator_code = line.split(":", 1)[1].strip().lower()
+            break
+
+    if indicator_code and indicator_code in query_lower:
+        return 2.5
+
+    # Check for direct title/keyword match in query and title
+    query_tokens = set(_tokens(query))
+    title_tokens = set(_tokens(title))
+    # High overlap between query tokens and title tokens = near-exact match
+    if query_tokens and len(query_tokens.intersection(title_tokens)) >= max(2, len(query_tokens) * 0.6):
+        return 2.5
+
+    return 0.0
+
+
+def _direct_keyword_bonus(query_tokens: set[str], candidate: RetrievalCandidate) -> float:
+    """Return +1.0 bonus when direct economic indicator keywords appear in both query and candidate."""
+    direct_kws = set(_DIRECT_INDICATOR_KEYWORDS_RU + _DIRECT_INDICATOR_KEYWORDS_EN)
+    embedding_text = str(candidate.metadata.get("embedding_text", "")).lower()
+    embedding_tokens = set(_tokens(embedding_text))
+
+    shared_direct_kws = query_tokens.intersection(direct_kws).intersection(embedding_tokens)
+    if shared_direct_kws:
+        return 1.0
+    return 0.0
+
+
+def _contextual_penalty(candidate: RetrievalCandidate, query_asks_for_share: bool) -> float:
+    """Return -1.5 penalty when candidate is a contextual share/percent but query wants a direct metric."""
+    if query_asks_for_share:
+        return 0.0  # No penalty — query explicitly wants a share/percent
+    if _title_is_contextual_share(candidate.title):
+        return -1.5
+    return 0.0

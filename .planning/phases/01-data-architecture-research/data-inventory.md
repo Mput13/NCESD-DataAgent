@@ -1,6 +1,6 @@
 # Phase 1 Data Inventory
 
-Updated: 2026-05-09T22:22:01Z
+Updated: 2026-05-10T00:49:01Z
 
 This inventory records deterministic source facts used by Plan 01-02. It does not contain numeric answer claims. Its purpose is to describe source metadata, local dump availability, bounded CKAN checks, and known gaps for later retrieval and extraction work.
 
@@ -103,6 +103,20 @@ Storage/interface expectations for `01-03`:
 - `embedding_chunks` are stable JSON records that can be embedded, hashed, and stored in a vector store or local cache without re-reading raw dump payloads.
 - Retrieval implementations should treat `metadata_version = source-card-v1` and `input_format_version = source-card-embedding-text-v1` as compatibility gates.
 - Dense retrieval may be added without redesigning `SourceCandidateCard`; it should consume `SourceCardEmbeddingChunk` records and join back to `card_id`.
+
+## Generated Artifacts
+
+Plan 01-02 generated a bounded source-card corpus, SQLite/DuckDB catalog, and embedding corpus under `.local/dataagent/phase1/`, with committed manifests in this phase directory.
+
+| Manifest | Local artifact | Count | Content hash |
+|---|---|---:|---|
+| `source-cards-manifest.json` | `.local/dataagent/phase1/source-cards.json` | 11 source cards | `c9efa49d6b5ea39aa4cc5abd7fa0883b59bc2afa104179758a3e4849a831c900` |
+| `source-catalog-manifest.json` | `.local/dataagent/phase1/source-catalog.sqlite` | 11 `source_cards`, 11 `embedding_chunks` | `f034f7d389cb12e2af12a19553de3e3aed2d85264c9fa3efd0f541b16f9f0685` |
+| `embedding-corpus-manifest.json` | `.local/dataagent/phase1/embedding-corpus.jsonl` | 11 source-card chunks | `1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09` |
+
+The SQLite catalog stores `source_cards`, `coverage_hints`, `embedding_chunks`, and `rejection_metadata`. The catalog manifest records `queryability_check = passed`, so later retrieval and coverage work can query the catalog interface instead of re-reading raw dump structures by default.
+
+The generated source-card manifest includes FedStat, World Bank, and CKAN family coverage. The CKAN portion used bounded CKAN `package_search` against query `57319` with `rows=3` and a per-package resource inspection bound of `3`.
 
 ## Known Gaps
 

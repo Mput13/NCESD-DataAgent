@@ -1,0 +1,44 @@
+{
+  "artifact_path": ".local/dataagent/phase1/source-cards.json",
+  "card_count": 11,
+  "card_hashes": {
+    "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d": "8c1f4495b5e12c9d8a0328d52c6e96fc9307d9768b539b6304890688b7fdf4a9",
+    "fedstat:60778:fedstatru/data/parquet/60778.parquet": "f9d80f22215f5edc1cf138fc1d5e5009e6622c5410207f3f8f4f9bc794a5732c",
+    "fedstat:61819:fedstatru/data/parquet/61819.parquet": "62bed6beb166ac40f0f3afd82ebc39daffead11d8e00eea22ff365989adf3287",
+    "fedstat:62439:fedstatru/data/parquet/62439.parquet": "5dc09ea1bbcb50e8e11e99bb8621f13a2d55fd8e968b216984c46f5fa2f4074e",
+    "fedstat:62909:fedstatru/data/parquet/62909.parquet": "1bd217c6acd1976f3f48331b5d676f4c14f64feca2df972b2e2df1d1afd95fdf",
+    "fedstat:63102:fedstatru/data/parquet/63102.parquet": "d4d92854fbb207d1dbeb4cab210b7ab1d77e187aad415e99685e9abe13b07313",
+    "world_bank:1.0.HCount.1.90usd:wb/parquet/1.0.HCount.1.90usd.parquet": "bf61843cf61827a0d76318c02f2668e824fb5676a5012fd4c7bb927f8318aa53",
+    "world_bank:1.0.HCount.2.5usd:wb/parquet/1.0.HCount.2.5usd.parquet": "770449c3427245e1b8cd0230d1d6932e54b9a582a5003a822fd2da6748358e47",
+    "world_bank:1.0.HCount.Mid10to50:wb/parquet/1.0.HCount.Mid10to50.parquet": "4dbdb87a77bde16ae8c01eacc8cb734bb46fc3e10b8de33ae53be5148e02120d",
+    "world_bank:1.0.HCount.Ofcl:wb/parquet/1.0.HCount.Ofcl.parquet": "ecc20d64ab3966ddfe670a9d21863e9b8a964240966db72da3aef6eef4595027",
+    "world_bank:1.0.HCount.Poor4uds:wb/parquet/1.0.HCount.Poor4uds.parquet": "f7515fb04eb8739ec9467a3d3fa493c2e6b659722acc0663bb76273e4cad5295"
+  },
+  "content_hash": "c9efa49d6b5ea39aa4cc5abd7fa0883b59bc2afa104179758a3e4849a831c900",
+  "embedding_chunk_count": 11,
+  "local_artifacts": [
+    ".local/dataagent/phase1/source-cards.json"
+  ],
+  "manifest_path": ".planning/phases/01-data-architecture-research/source-cards-manifest.json",
+  "metadata_version": "source-card-v1",
+  "source_families": [
+    "CKAN",
+    "FedStat",
+    "World Bank"
+  ],
+  "source_notes": {
+    "ckan_endpoint": "https://repository.nsedc.ru/api/3/action/package_search",
+    "ckan_packages_returned": 1,
+    "ckan_query": "57319",
+    "ckan_resource_limit": 3,
+    "ckan_rows": 3,
+    "fedstat_clean_jsonl_files": 84,
+    "fedstat_metadata_rows": 6905,
+    "fedstat_parquet_files": 7328,
+    "fedstat_zip": "/Users/a/Downloads/dumps/fedstatru/fedstatru.zip",
+    "world_bank_countries": 296,
+    "world_bank_indicators": 29470,
+    "world_bank_parquet_files": 27654,
+    "world_bank_zip": "/Users/a/Downloads/dumps/wb/data.zip"
+  }
+}

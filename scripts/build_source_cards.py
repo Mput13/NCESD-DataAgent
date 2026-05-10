@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import csv
 import io
 import json
@@ -19,6 +20,15 @@ from app.data.source_card_builders import build_ckan, build_fedstat, build_world
 DEFAULT_FEDSTAT_ZIP = Path("/Users/a/Downloads/dumps/fedstatru/fedstatru.zip")
 DEFAULT_WORLD_BANK_ZIP = Path("/Users/a/Downloads/dumps/wb/data.zip")
 DEFAULT_CKAN_ENDPOINT = "https://repository.nsedc.ru/api/3/action/package_search"
+DEFAULT_ARTIFACT = Path(".local/dataagent/phase1/source-cards.json")
+DEFAULT_MANIFEST = Path(
+    ".planning/phases/01-data-architecture-research/source-cards-manifest.json"
+)
+SOURCE_FAMILY_LABELS = {
+    "fedstat": "FedStat",
+    "world_bank": "World Bank",
+    "ckan": "CKAN",
+}
 
 
 def main() -> None:
@@ -35,13 +45,45 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(".planning/phases/01-data-architecture-research/source-cards.json"),
+        default=DEFAULT_ARTIFACT,
+    )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=DEFAULT_MANIFEST,
     )
     args = parser.parse_args()
 
+    cards, source_notes = build_cards(args)
+
+    payload = serialize_cards_payload(cards)
+    write_json(args.output, payload)
+    manifest = build_manifest(
+        payload,
+        artifact_path=args.output,
+        manifest_path=args.manifest,
+        source_notes=source_notes,
+    )
+    write_json(args.manifest, manifest)
+    print(f"Wrote {len(cards)} source cards to {args.output}")
+    print(f"Wrote source-card manifest to {args.manifest}")
+
+
+def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, object]]:
     cards = []
+    source_notes: dict[str, object] = {
+        "fedstat_zip": str(args.fedstat_zip),
+        "world_bank_zip": str(args.world_bank_zip),
+        "ckan_endpoint": DEFAULT_CKAN_ENDPOINT,
+        "ckan_rows": args.ckan_rows,
+        "ckan_resource_limit": args.ckan_resource_limit,
+        "ckan_query": args.ckan_query,
+    }
     if args.fedstat_zip.exists():
         fedstat_rows, fedstat_parquet, fedstat_clean = read_fedstat_metadata(args.fedstat_zip)
+        source_notes["fedstat_metadata_rows"] = len(fedstat_rows)
+        source_notes["fedstat_parquet_files"] = len(fedstat_parquet)
+        source_notes["fedstat_clean_jsonl_files"] = len(fedstat_clean)
         cards.extend(
             build_fedstat(
                 fedstat_rows,
@@ -54,6 +96,9 @@ def main() -> None:
 
     if args.world_bank_zip.exists():
         indicators, countries, wb_parquet = read_world_bank_metadata(args.world_bank_zip)
+        source_notes["world_bank_indicators"] = len(indicators)
+        source_notes["world_bank_countries"] = len(countries)
+        source_notes["world_bank_parquet_files"] = len(wb_parquet)
         cards.extend(
             build_world_bank(
                 indicators,
@@ -69,6 +114,7 @@ def main() -> None:
             rows=args.ckan_rows,
             endpoint=DEFAULT_CKAN_ENDPOINT,
         )
+        source_notes["ckan_packages_returned"] = len(packages)
         cards.extend(
             build_ckan(
                 packages,
@@ -78,10 +124,15 @@ def main() -> None:
                 limit=args.ckan_rows,
             )
         )
+    else:
+        source_notes["ckan_skipped"] = True
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
+    return cards, source_notes
+
+
+def serialize_cards_payload(cards: list[object]) -> dict[str, object]:
     embedding_chunks = [card.to_embedding_chunk().model_dump(mode="json") for card in cards]
-    payload = {
+    return {
         "metadata_version": "source-card-v1",
         "embedding_provider_target": {
             "provider": "yandex_ai_studio",
@@ -93,11 +144,52 @@ def main() -> None:
         "cards": [card.model_dump(mode="json") for card in cards],
         "embedding_chunks": embedding_chunks,
     }
-    args.output.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+
+
+def build_manifest(
+    payload: dict[str, object],
+    *,
+    artifact_path: Path,
+    manifest_path: Path,
+    source_notes: dict[str, object],
+) -> dict[str, object]:
+    data = stable_json_bytes(payload)
+    cards = list(payload.get("cards", []))
+    chunks = list(payload.get("embedding_chunks", []))
+    families = sorted(
+        {
+            SOURCE_FAMILY_LABELS.get(str(card.get("source")), str(card.get("source")))
+            for card in cards
+            if isinstance(card, dict)
+        }
     )
-    print(f"Wrote {len(cards)} source cards to {args.output}")
+    return {
+        "metadata_version": payload["metadata_version"],
+        "artifact_path": str(artifact_path),
+        "manifest_path": str(manifest_path),
+        "card_count": len(cards),
+        "embedding_chunk_count": len(chunks),
+        "source_families": families,
+        "content_hash": hashlib.sha256(data).hexdigest(),
+        "card_hashes": {
+            str(card["card_id"] if "card_id" in card else f"{card['source']}:{card['dataset_id']}:{card.get('resource_id') or 'metadata'}"): hashlib.sha256(
+                stable_json_bytes(card)
+            ).hexdigest()
+            for card in cards
+            if isinstance(card, dict)
+        },
+        "local_artifacts": [str(artifact_path)],
+        "source_notes": source_notes,
+    }
+
+
+def stable_json_bytes(payload: object) -> bytes:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def read_fedstat_metadata(zip_path: Path) -> tuple[list[dict[str, str]], set[str], set[str]]:

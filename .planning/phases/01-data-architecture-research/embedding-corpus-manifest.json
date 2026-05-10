@@ -1,0 +1,38 @@
+{
+  "artifact_path": ".local/dataagent/phase1/embedding-corpus.jsonl",
+  "chunk_count": 11,
+  "chunk_hashes": {
+    "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source-card-v1:78df137f316b332a": "e1fe02352d2ab165f7349c08974980384e4166a5808641c6ebb45e4e013d6abe",
+    "fedstat:60778:fedstatru/data/parquet/60778.parquet:source-card-v1:c5b97c8e94ffa6a9": "b22ea2b6236717fdcdde8b5331a65252aa5b21d17ffc838fb9bdde50c038cf8f",
+    "fedstat:61819:fedstatru/data/parquet/61819.parquet:source-card-v1:cb45d43b5fa81501": "a4f8eb1cca9814ff52573410cad67b73a76b869299c15e4d4a7463e8fa233941",
+    "fedstat:62439:fedstatru/data/parquet/62439.parquet:source-card-v1:b2b929f661f18e13": "13fd5cd540e462774d04d15a9040c3bee5f65c6f2f38b244501337f03037ee55",
+    "fedstat:62909:fedstatru/data/parquet/62909.parquet:source-card-v1:b3c49ee65d9e2cb2": "51987423017d6882e7511618c4eef03daea0120f1aca407840fcd88489338b93",
+    "fedstat:63102:fedstatru/data/parquet/63102.parquet:source-card-v1:b0031b682f998f5d": "fddef3e02d6df92c5a11fb3139955511357e410c8fe93f69c18de2fd30698dfe",
+    "world_bank:1.0.HCount.1.90usd:wb/parquet/1.0.HCount.1.90usd.parquet:source-card-v1:0dc6d7431494c3ac": "8a940750dfc470464c03170623f3fa25aa35bdb7bd71bf4f937846893e02c399",
+    "world_bank:1.0.HCount.2.5usd:wb/parquet/1.0.HCount.2.5usd.parquet:source-card-v1:e26a60fbbc394b0c": "b66edccecfa06cc7465682c9fdc393bd7b8c7eb1634c886712d86395bcab364e",
+    "world_bank:1.0.HCount.Mid10to50:wb/parquet/1.0.HCount.Mid10to50.parquet:source-card-v1:a17fbca89d03a637": "e95b114390365f591c05dd6418d5c4be0eff47664f44eaf3b06449b7288f9516",
+    "world_bank:1.0.HCount.Ofcl:wb/parquet/1.0.HCount.Ofcl.parquet:source-card-v1:d7f4ee252a8b0f0a": "617b6e438b8cc16c192d410bd30fd4f78f315fd38f2b51bc01d66fa7dd9a3955",
+    "world_bank:1.0.HCount.Poor4uds:wb/parquet/1.0.HCount.Poor4uds.parquet:source-card-v1:51e389155dd2d80e": "c12f8c58678de49d9bf98a7374263bcf1d55281a3a29a2358a5a7af91281126c"
+  },
+  "content_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
+  "document_model": "text-search-doc",
+  "input_format_version": "source-card-embedding-text-v1",
+  "local_artifacts": [
+    ".local/dataagent/phase1/embedding-corpus.jsonl"
+  ],
+  "manifest_path": ".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
+  "metadata_version": "source-card-v1",
+  "provider": "yandex_ai_studio",
+  "provider_hints": {
+    "default_dimensions": "256",
+    "dimensions_env": "YANDEX_EMBEDDING_DIMENSIONS",
+    "document_model_env": "YANDEX_EMBEDDING_DOC_MODEL",
+    "query_model_env": "YANDEX_EMBEDDING_QUERY_MODEL"
+  },
+  "query_model": "text-search-query",
+  "source_families": [
+    "ckan",
+    "fedstat",
+    "world_bank"
+  ]
+}

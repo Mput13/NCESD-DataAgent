@@ -1,0 +1,32 @@
+{
+  "catalog_path": ".local/dataagent/phase1/source-catalog.sqlite",
+  "catalog_type": "SQLite",
+  "content_hash": "f034f7d389cb12e2af12a19553de3e3aed2d85264c9fa3efd0f541b16f9f0685",
+  "duckdb_compatible": true,
+  "embedding_chunks_count": 11,
+  "local_artifacts": [
+    ".local/dataagent/phase1/source-catalog.sqlite"
+  ],
+  "manifest_path": ".planning/phases/01-data-architecture-research/source-catalog-manifest.json",
+  "queryability_check": "passed",
+  "rejection_metadata": "available",
+  "source_cards_count": 11,
+  "source_cards_manifest": ".planning/phases/01-data-architecture-research/source-cards-manifest.json",
+  "source_families": [
+    "ckan",
+    "fedstat",
+    "world_bank"
+  ],
+  "table_counts": {
+    "coverage_hints": 11,
+    "embedding_chunks": 11,
+    "rejection_metadata": 11,
+    "source_cards": 11
+  },
+  "tables": [
+    "source_cards",
+    "coverage_hints",
+    "embedding_chunks",
+    "rejection_metadata"
+  ]
+}

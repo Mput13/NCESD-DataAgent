@@ -200,11 +200,18 @@ class ScriptArtifact(BaseModel):
 
     artifact_id: str
     language: Literal["python", "sql", "bash"] = "python"
+    path: str | None = None
     script_path: str | None = None
     content: str | None = None
     entrypoint: str | None = None
     source_ids: list[str] = Field(default_factory=list)
+    source_dataset_artifact_id: str | None = None
     dataset_artifact_id: str | None = None
+    sha256: str | None = None
+    downloadable: bool = True
+    download_filename: str | None = None
+    display_name: str | None = None
+    mime_type: str = "text/x-python"
     provenance: list[dict[str, Any]] = Field(default_factory=list)
     quality_flags: list[str] = Field(default_factory=list)
 

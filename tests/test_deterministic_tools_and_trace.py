@@ -5,10 +5,11 @@ from pathlib import Path
 
 
 def test_deterministic_tool_contracts_export_dataset_and_visualization(tmp_path: Path) -> None:
-    from app.artifacts.workflow_artifacts import DatasetArtifact, VisualizationSpec
+    from app.artifacts.workflow_artifacts import DatasetArtifact, ScriptArtifact, VisualizationSpec
     from app.data.deterministic_tools import (
         build_dataset_artifact,
         export_csv_parquet_manifest,
+        export_dataset_with_script,
         render_visualization_from_dataset_artifact,
         run_duckdb_query,
     )
@@ -29,6 +30,26 @@ def test_deterministic_tool_contracts_export_dataset_and_visualization(tmp_path:
     assert isinstance(spec, VisualizationSpec)
     assert spec.status == "ok"
     assert "Altair" in spec.encoding.get("renderer", "") or "Plotly" in spec.encoding.get("renderer", "")
+
+    exported_with_script, script = export_dataset_with_script(
+        dataset,
+        output_dir=tmp_path / "scripted",
+        script_text=(
+            "from pathlib import Path\n"
+            "\n"
+            "DATASET_ID = 'dataset-test'\n"
+            "OUTPUT_DIR = Path('artifacts')\n"
+        ),
+    )
+
+    assert isinstance(exported_with_script, DatasetArtifact)
+    assert isinstance(script, ScriptArtifact)
+    assert script.language == "python"
+    assert script.source_dataset_artifact_id == dataset.artifact_id
+    assert len(script.sha256) == 64
+    assert script.download_filename == "dataset-test.py"
+    assert Path(script.path).exists()
+    assert Path(script.path).suffix == ".py"
 
 
 def test_trace_models_reuse_canonical_trace_event() -> None:

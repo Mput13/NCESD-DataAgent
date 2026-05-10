@@ -1,0 +1,498 @@
+{
+  "total_cases": 20,
+  "generated_at": "2026-05-10T13:02:27Z",
+  "qdrant_server_manifest": {
+    "collection": "phase1_source_cards",
+    "corpus_hash": "2eee2f17d877773569acdf695bd6f9b728dc0d088d4a0f487e46b7dff126da38",
+    "promotion_action": "skipped_existing_collection",
+    "qdrant_url": "http://localhost:6333",
+    "reproduce_command": "python3 scripts/promote_qdrant_server.py --start-server --manifest-output .planning/phases/02-jury-mvp/qdrant-server-manifest.json",
+    "status": "ready",
+    "vector_count": 36321,
+    "verified_at": "2026-05-10T11:55:50Z"
+  },
+  "source_catalog_source_families": [
+    "fedstat",
+    "world_bank"
+  ],
+  "retrieval_evidence_loaded": false,
+  "cases": [
+    {
+      "case_id": "GC-001",
+      "source_family": "world_bank",
+      "source_id": "NY.GDP.MKTP.CD",
+      "card_id": "NY.GDP.MKTP.CD",
+      "filters": {
+        "geography": "Russia",
+        "period": "2024",
+        "indicator": "GDP"
+      },
+      "expected_terminal_outcome": "needs_clarification",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with metric=GDP, geography=Russia, period=2024",
+        "SourceCandidateCard for FedStat GDP and World Bank GDP",
+        "Clarification question about Rosstat rubles vs World Bank current USD"
+      ],
+      "missing_data_evidence": "Clarification required: two valid sources (FedStat rubles vs World Bank USD/PPP) offer different methodologies; extraction cannot proceed without user choice.",
+      "query_ru": "Какой ВВП России в 2024 году?",
+      "category": "simple",
+      "needs_clarification": true
+    },
+    {
+      "case_id": "GC-002",
+      "source_family": "fedstat",
+      "source_id": "fedstat_gdp_ppp",
+      "card_id": "fedstat_gdp_ppp",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "ВВП по ППС"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with explicit FedStat source preference",
+        "SourceCandidateCard for FedStat PPP GDP indicators",
+        "CoverageReport before extraction",
+        "ExtractionPlan with deterministic FedStat read strategy"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Покажи ВВП России по ППС по Росстату.",
+      "category": "simple",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-003",
+      "source_family": "world_bank",
+      "source_id": "NY.GDP.MKTP.KD.ZG",
+      "card_id": "NY.GDP.MKTP.KD.ZG",
+      "filters": {
+        "geography": [
+          "BRA",
+          "RUS",
+          "IND",
+          "CHN",
+          "ZAF"
+        ],
+        "periods": [
+          "2015",
+          "2016",
+          "2017",
+          "2018",
+          "2019",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024"
+        ],
+        "indicator": "GDP growth"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact listing countries, indicator, and annual period",
+        "World Bank SourceCandidateCard with indicator code evidence",
+        "CoverageReport for each requested country and period",
+        "DatasetArtifact with long-format country-year rows"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Сравни динамику ВВП стран БРИКС за 2015-2024 годы.",
+      "category": "comparative",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-004",
+      "source_family": "world_bank",
+      "source_id": "FP.CPI.TOTL.ZG",
+      "card_id": "FP.CPI.TOTL.ZG",
+      "filters": {
+        "geography": [
+          "RUS",
+          "KAZ",
+          "CHN"
+        ],
+        "indicator": "CPI inflation"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with latest_available period policy",
+        "World Bank CPI/inflation SourceCandidateCard",
+        "CoverageReport identifying non-null latest available periods",
+        "MethodologyNote about cross-country comparability"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Сравни инфляцию в России, Казахстане и Китае за последние доступные годы.",
+      "category": "comparative",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-005",
+      "source_family": "world_bank",
+      "source_id": "SP.URB.TOTL.IN.ZS,SP.DYN.TFRT.IN",
+      "card_id": "SP.URB.TOTL.IN.ZS",
+      "filters": {
+        "indicator": "urbanization,fertility"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with hypothesis, dimensions, indicators, and join keys",
+        "Two or more World Bank SourceCandidateCards",
+        "CoverageReport for country-year overlap",
+        "ExtractionPlan for deterministic join"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Как связаны урбанизация и рождаемость по странам мира?",
+      "category": "research",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-006",
+      "source_family": "fedstat",
+      "source_id": "fedstat_real_income_russia",
+      "card_id": "fedstat_real_income_russia",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "реальные доходы населения"
+      },
+      "expected_terminal_outcome": "needs_clarification",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with possible income, CPI/deflator, wage, and employment branches",
+        "FedStat and CKAN candidate source cards",
+        "Clarification question about geography, period, and preferred income concept"
+      ],
+      "missing_data_evidence": "Clarification required: multiple income-concept candidates exist (nominal, real disposable, per-capita) and the requested period and geography are under-specified; extraction cannot proceed without user choice.",
+      "query_ru": "Исследуй факторы, которые могут объяснить динамику реальных доходов населения в России.",
+      "category": "research",
+      "needs_clarification": true
+    },
+    {
+      "case_id": "GC-007",
+      "source_family": "fedstat",
+      "source_id": "fedstat_real_disposable_income",
+      "card_id": "fedstat_real_disposable_income",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "реальные располагаемые доходы",
+        "base_year": "2014"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with formula inputs and base-year policy",
+        "SourceCandidateCards for nominal income and price deflator or CPI candidates",
+        "CoverageReport for both inputs",
+        "ExtractionPlan with deterministic formula"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Построй индекс реальных располагаемых доходов РФ к базовому году 2014.",
+      "category": "derived_metric",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-008",
+      "source_family": "world_bank",
+      "source_id": "NY.GDP.MKTP.KD",
+      "card_id": "NY.GDP.MKTP.KD",
+      "filters": {
+        "geography": [
+          "ARM",
+          "BLR",
+          "KAZ",
+          "KGZ",
+          "RUS"
+        ],
+        "indicator": "GDP constant",
+        "normalize": "first_available_year_100"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with country set and normalization rule",
+        "World Bank GDP candidate",
+        "CoverageReport with first non-null year per country",
+        "Deterministic normalized index output artifact"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Нормализуй ВВП стран ЕАЭС так, чтобы первый доступный год был равен 100.",
+      "category": "derived_metric",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-009",
+      "source_family": "world_bank",
+      "source_id": "FP.CPI.TOTL.ZG",
+      "card_id": "FP.CPI.TOTL.ZG",
+      "filters": {},
+      "expected_terminal_outcome": "needs_clarification",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with missing geography, period, frequency, and inflation concept",
+        "Clarification question with concrete options"
+      ],
+      "missing_data_evidence": "Clarification required: geography, period, frequency, and inflation concept are all missing; no source can be selected and no extraction can run until the user specifies at least geography and time range.",
+      "query_ru": "Дай данные по инфляции.",
+      "category": "ambiguous",
+      "needs_clarification": true
+    },
+    {
+      "case_id": "GC-010",
+      "source_family": "fedstat",
+      "source_id": "fedstat_regional_income",
+      "card_id": "fedstat_regional_income",
+      "filters": {},
+      "expected_terminal_outcome": "needs_clarification",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with missing country scope, income concept, period, and units",
+        "Optional candidate preview limited to source cards",
+        "Clarification question"
+      ],
+      "missing_data_evidence": "Clarification required: the request does not specify country, income concept, period, or units; FedStat regional income candidates are available but cannot be selected without disambiguation.",
+      "query_ru": "Покажи доходы регионов.",
+      "category": "ambiguous",
+      "needs_clarification": true
+    },
+    {
+      "case_id": "GC-011",
+      "source_family": "world_bank",
+      "source_id": "FP.CPI.TOTL.ZG",
+      "card_id": "FP.CPI.TOTL.ZG",
+      "filters": {
+        "geography": "PRK",
+        "period": "2024",
+        "indicator": "inflation"
+      },
+      "expected_terminal_outcome": "not_found",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "AttemptedSourceLog for World Bank and CKAN",
+        "RejectionReason entries for missing or insufficient coverage",
+        "NoDataExplanationArtifact"
+      ],
+      "missing_data_evidence": "World Bank does not publish CPI/inflation data for North Korea (PRK) for 2024; the indicator FP.CPI.TOTL.ZG has no row for PRK. CKAN package_search for 'North Korea inflation 2024' returned no packages with extractable CSV/Parquet resources. No official source was found.",
+      "query_ru": "Найди официальную инфляцию в Северной Корее за 2024 год.",
+      "category": "no_data",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-012",
+      "source_family": "fedstat",
+      "source_id": "fedstat_trade_russia_kazakhstan",
+      "card_id": "fedstat_trade_russia_kazakhstan",
+      "filters": {
+        "geography": [
+          "Russia",
+          "Kazakhstan"
+        ],
+        "periods": [
+          "2010",
+          "2011",
+          "2012",
+          "2013",
+          "2014",
+          "2015",
+          "2016",
+          "2017",
+          "2018",
+          "2019",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "indicator": "товарооборот"
+      },
+      "expected_terminal_outcome": "not_found",
+      "required_adapter": "ckan_adapter",
+      "artifact_expectations": [
+        "AttemptedSourceLog for FedStat and World Bank local dumps",
+        "CKAN discovery candidate list if available",
+        "NoDataExplanationArtifact or bounded follow-up source recommendation"
+      ],
+      "missing_data_evidence": "Local FedStat dumps do not contain bilateral goods-level trade data for Russia-Kazakhstan 2010-2025. World Bank WITS/trade indicator parquet files in local dump do not provide bilateral goods detail at the requested granularity. CKAN package_search for 'товарооборот Россия Казахстан' returned metadata-only packages without extractable CSV/Parquet resources covering the full 2010-2025 range.",
+      "query_ru": "Собери товарооборот Россия-Казахстан по товарам за 2010-2025 годы из текущих локальных дампов.",
+      "category": "no_data",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-013",
+      "source_family": "ckan",
+      "source_id": "57319",
+      "card_id": "emiss_57319",
+      "filters": {
+        "emiss_code": "57319"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "ckan_adapter",
+      "artifact_expectations": [
+        "CKAN package_search result compressed into SourceCandidateCard",
+        "Resource list with formats and provenance",
+        "FedStat local availability flag"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Найди показатель ЕМИСС 57319 и покажи доступные ресурсы.",
+      "category": "simple",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-014",
+      "source_family": "fedstat",
+      "source_id": "fedstat_cpi_russia",
+      "card_id": "fedstat_cpi_russia",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "потребительские цены CPI"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with CPI and related price-index concepts",
+        "Multiple SourceCandidateCards with match_mode values",
+        "SourceRejectionLog for near misses"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Какие источники подойдут для анализа потребительских цен в России?",
+      "category": "research",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-015",
+      "source_family": "world_bank",
+      "source_id": "SP.POP.TOTL",
+      "card_id": "SP.POP.TOTL",
+      "filters": {
+        "geography": [
+          "RUS",
+          "KAZ"
+        ],
+        "indicator": "total population"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "IntentArtifact with explicit World Bank source preference",
+        "World Bank population SourceCandidateCard",
+        "CoverageReport for Russia and Kazakhstan",
+        "DatasetArtifact with source-bound rows"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Сравни население России и Казахстана по данным World Bank.",
+      "category": "comparative",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-016",
+      "source_family": "fedstat",
+      "source_id": "fedstat_cpi_coverage",
+      "card_id": "fedstat_cpi_coverage",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "индекс потребительских цен ЕМИСС"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "FedStat SourceCandidateCard for CPI-related indicator",
+        "CoverageReport listing available periods without final numeric answer"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Покажи доступные годы для индекса потребительских цен в ЕМИСС.",
+      "category": "simple",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-017",
+      "source_family": "world_bank",
+      "source_id": "SL.UEM.TOTL.ZS,NY.GDP.MKTP.KD",
+      "card_id": "SL.UEM.TOTL.ZS",
+      "filters": {
+        "geography": "Europe",
+        "indicator": "unemployment GDP"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "world_bank_adapter",
+      "artifact_expectations": [
+        "ResearchDesignArtifact with indicator pair and geography group",
+        "World Bank source cards for unemployment and GDP",
+        "CoverageReport for European countries or aggregate policy",
+        "MethodologyNote about country set and aggregates"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Подбери набор данных для анализа безработицы и ВВП по странам Европы.",
+      "category": "research",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-018",
+      "source_family": "fedstat",
+      "source_id": "fedstat_telegram_users",
+      "card_id": "fedstat_telegram_users",
+      "filters": {
+        "geography": "Russia",
+        "indicator": "пользователи телеграма"
+      },
+      "expected_terminal_outcome": "not_found",
+      "required_adapter": "ckan_adapter",
+      "artifact_expectations": [
+        "AttemptedSourceLog with FedStat and CKAN searches",
+        "NoDataExplanationArtifact with distinction between official statistics and platform data",
+        "SourceRejectionLog for weak social-media proxy matches"
+      ],
+      "missing_data_evidence": "Official regional Telegram-user data is not published by Rosstat or EMISS; FedStat local dump contains no social-media platform user counts by region. CKAN package_search for 'телеграм пользователи регион' returned packages about internet usage proxies, not platform-specific user counts; all were rejected as unsupported substitutes without explicit user approval.",
+      "query_ru": "Сколько было пользователей телеграма в каждом регионе России по официальной статистике?",
+      "category": "no_data",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-019",
+      "source_family": "fedstat",
+      "source_id": "fedstat_world_bank_ckan_source_cards",
+      "card_id": "phase1_source_cards_collection",
+      "filters": {
+        "embedding_mode": "text-search-doc",
+        "query_mode": "text-search-query"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "EmbeddingConfigArtifact declaring provider/model family or credential-aware fallback",
+        "EmbeddingInputSpec for source-card/chunk documents",
+        "Sample source-card chunks with provenance, coverage hints, units, dimensions, and source URLs",
+        "RetrievalEvidenceArtifact proving dense retrieval indexes metadata/card chunks only"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Проверь, готов ли dense retrieval искать источники по карточкам FedStat, World Bank и CKAN, не загружая числовые таблицы.",
+      "category": "research",
+      "needs_clarification": false
+    },
+    {
+      "case_id": "GC-020",
+      "source_family": "fedstat",
+      "source_id": "yandex_embedding_split_check",
+      "card_id": "yandex_embedding_split_config",
+      "filters": {
+        "embedding_mode": "text-search-doc",
+        "query_mode": "text-search-query"
+      },
+      "expected_terminal_outcome": "passed",
+      "required_adapter": "fedstat_adapter",
+      "artifact_expectations": [
+        "EmbeddingConfigArtifact with document mode text-search-doc for source-card/chunk docs",
+        "EmbeddingConfigArtifact with query mode text-search-query for natural-language queries",
+        "CredentialAwareSkipArtifact if Yandex credentials are missing",
+        "SourceCardChunk example containing provenance, coverage, units/dimensions, and resource URLs"
+      ],
+      "missing_data_evidence": "",
+      "query_ru": "Для Yandex AI Studio embeddings покажи, чем индексируются документы источников и чем индексируется пользовательский запрос.",
+      "category": "simple",
+      "needs_clarification": false
+    }
+  ],
+  "unresolved_data_gaps": []
+}

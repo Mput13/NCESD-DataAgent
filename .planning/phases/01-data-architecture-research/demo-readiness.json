@@ -1,0 +1,196 @@
+{
+  "artifacts": {
+    "build_log_path": ".planning/phases/01-data-architecture-research/embedding-index-build.md",
+    "data_relevance_eval": ".planning/phases/01-data-architecture-research/data-relevance-eval.json",
+    "embedding_corpus_manifest": ".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
+    "embedding_index_manifest": ".planning/phases/01-data-architecture-research/embedding-index-manifest.json",
+    "extraction_probes": ".planning/phases/01-data-architecture-research/extraction-probes.json",
+    "rebuild_command": "PATH=\"$PWD/.local/bin:$PATH\" python scripts/build_embedding_index.py --corpus-manifest .planning/phases/01-data-architecture-research/embedding-corpus-manifest.json --manifest .planning/phases/01-data-architecture-research/embedding-index-manifest.json --build-log .planning/phases/01-data-architecture-research/embedding-index-build.md",
+    "retrieval_eval": ".planning/phases/01-data-architecture-research/retrieval-eval.csv",
+    "source_cards_manifest": ".planning/phases/01-data-architecture-research/source-cards-manifest.json",
+    "source_catalog_manifest": ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
+  },
+  "blocked_components": [],
+  "data_relevance_eval_status": "gated",
+  "dense_retrieval_ready": false,
+  "embedding_corpus_status": "ready",
+  "evidence": {
+    "data_relevance_failed": 12,
+    "data_relevance_gated": 8,
+    "data_relevance_total_cases": 20,
+    "extraction_probe_count": 3,
+    "missing_env_vars": [
+      "YANDEX_AI_STUDIO_API_KEY or YANDEX_EMBEDDING_API_KEY"
+    ],
+    "retrieval_rows": 8
+  },
+  "extraction_eval_status": "gated",
+  "gated_components": [
+    "data_relevance_eval",
+    "extraction_eval",
+    "qdrant",
+    "retrieval_eval"
+  ],
+  "overall_status": "gated",
+  "prepared": {
+    "catalog_source_cards_count": 11,
+    "corpus_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
+    "embedding_chunk_count": 11,
+    "index_corpus_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
+    "qdrant_collection": "phase1_source_cards",
+    "qdrant_vector_count": 0,
+    "source_card_count": 11,
+    "vector_store": "qdrant"
+  },
+  "qdrant_reason": "Yandex embedding credentials are unavailable; Qdrant collection abstraction is preserved.",
+  "qdrant_status": "gated_skip",
+  "rebuild_policy": "Do not rebuild or re-embed by default; use the recorded rebuild_command only when a manifest is missing or stale.",
+  "retrieval_eval_status": "gated",
+  "source_cards_status": "ready",
+  "source_catalog_status": "ready",
+  "trace_ui_status": "ready",
+  "trace_view_model": {
+    "artifacts": [
+      {
+        "kind": "readiness",
+        "name": "demo-readiness.json"
+      },
+      {
+        "kind": "retrieval",
+        "name": "retrieval-eval.csv"
+      },
+      {
+        "kind": "deterministic extraction",
+        "name": "extraction-probes.json"
+      },
+      {
+        "kind": "evaluation",
+        "name": "data-relevance-eval.json"
+      }
+    ],
+    "diagnostic": true,
+    "feedback": {
+      "artifact_id": "demo-readiness.json",
+      "comment": null,
+      "diagnostic": true,
+      "rating": "not_set",
+      "run_id": "phase1-demo-readiness"
+    },
+    "fix_request": {
+      "diagnostic": true,
+      "requested_change": "Record source, coverage, or extraction correction before rerunning.",
+      "run_id": "phase1-demo-readiness",
+      "target_state": "prepared_index_check"
+    },
+    "index_status": {
+      "build_log_path": ".planning/phases/01-data-architecture-research/embedding-index-build.md",
+      "collection_name": "phase1_source_cards",
+      "dense_status": "gated_skip",
+      "gated_reason": "Yandex embedding credentials are unavailable; Qdrant collection abstraction is preserved.",
+      "state": "gated_skip"
+    },
+    "rejected_sources": [
+      {
+        "case_id": "GC-001",
+        "rejection_reasons": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source_family_mismatch"
+      },
+      {
+        "case_id": "GC-002",
+        "rejection_reasons": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source_family_mismatch"
+      },
+      {
+        "case_id": "GC-003",
+        "rejection_reasons": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source_family_mismatch; fedstat:63102:fedstatru/data/parquet/63102.parquet:source_family_mismatch; fedstat:62909:fedstatru/data/parquet/62909.parquet:source_family_mismatch; fedstat:61819:fedstatru/data/parquet/61819.parquet:source_family_mismatch; fedstat:62439:fedstatru/data/parquet/62439.parquet:source_family_mismatch"
+      },
+      {
+        "case_id": "GC-011",
+        "rejection_reasons": "fedstat:62909:fedstatru/data/parquet/62909.parquet:source_family_mismatch; fedstat:62439:fedstatru/data/parquet/62439.parquet:source_family_mismatch; fedstat:63102:fedstatru/data/parquet/63102.parquet:source_family_mismatch; fedstat:61819:fedstatru/data/parquet/61819.parquet:source_family_mismatch"
+      }
+    ],
+    "run_id": "phase1-demo-readiness",
+    "selected_sources": [
+      {
+        "card_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+        "case_id": "GC-001",
+        "provenance_url": "https://www.fedstat.ru/indicator/62439",
+        "retrieval_mode": "hybrid_lexical_dense_gated",
+        "source_family": "fedstat"
+      },
+      {
+        "card_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+        "case_id": "GC-002",
+        "provenance_url": "https://www.fedstat.ru/indicator/62439",
+        "retrieval_mode": "hybrid_lexical_dense_gated",
+        "source_family": "fedstat"
+      },
+      {
+        "card_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+        "case_id": "GC-009",
+        "provenance_url": "",
+        "retrieval_mode": "hybrid_lexical_dense_gated",
+        "source_family": "ckan"
+      },
+      {
+        "card_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+        "case_id": "GC-011",
+        "provenance_url": "",
+        "retrieval_mode": "hybrid_lexical_dense_gated",
+        "source_family": "ckan"
+      },
+      {
+        "card_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+        "case_id": "GC-013",
+        "provenance_url": "",
+        "retrieval_mode": "hybrid_lexical_dense_gated",
+        "source_family": "ckan"
+      }
+    ],
+    "trace_events": [
+      {
+        "agent": "Demo readiness runner",
+        "decision": "gated_skip",
+        "duration_ms": 0,
+        "input_summary": null,
+        "output_artifact": "demo-readiness.json",
+        "payload": {
+          "Qdrant": "gated_skip",
+          "data relevance": "gated",
+          "prepared index": true
+        },
+        "run_id": "phase1-demo-readiness",
+        "started_at": "2026-05-10T04:34:32Z",
+        "state": "prepared_index_check",
+        "tool_calls": [
+          "source-cards-manifest",
+          "source-catalog-manifest",
+          "embedding-corpus-manifest",
+          "embedding-index-manifest"
+        ],
+        "warnings": [
+          "Yandex embedding credentials are unavailable; Qdrant collection abstraction is preserved."
+        ]
+      },
+      {
+        "agent": "Data relevance and deterministic extraction checks",
+        "decision": "gated",
+        "duration_ms": 0,
+        "input_summary": null,
+        "output_artifact": "prepared-data-readiness.md",
+        "payload": {
+          "dense_retrieval_ready": false,
+          "extraction_eval_status": "gated",
+          "retrieval_eval_status": "gated"
+        },
+        "run_id": "phase1-demo-readiness",
+        "started_at": "2026-05-10T04:34:32Z",
+        "state": "evidence_gate",
+        "tool_calls": [
+          "retrieval-eval.csv",
+          "extraction-probes.json",
+          "data-relevance-eval.json"
+        ],
+        "warnings": []
+      }
+    ]
+  }
+}

@@ -53,6 +53,9 @@ def build_embedding_index(
     config = EmbeddingIndexConfig.from_env()
     corpus_manifest, documents = load_embedding_documents(corpus_manifest_path)
     started_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    if manifest_path.exists():
+        previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        started_at = str(previous_manifest.get("created_at") or started_at)
 
     base_manifest = _base_manifest(
         config=config,

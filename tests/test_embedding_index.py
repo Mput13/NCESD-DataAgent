@@ -110,3 +110,11 @@ def test_build_embedding_index_writes_gated_manifest_with_qdrant_config(
     assert "YANDEX" in ",".join(manifest["missing_env_vars"])
     assert "gated_skip" in build_log.read_text(encoding="utf-8")
     assert json.loads(index_manifest.read_text(encoding="utf-8"))["status"] == "gated_skip"
+
+    second_manifest = build_embedding_index(
+        corpus_manifest_path=corpus_manifest,
+        manifest_path=index_manifest,
+        build_log_path=build_log,
+    )
+
+    assert second_manifest["created_at"] == manifest["created_at"]

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Corrected plan state; no Phase 1 plan has started, next action is executing revised `01-01-PLAN.md`.
-last_updated: "2026-05-10T00:44:01.913Z"
+stopped_at: Completed 01-data-architecture-research-01-PLAN.md
+last_updated: "2026-05-10T00:46:53.444Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State: DataAgent
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md`
 **Name:** Data Architecture Implementation  
 **Status:** Executing Phase 01
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** start execution at revised `01-01-PLAN.md`; do not skip ahead to `01-02` until Plan 01 writes an accepted `01-01-SUMMARY.md`.
+**Next action:** execute revised `01-02-PLAN.md`; Plan 01 has an accepted `01-01-SUMMARY.md`.
 
 ## Phase Boundary
 
@@ -51,6 +51,9 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 - **2026-05-10 — Data relevance and Qdrant priority clarified.**
   User clarified that Phase 1 should prioritize relevant source selection and deterministic extraction over UI beauty. Qdrant must be used for the vector-store path. The revised plans must replace marker-only verification with executable build/eval gates for corpus/catalog, Qdrant index readiness or credential gates, retrieval relevance, extraction probes, graph execution, and demo readiness.
+
+- **2026-05-10 — Plan 01 evaluation foundation completed.**
+  `01-01-SUMMARY.md` accepted the requirements map, 20 golden cases, and deterministic eval rubric as the Phase 1 evaluation foundation.
 
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
@@ -77,6 +80,9 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - `.planning/YANDEX_AI_STUDIO_RESEARCH.md` records the existing DeepSeek 3.2 smoke-test history. Qwen remains the target model path for Phase 1 unless a plan records a blocker.
 
 ## Decisions Log
+
+- **2026-05-10 — Plan 01 evaluates structured evidence, not prose alone.**
+  Downstream Phase 1 work should target `golden-cases.yaml` and `eval-rubric.md`; unsupported numeric claims are hard failures without deterministic provenance.
 
 - **2026-05-10 — Single-track execution.**
   The project no longer uses a three-person Core/Data/UI workstream split. Future agents should execute the canonical Phase 1 plans directly and should not recreate owner-specific onboarding docs.
@@ -105,7 +111,7 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - [x] Получить API-ключ Yandex AI Studio для smoke test
 - [x] Получить рабочий folder_id Yandex Cloud for DeepSeek 3.2 smoke test: `b1gbntotj1b57karq6qm`
 - [x] Понять фактическую структуру локального дампа после скачивания — summarized in `.planning/DATA_REPORT.md`
-- [ ] Create the 15-20 case golden set in `01-01-PLAN.md`
+- [x] Create the 15-20 case golden set in `01-01-PLAN.md`
 - [ ] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
 - [ ] Materialize Qdrant embedding/search index and retrieval relevance eval in revised `01-03-PLAN.md`
 - [ ] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04` and integrated demo package in `01-05`
@@ -114,17 +120,22 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 Run the revised Phase 1 plans in order:
 
-1. Execute revised `.planning/phases/01-data-architecture-research/01-01-PLAN.md`.
-2. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md` only after Plan 01 has an accepted summary.
+1. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md`.
+2. Start `01-03` only after `01-02` produces the source-card corpus contract and accepted summary.
 3. Start the long-running embedding/index build in revised `01-03` as soon as the corpus is ready; prepare `01-04` work while indexing runs.
 4. Run revised `01-05` only after prepared-index status and independent contracts are clear.
 5. Run `$gsd-verify-work 1` after all five summaries exist.
 
 ## Session Continuity
 
-Last session: 2026-05-10T03:38:00+03:00
-Stopped at: Corrected plan state; no Phase 1 plan has started, next action is executing revised `01-01-PLAN.md`.
-Resume file: none
+Last session: 2026-05-10T00:46:53.442Z
+Stopped at: Completed 01-data-architecture-research-01-PLAN.md
+Resume file: None
 
 ---
-*Last updated: 2026-05-10 after correcting plan progress to zero started*
+## Performance Metrics
+
+- 2026-05-10 — Phase `01-data-architecture-research`, Plan `01`: 1 min, 3 tasks, 3 artifact files.
+
+---
+*Last updated: 2026-05-10 after completing Plan 01*

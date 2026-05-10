@@ -106,28 +106,37 @@ class YandexAIStudioClient:
         max_tokens: int = 512,
         timeout: int = 60,
     ) -> SchemaT:
-        """Request Qwen structured output and validate it as a Pydantic artifact."""
+        """Request Qwen structured output and validate it as a Pydantic artifact.
 
-        schema_name = schema.__name__.lstrip("_")
-        response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": schema_name,
-                "schema": schema.model_json_schema(),
-                "strict": True,
-            },
-        }
+        Uses json_object response_format (Yandex AI Studio does not support json_schema/strict).
+        Schema is communicated via system prompt so the model knows what fields to return.
+        """
+        schema_fields = list(schema.model_fields.keys())
+        schema_hint = f"Верни JSON объект с полями: {schema_fields}. Только JSON, без пояснений."
+
+        # Inject schema hint into the last system message or prepend one
+        augmented = list(messages)
+        if augmented and augmented[0].get("role") == "system":
+            augmented[0] = {
+                **augmented[0],
+                "content": augmented[0]["content"] + f"\n\n{schema_hint}",
+            }
+        else:
+            augmented.insert(0, {"role": "system", "content": schema_hint})
+
         content = self.chat(
-            messages,
+            augmented,
             temperature=temperature,
             max_tokens=max_tokens,
             timeout=timeout,
-            response_format=response_format,
+            response_format={"type": "json_object"},
         )
         try:
             payload = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise RuntimeError("Structured Yandex AI Studio response was not valid JSON") from exc
+            raise RuntimeError(
+                f"Structured Yandex AI Studio response was not valid JSON: {content[:200]}"
+            ) from exc
         return schema.model_validate(payload)
 
 

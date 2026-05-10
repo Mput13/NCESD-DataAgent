@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 QueryCategory = Literal[
@@ -22,6 +22,8 @@ WorkflowStatus = Literal[
     "needs_clarification",
     "no_data",
 ]
+
+TerminalOutcome = Literal["passed", "needs_clarification", "not_found"]
 
 
 def utc_now_iso() -> str:
@@ -179,6 +181,86 @@ class FeedbackArtifact(BaseModel):
     created_at: str = Field(default_factory=utc_now_iso)
 
     model_config = ConfigDict(extra="forbid")
+
+
+class FeedbackAction(BaseModel):
+    """Frontend action the user can take to repair or rate a workflow response."""
+
+    action_id: str
+    label: str
+    action_type: Literal["rate", "clarify", "request_fix", "retry", "download"]
+    target_artifact_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ScriptArtifact(BaseModel):
+    """Generated deterministic extraction script and its execution context."""
+
+    artifact_id: str
+    language: Literal["python", "sql", "bash"] = "python"
+    script_path: str | None = None
+    content: str | None = None
+    entrypoint: str | None = None
+    source_ids: list[str] = Field(default_factory=list)
+    dataset_artifact_id: str | None = None
+    provenance: list[dict[str, Any]] = Field(default_factory=list)
+    quality_flags: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class NoDataExplanationArtifact(BaseModel):
+    """Evidence showing why a trusted-source search ended in not_found."""
+
+    artifact_id: str
+    checked_sources: list[dict[str, Any]] = Field(default_factory=list)
+    rejected_sources: list[dict[str, Any]] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
+    search_strategy: str
+    alternatives: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class WorkflowResponse(BaseModel):
+    """Shared Phase 2 frontend/eval/CLI response contract."""
+
+    run_id: str
+    final_outcome: TerminalOutcome
+    message: str
+    answer_blocks: list[dict[str, Any]] = Field(default_factory=list)
+    citations: list[dict[str, Any]] = Field(default_factory=list)
+    selected_sources: list[dict[str, Any]] = Field(default_factory=list)
+    rejected_sources: list[dict[str, Any]] = Field(default_factory=list)
+    coverage: list[CoverageReport] = Field(default_factory=list)
+    extraction_plan: ExtractionPlan | None = None
+    dataset_artifacts: list[DatasetArtifact] = Field(default_factory=list)
+    script_artifacts: list[ScriptArtifact] = Field(default_factory=list)
+    visualization: VisualizationSpec | None = None
+    trace_events: list[TraceEvent] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    clarification_questions: list[str] = Field(default_factory=list)
+    not_found_evidence: NoDataExplanationArtifact | None = None
+    feedback_actions: list[FeedbackAction] = Field(default_factory=list)
+    component_statuses: dict[str, str] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_terminal_outcome_requirements(self) -> WorkflowResponse:
+        if self.final_outcome == "passed":
+            if not self.dataset_artifacts:
+                raise ValueError("passed WorkflowResponse requires at least one dataset artifact")
+            if not self.script_artifacts:
+                raise ValueError("passed WorkflowResponse requires at least one script artifact")
+        if self.final_outcome == "needs_clarification" and not self.clarification_questions:
+            raise ValueError("needs_clarification WorkflowResponse requires clarification questions")
+        if self.final_outcome == "not_found" and self.not_found_evidence is None:
+            raise ValueError("not_found WorkflowResponse requires not_found_evidence")
+        return self
 
 
 class TraceEvent(BaseModel):

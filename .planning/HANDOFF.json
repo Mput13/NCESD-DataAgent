@@ -1,94 +1,129 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-10T15:29:59.550Z",
-  "phase": "02",
-  "phase_name": "jury-mvp",
+  "timestamp": "2026-05-10T17:44:09.104Z",
+  "phase": "2",
+  "phase_name": "Full Jury MVP",
   "phase_dir": ".planning/phases/02-jury-mvp",
   "plan": 8,
-  "task": "minimal_real_frontend_prep",
+  "task": 3,
   "total_tasks": 3,
   "status": "paused",
   "completed_tasks": [
     {
       "id": 1,
-      "name": "Phase 2 execution through 02-08",
+      "name": "Pull normal web frontend from remote",
       "status": "done",
-      "commit": "e140e35"
+      "commit": "b66e66a"
     },
     {
       "id": 2,
-      "name": "Minimal non-Streamlit web scaffold",
-      "status": "in_progress",
-      "progress": "Created app/web/server.py, static HTML/CSS/JS, tests/test_web_frontend.py, and README run instructions. Focused tests passed: python -m pytest tests/test_web_frontend.py tests/test_phase2_workflow_service.py -q -> 33 passed."
+      "name": "Fix local workflow defects found during manual UAT",
+      "status": "done",
+      "progress": "Removed translit prompts, added CLI workflow runner, fixed not_found validation, fixed over-eager GDP preflight clarification, hydrated source cards from SQLite, enabled zip-backed parquet extraction, fixed FedStat period/geography filtering, and made the GDP Russia 2024 case reach a non-empty DatasetArtifact."
+    },
+    {
+      "id": 3,
+      "name": "Make frontend response useful in local fallback mode",
+      "status": "done",
+      "progress": "Fallback narrator now summarizes concrete DatasetArtifact records; frontend renders answer_blocks and dataset row preview instead of only sources."
     }
   ],
   "remaining_tasks": [
     {
-      "id": 3,
-      "name": "Smoke minimal web UI",
-      "status": "not_started",
-      "detail": "Run PYTHONPATH=. python -m app.web.server --port 8787, open http://127.0.0.1:8787, submit a query, verify /api/query, /api/continue, and /api/feedback render correctly."
-    },
-    {
       "id": 4,
-      "name": "Decide whether to keep Streamlit during transition",
-      "status": "not_started",
-      "detail": "Current scaffold is additive and does not remove app/ui/streamlit_app.py."
+      "name": "Decide whether post-UAT hotfixes should be split into focused commits or folded into a Phase 2 verification commit",
+      "status": "not_started"
     },
     {
       "id": 5,
-      "name": "Commit frontend scaffold if accepted",
+      "name": "Clean or intentionally preserve generated manual/workflow run artifacts",
+      "status": "not_started"
+    },
+    {
+      "id": 6,
+      "name": "Continue manual UAT over the remaining golden/realistic cases, especially factor/causal queries that currently only extract numeric series in local fallback mode",
+      "status": "not_started"
+    },
+    {
+      "id": 7,
+      "name": "Run full phase verification and update manual UAT evidence after commit policy is chosen",
       "status": "not_started"
     }
   ],
-  "blockers": [],
-  "human_actions_pending": [
+  "blockers": [
     {
-      "action": "Review minimal web UI direction",
-      "context": "User wants to replace Streamlit with real frontend using JS/HTML/CSS. Current scaffold is minimal and additive.",
-      "blocking": false
+      "description": "Local fallback mode does not perform a real causal/factor analysis; it only reports extracted numeric rows and warns when a query asks for factors/drivers.",
+      "type": "technical",
+      "workaround": "Use live narrator/factor pipeline for jury-quality factor answers, or add a deterministic factor-analysis route with supporting indicators."
     },
     {
-      "action": "Manual UAT for Phase 2",
-      "context": ".planning/phases/02-jury-mvp/manual-uat.md still needs human approval before full phase completion.",
+      "description": "Many generated workflow/manual run directories are untracked and should not be blindly committed.",
+      "type": "human_action",
+      "workaround": "Review .planning/phases/02-jury-mvp/manual-runs/ and workflow-runs/phase2-*; keep only deliberate evidence artifacts."
+    },
+    {
+      "description": "Some existing SUMMARY/plan docs contain placeholder/TBD markers from earlier work.",
+      "type": "technical",
+      "workaround": "Inspect grep output before claiming milestone archival completeness."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Manual UAT decision",
+      "context": "User was manually testing the new web frontend at http://localhost:8787 and reviewing whether answers are useful enough.",
+      "blocking": true
+    },
+    {
+      "action": "Commit scope decision",
+      "context": "Current dirty tree includes both real code fixes and generated run artifacts; decide which should be committed.",
       "blocking": true
     }
   ],
   "decisions": [
     {
-      "decision": "Prepare a zero-new-dependency Python HTTP server plus static frontend instead of adding a JS framework immediately.",
-      "rationale": "Keeps workflow service as source of truth and makes future migration to Vite/React or plain JS possible without disturbing Phase 2 logic.",
-      "phase": "02"
+      "decision": "Use the new app.web frontend on port 8787 instead of old Streamlit for current manual testing.",
+      "rationale": "Remote commit b66e66a added a normal browser frontend; user explicitly wanted to use that rather than the awful old UI.",
+      "phase": "2"
     },
     {
-      "decision": "Stop the interrupted app.web.server process on port 8787 during pause.",
-      "rationale": "The user interrupted the smoke run; leaving a fresh background server running would make resume state muddy.",
-      "phase": "02"
+      "decision": "Keep local_mode fallback honest instead of pretending to answer causal factor questions.",
+      "rationale": "Numbers must come from deterministic artifacts; fallback can summarize records but cannot infer causes without supporting factor data and narrator logic.",
+      "phase": "2"
+    },
+    {
+      "decision": "Treat source cards retrieved from Qdrant/BM25 as lightweight pointers and hydrate them from the Phase 1 SQLite catalog before coverage/extraction.",
+      "rationale": "Retrieval snippets do not carry resource_id/local_paths, so coverage could not find FedStat parquet files.",
+      "phase": "2"
+    },
+    {
+      "decision": "Select extraction source by requested coverage, not by first ok source.",
+      "rationale": "The first source for GDP Russia 2024 lacked 2024 data; source 57395 had the requested period and produced a dataset artifact.",
+      "phase": "2"
     }
   ],
   "uncommitted_files": [
+    ".planning/phases/01-data-architecture-research/golden-cases.yaml",
+    ".planning/phases/02-jury-mvp/golden-coverage-matrix.json",
+    ".planning/phases/02-jury-mvp/manual-uat.md",
     "README.md",
-    "app/web/__init__.py",
-    "app/web/server.py",
-    "app/web/static/app.js",
-    "app/web/static/index.html",
-    "app/web/static/styles.css",
-    "tests/test_web_frontend.py",
-    ".planning/HANDOFF.json",
-    ".planning/phases/02-jury-mvp/.continue-here.md"
+    "app/data/fedstat_adapter.py",
+    "app/data/source_card_lookup.py",
+    "app/data/world_bank_adapter.py",
+    "app/ui/streamlit_app.py",
+    "app/web/static/js/app.js",
+    "app/workflow/nodes/coverage.py",
+    "app/workflow/nodes/deterministic_tools.py",
+    "app/workflow/nodes/extraction_planner.py",
+    "app/workflow/nodes/narrator.py",
+    "app/workflow/service.py",
+    "app/workflow/state.py",
+    "scripts/run_workflow_query.py",
+    "tests/test_phase2_extraction_adapters.py",
+    "tests/test_phase2_finalization.py",
+    "tests/test_phase2_workflow_service.py",
+    ".planning/phases/02-jury-mvp/manual-runs/",
+    ".planning/phases/02-jury-mvp/workflow-runs/phase2-*/"
   ],
-  "background_processes": [
-    {
-      "pid": 29972,
-      "command": "streamlit run app/ui/streamlit_app.py --server.headless true",
-      "status": "running before pause"
-    },
-    {
-      "pid": 28584,
-      "command": "python -m streamlit run app/ui/streamlit_app.py --server.port 8502 --server.headless true",
-      "status": "running before pause"
-    }
-  ],
-  "next_action": "Run the minimal web server smoke: $env:PYTHONPATH='.'; python -m app.web.server --port 8787, then open http://127.0.0.1:8787 and submit 'Kakoy VVP Rossii v 2024 godu'.",
-  "context_notes": "Do not restart Phase 2 execution. Phase 2 plan set is complete and committed at e140e35. The active work is a user-requested pivot from Streamlit to a minimal real frontend. Keep app.workflow.service as the API boundary."
+  "next_action": "Resume with git status, inspect the dirty diff, decide commit scope for code fixes versus generated run artifacts, then continue manual UAT from http://localhost:8787.",
+  "context_notes": "Branch is codex/phase-2-jury-mvp-planning. Qdrant server is expected at http://localhost:6333 with collection phase1_source_cards. Web server was running on PID 40588 at 127.0.0.1:8787 when paused. Latest targeted verification passed: 93 tests, 1 LangGraph warning. Browser check confirmed the factors/GDP 2012 query now renders answer text, answer_blocks, limitations, and dataset rows."
 }

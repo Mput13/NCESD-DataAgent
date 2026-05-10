@@ -67,7 +67,7 @@
 
 **Canonical directory:** `.planning/phases/02-jury-mvp`
 
-**Status:** Ready for `$gsd-discuss-phase 2`; no Phase 2 plan has been accepted yet.
+**Status:** Planned; ready for `$gsd-execute-phase 02`.
 
 **Why this phase exists:** Phase 1 is accepted only as infrastructure. The acceptance report `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` shows the current system is not a functional MVP: pytest is 26/27, demo readiness is blocked/stale, dense retrieval is gated for all 20 golden cases, extraction is probe-level, data relevance eval is 0 passed / 20 gated, and the current Streamlit UI is diagnostic rather than a jury UI.
 
@@ -88,6 +88,19 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 **Remote workstream note:** `origin/workstream-1/core-integration` contains useful architectural ideas for a LangGraph skeleton and typed contracts, but it is not directly mergeable into the current branch. It deletes Phase 1 artifacts/tests/scripts, rewinds `.planning` to a pre-execution state, includes stub extraction/scout behavior, and regresses the verified Yandex API base URL/auth header. Treat it as reference material only unless individual pieces are ported and verified against the Phase 2 acceptance gates.
 
 **Covers:** all v1 requirements that are still pending or only infrastructure-level after Phase 1, especially ART-01..06, RBST-01..03, UI-01..04, ENG-01..04, and the functional versions of NLU/SRCH/DATA requirements across all golden cases.
+
+**Plans:** 8 plans
+
+### Plans
+
+- [ ] `02-01-PLAN.md` — Response/status/artifact contract and shared workflow service interface
+- [ ] `02-02-PLAN.md` — Qdrant readiness evidence and source retrieval ranking hardening
+- [ ] `02-03-PLAN.md` — FedStat and World Bank deterministic extraction adapters
+- [ ] `02-04-PLAN.md` — CKAN promotion, source scouts, coverage, and safe extraction planning nodes
+- [ ] `02-05-PLAN.md` — LangGraph workflow runtime and shared service/CLI execution path
+- [ ] `02-06-PLAN.md` — Methodology critic, visualization, narrator, and numeric guardrails
+- [ ] `02-07-PLAN.md` — All-20 golden acceptance eval and strict demo readiness gate
+- [ ] `02-08-PLAN.md` — Streamlit workflow surface, reproducibility docs, and manual UAT
 
 ### Required Capabilities
 

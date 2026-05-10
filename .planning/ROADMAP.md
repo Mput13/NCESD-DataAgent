@@ -26,7 +26,7 @@
 ### Plans
 
 - [x] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
-- [ ] `01-02-PLAN.md` — Prepared-data contract, source-card builders, and embedding corpus format
+- [x] `01-02-PLAN.md` — Prepared-data contract, source-card builders, and embedding corpus format
 - [ ] `01-03-PLAN.md` — Materialized embedding/search index and retrieval evaluation
 - [ ] `01-04-PLAN.md` — Qwen/Yandex, runnable LangGraph narrow flow, deterministic extraction, data-relevance eval, and diagnostic UI models while indexing runs
 - [ ] `01-05-PLAN.md` — Runnable readiness/demo package over prepared data, Qdrant status, relevance/extraction evidence, and minimal diagnostic Streamlit surface
@@ -51,7 +51,7 @@
 
 ### Validation
 
-- [ ] Local data and CKAN access paths are documented with bounded, reproducible commands.
+- [x] Local data and CKAN access paths are documented with bounded, reproducible commands.
 - [ ] The source-card corpus and Qdrant embedding/search collection are built or explicitly gated by missing credentials, with a manifest that records provider, model URI, dimensions, chunk counts, hashes, collection name, Qdrant mode/path or URL, and local artifact paths.
 - [ ] Long-running embedding/indexing work starts as soon as the source-card corpus is ready; orchestration, UI, and extraction work proceeds in parallel while it runs.
 - [ ] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.

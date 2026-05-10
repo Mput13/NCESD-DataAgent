@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-data-architecture-research-01-PLAN.md
-last_updated: "2026-05-10T00:46:53.444Z"
+stopped_at: Completed 01-data-architecture-research-02-PLAN.md
+last_updated: "2026-05-10T00:54:36.165Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State: DataAgent
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md`
 **Name:** Data Architecture Implementation  
 **Status:** Executing Phase 01
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** execute revised `01-02-PLAN.md`; Plan 01 has an accepted `01-01-SUMMARY.md`.
+**Next action:** execute revised `01-03-PLAN.md`; Plans 01 and 02 have accepted summaries.
 
 ## Phase Boundary
 
@@ -55,6 +55,9 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - **2026-05-10 — Plan 01 evaluation foundation completed.**
   `01-01-SUMMARY.md` accepted the requirements map, 20 golden cases, and deterministic eval rubric as the Phase 1 evaluation foundation.
 
+- **2026-05-10 — Plan 02 prepared-data contracts completed.**
+  `01-02-SUMMARY.md` accepted typed source-card/evidence/embedding contracts, deterministic FedStat/World Bank/CKAN builders, SQLite catalog materialization, and source-card/catalog/embedding-corpus manifests.
+
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
   Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
@@ -64,7 +67,7 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - `app/llm/yandex_ai_studio.py` — existing minimal Yandex AI Studio chat-completions client.
 - `docs/PROJECT_WORKFLOW.md` — GSD workflow explanation for the project.
 - `requirements.txt` — currently only `python-dotenv` and `requests`; plans must update it when adding dependencies.
-- No accepted data adapters, retrieval modules, LangGraph workflow, Streamlit UI, tests, or eval cases are currently implemented.
+- Accepted Phase 1 artifacts now include golden eval cases, source-card contracts, deterministic source-card builders, a SQLite source catalog, generated source-card/catalog/embedding-corpus manifests, and tests for those contracts.
 
 ## Verified Local Data Locations
 
@@ -83,6 +86,12 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 - **2026-05-10 — Plan 01 evaluates structured evidence, not prose alone.**
   Downstream Phase 1 work should target `golden-cases.yaml` and `eval-rubric.md`; unsupported numeric claims are hard failures without deterministic provenance.
+
+- **2026-05-10 — Plan 02 embeds source-card metadata only.**
+  Raw numeric observations and generated answer text are excluded from embedding input; later Qdrant indexing should consume `EmbeddingDocument` chunks and join back through `card_id`.
+
+- **2026-05-10 — Plan 02 uses SQLite as the local catalog interface.**
+  The catalog stores source cards, coverage hints, embedding chunks, and rejection-ready metadata while remaining DuckDB-compatible for later deterministic extraction and catalog queries.
 
 - **2026-05-10 — Single-track execution.**
   The project no longer uses a three-person Core/Data/UI workstream split. Future agents should execute the canonical Phase 1 plans directly and should not recreate owner-specific onboarding docs.
@@ -112,7 +121,7 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - [x] Получить рабочий folder_id Yandex Cloud for DeepSeek 3.2 smoke test: `b1gbntotj1b57karq6qm`
 - [x] Понять фактическую структуру локального дампа после скачивания — summarized in `.planning/DATA_REPORT.md`
 - [x] Create the 15-20 case golden set in `01-01-PLAN.md`
-- [ ] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
+- [x] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
 - [ ] Materialize Qdrant embedding/search index and retrieval relevance eval in revised `01-03-PLAN.md`
 - [ ] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04` and integrated demo package in `01-05`
 
@@ -120,22 +129,23 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 Run the revised Phase 1 plans in order:
 
-1. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md`.
-2. Start `01-03` only after `01-02` produces the source-card corpus contract and accepted summary.
-3. Start the long-running embedding/index build in revised `01-03` as soon as the corpus is ready; prepare `01-04` work while indexing runs.
+1. Execute revised `.planning/phases/01-data-architecture-research/01-03-PLAN.md`.
+2. Start the long-running embedding/index build in revised `01-03` using the `01-02` source-card and embedding-corpus manifests.
+3. Prepare `01-04` work while indexing runs.
 4. Run revised `01-05` only after prepared-index status and independent contracts are clear.
 5. Run `$gsd-verify-work 1` after all five summaries exist.
 
 ## Session Continuity
 
-Last session: 2026-05-10T00:46:53.442Z
-Stopped at: Completed 01-data-architecture-research-01-PLAN.md
+Last session: 2026-05-10T00:54:36.163Z
+Stopped at: Completed 01-data-architecture-research-02-PLAN.md
 Resume file: None
 
 ---
 ## Performance Metrics
 
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `01`: 1 min, 3 tasks, 3 artifact files.
+- 2026-05-10 — Phase `01-data-architecture-research`, Plan `02`: 5 min, 2 tasks, 15 artifact/code/test files.
 
 ---
-*Last updated: 2026-05-10 after completing Plan 01*
+*Last updated: 2026-05-10 after completing Plan 02*

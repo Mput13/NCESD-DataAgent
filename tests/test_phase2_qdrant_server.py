@@ -133,3 +133,114 @@ def test_promote_qdrant_server_fails_on_incomplete_cache_without_reembed(
             allow_reembed=False,
             client_factory=lambda *_args, **_kwargs: None,
         )
+
+
+def test_server_manifest_ready_with_matching_phase2_baseline(tmp_path: Path) -> None:
+    from app.retrieval.readiness import assess_phase2_index_readiness
+
+    index_manifest, corpus_manifest = _write_phase2_ready_manifests(tmp_path)
+    server_manifest = tmp_path / "qdrant-server-manifest.json"
+    server_manifest.write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "qdrant_url": "http://localhost:6333",
+                "collection": "phase1_source_cards",
+                "vector_count": 36321,
+                "corpus_hash": "corpus-hash",
+                "verified_at": "2026-05-10T00:00:00Z",
+                "reproduce_command": "python3 scripts/promote_qdrant_server.py --start-server",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = assess_phase2_index_readiness(index_manifest, corpus_manifest, server_manifest)
+
+    assert readiness["ready"] is True
+    assert readiness["qdrant_url"] == "http://localhost:6333"
+    assert readiness["server_manifest_status"] == "ready"
+    assert readiness["reproduce_command"].startswith("python3 scripts/promote_qdrant_server.py")
+    assert readiness["reasons"] == []
+
+
+def test_stale_server_manifest_reports_corpus_hash_mismatch(tmp_path: Path) -> None:
+    from app.retrieval.readiness import assess_phase2_index_readiness
+
+    index_manifest, corpus_manifest = _write_phase2_ready_manifests(tmp_path)
+    server_manifest = tmp_path / "qdrant-server-manifest.json"
+    server_manifest.write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "qdrant_url": "http://localhost:6333",
+                "collection": "phase1_source_cards",
+                "vector_count": 36321,
+                "corpus_hash": "stale-corpus-hash",
+                "verified_at": "2026-05-10T00:00:00Z",
+                "reproduce_command": "python3 scripts/promote_qdrant_server.py --start-server",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = assess_phase2_index_readiness(index_manifest, corpus_manifest, server_manifest)
+
+    assert readiness["ready"] is False
+    assert "corpus_hash_mismatch" in readiness["reasons"]
+
+
+def test_zero_server_manifest_vector_count_reports_mismatch(tmp_path: Path) -> None:
+    from app.retrieval.readiness import assess_phase2_index_readiness
+
+    index_manifest, corpus_manifest = _write_phase2_ready_manifests(tmp_path)
+    server_manifest = tmp_path / "qdrant-server-manifest.json"
+    server_manifest.write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "qdrant_url": "http://localhost:6333",
+                "collection": "phase1_source_cards",
+                "vector_count": 0,
+                "corpus_hash": "corpus-hash",
+                "verified_at": "2026-05-10T00:00:00Z",
+                "reproduce_command": "python3 scripts/promote_qdrant_server.py --start-server",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    readiness = assess_phase2_index_readiness(index_manifest, corpus_manifest, server_manifest)
+
+    assert readiness["ready"] is False
+    assert "server_vector_count_mismatch" in readiness["reasons"]
+
+
+def _write_phase2_ready_manifests(tmp_path: Path) -> tuple[Path, Path]:
+    corpus_manifest = tmp_path / "embedding-corpus-manifest.json"
+    corpus_manifest.write_text(
+        json.dumps(
+            {
+                "chunk_count": 36321,
+                "content_hash": "corpus-hash",
+            }
+        ),
+        encoding="utf-8",
+    )
+    index_manifest = tmp_path / "embedding-index-manifest.json"
+    index_manifest.write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "dense_status": "ready",
+                "chunk_count": 36321,
+                "vector_count": 36321,
+                "corpus_hash": "corpus-hash",
+                "qdrant_mode": "remote",
+                "qdrant_url": "http://localhost:6333",
+                "collection_name": "phase1_source_cards",
+            }
+        ),
+        encoding="utf-8",
+    )
+    return index_manifest, corpus_manifest

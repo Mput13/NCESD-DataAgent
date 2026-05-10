@@ -85,6 +85,27 @@ class SourceCatalogAndCorpusTest(unittest.TestCase):
             self.assertRegex(manifest["content_hash"], r"^[0-9a-f]{64}$")
             self.assertEqual(json.loads(manifest_path.read_text())["chunk_count"], 1)
 
+    def test_embedding_text_is_bounded_for_provider_limits(self) -> None:
+        from app.artifacts.source_cards import MatchMode, SourceCandidateCard
+
+        card = SourceCandidateCard(
+            source="fedstat",
+            builder_source="fedstat_metdata_csv",
+            dataset_id="LONG",
+            resource_id="fedstatru/data/parquet/LONG.parquet",
+            title="Long methodology source",
+            match_mode=MatchMode.LEXICAL,
+            geography=["Russian Federation"],
+            description="Очень длинное методологическое описание. " * 600,
+            why_matched="Full source-card metadata candidate.",
+            metadata={"methodology": "Подробная методология. " * 600},
+        )
+
+        text = card.to_embedding_text()
+
+        self.assertLessEqual(len(text), 6000)
+        self.assertIn("truncated_for_embedding", text)
+
 
 if __name__ == "__main__":
     unittest.main()

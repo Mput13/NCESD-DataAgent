@@ -243,14 +243,20 @@ class SourceCandidateCard(BaseModel):
             ("description", self.description),
             ("why_matched", self.why_matched),
         ]
-        lines = [f"{name}: {value}" for name, value in fields if value]
+        lines = [f"{name}: {_bounded_embedding_value(str(value))}" for name, value in fields if value]
         for name, value in sorted(self.metadata.items()):
             if name in _NON_EMBEDDABLE_METADATA_KEYS:
                 continue
             rendered = _render_embedding_metadata(value)
             if rendered:
-                lines.append(f"metadata.{name}: {rendered}")
-        return "\n".join(lines)
+                lines.append(f"metadata.{name}: {_bounded_embedding_value(rendered)}")
+        embedding_text = "\n".join(lines)
+        if len(embedding_text) <= _MAX_EMBEDDING_TEXT_CHARS:
+            return embedding_text
+        return (
+            embedding_text[: _MAX_EMBEDDING_TEXT_CHARS - 25].rstrip()
+            + "\ntruncated_for_embedding: true"
+        )
 
     def _primary_resource_url(self) -> str | None:
         resources = self.metadata.get("resources")
@@ -297,6 +303,9 @@ _NON_EMBEDDABLE_METADATA_KEYS = {
     "aggregate_count",
 }
 
+_MAX_EMBEDDING_TEXT_CHARS = 6000
+_MAX_EMBEDDING_FIELD_CHARS = 1200
+
 
 def _render_embedding_metadata(value: Any) -> str:
     if value is None:
@@ -318,3 +327,10 @@ def _render_embedding_metadata(value: Any) -> str:
                 rendered_pairs.append(f"{key}={rendered}")
         return "; ".join(rendered_pairs)
     return str(value).strip()
+
+
+def _bounded_embedding_value(value: str) -> str:
+    value = " ".join(value.split())
+    if len(value) <= _MAX_EMBEDDING_FIELD_CHARS:
+        return value
+    return value[: _MAX_EMBEDDING_FIELD_CHARS - 24].rstrip() + " [truncated_for_embedding]"

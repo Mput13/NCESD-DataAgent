@@ -37,9 +37,18 @@ def main() -> None:
     )
     parser.add_argument("--fedstat-zip", type=Path, default=DEFAULT_FEDSTAT_ZIP)
     parser.add_argument("--world-bank-zip", type=Path, default=DEFAULT_WORLD_BANK_ZIP)
-    parser.add_argument("--limit", type=int, default=5)
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optional per-source local metadata limit. Default: no limit.",
+    )
+    parser.add_argument("--fedstat-limit", type=int, default=None)
+    parser.add_argument("--world-bank-limit", type=int, default=None)
     parser.add_argument("--ckan-query", default="57319")
     parser.add_argument("--ckan-rows", type=int, default=3)
+    parser.add_argument("--ckan-all", action="store_true")
+    parser.add_argument("--ckan-page-size", type=int, default=100)
     parser.add_argument("--ckan-resource-limit", type=int, default=3)
     parser.add_argument("--skip-ckan", action="store_true")
     parser.add_argument(
@@ -90,7 +99,7 @@ def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, objec
                 local_zip_path=str(args.fedstat_zip),
                 parquet_paths=fedstat_parquet,
                 clean_jsonl_paths=fedstat_clean,
-                limit=args.limit,
+                limit=args.fedstat_limit if args.fedstat_limit is not None else args.limit,
             )
         )
 
@@ -104,17 +113,28 @@ def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, objec
                 indicators,
                 countries=countries,
                 parquet_paths=wb_parquet,
-                limit=args.limit,
+                limit=args.world_bank_limit
+                if args.world_bank_limit is not None
+                else args.limit,
             )
         )
 
     if not args.skip_ckan:
-        packages = fetch_ckan_packages(
-            query=args.ckan_query,
-            rows=args.ckan_rows,
-            endpoint=DEFAULT_CKAN_ENDPOINT,
+        packages = (
+            fetch_all_ckan_packages(
+                query=args.ckan_query,
+                page_size=args.ckan_page_size,
+                endpoint=DEFAULT_CKAN_ENDPOINT,
+            )
+            if args.ckan_all
+            else fetch_ckan_packages(
+                query=args.ckan_query,
+                rows=args.ckan_rows,
+                endpoint=DEFAULT_CKAN_ENDPOINT,
+            )
         )
         source_notes["ckan_packages_returned"] = len(packages)
+        source_notes["ckan_all"] = args.ckan_all
         cards.extend(
             build_ckan(
                 packages,
@@ -127,7 +147,10 @@ def build_cards(args: argparse.Namespace) -> tuple[list[object], dict[str, objec
     else:
         source_notes["ckan_skipped"] = True
 
-    return cards, source_notes
+    deduped_cards, duplicate_ids = deduplicate_cards(cards)
+    source_notes["duplicate_source_card_ids"] = len(duplicate_ids)
+    source_notes["duplicate_source_card_id_examples"] = duplicate_ids[:20]
+    return deduped_cards, source_notes
 
 
 def serialize_cards_payload(cards: list[object]) -> dict[str, object]:
@@ -144,6 +167,22 @@ def serialize_cards_payload(cards: list[object]) -> dict[str, object]:
         "cards": [card.model_dump(mode="json") for card in cards],
         "embedding_chunks": embedding_chunks,
     }
+
+
+def deduplicate_cards(cards: list[object]) -> tuple[list[object], list[str]]:
+    """Keep one deterministic card per source/dataset/resource identity."""
+
+    seen: set[str] = set()
+    deduped: list[object] = []
+    duplicates: list[str] = []
+    for card in cards:
+        card_id = getattr(card, "card_id")
+        if card_id in seen:
+            duplicates.append(card_id)
+            continue
+        seen.add(card_id)
+        deduped.append(card)
+    return deduped, duplicates
 
 
 def build_manifest(
@@ -225,6 +264,32 @@ def fetch_ckan_packages(*, query: str, rows: int, endpoint: str) -> list[dict[st
     if not payload.get("success"):
         raise RuntimeError(f"CKAN package_search failed for query {query!r}")
     return list(payload.get("result", {}).get("results", []))
+
+
+def fetch_all_ckan_packages(
+    *, query: str, page_size: int, endpoint: str
+) -> list[dict[str, object]]:
+    packages: list[dict[str, object]] = []
+    start = 0
+    total: int | None = None
+    while total is None or start < total:
+        response = requests.get(
+            endpoint,
+            params={"q": query, "rows": page_size, "start": start},
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not payload.get("success"):
+            raise RuntimeError(f"CKAN package_search failed for query {query!r}")
+        result = payload.get("result", {})
+        total = int(result.get("count") or 0)
+        batch = list(result.get("results", []))
+        packages.extend(batch)
+        if not batch:
+            break
+        start += len(batch)
+    return packages
 
 
 if __name__ == "__main__":

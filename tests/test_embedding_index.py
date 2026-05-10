@@ -74,8 +74,9 @@ def test_build_embedding_index_writes_gated_manifest_with_qdrant_config(
     build_log = tmp_path / "embedding-index-build.md"
     qdrant_path = tmp_path / "qdrant"
 
-    monkeypatch.delenv("YANDEX_AI_STUDIO_API_KEY", raising=False)
-    monkeypatch.delenv("YANDEX_EMBEDDING_API_KEY", raising=False)
+    monkeypatch.setenv("YANDEX_AI_STUDIO_API_KEY", "")
+    monkeypatch.setenv("YANDEX_EMBEDDING_API_KEY", "")
+    monkeypatch.setenv("YANDEX_API_KEY", "")
     monkeypatch.setenv("QDRANT_MODE", "local")
     monkeypatch.setenv("QDRANT_PATH", str(qdrant_path))
     monkeypatch.setenv("QDRANT_COLLECTION", "phase1_source_cards_test")

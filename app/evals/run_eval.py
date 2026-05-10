@@ -237,15 +237,184 @@ The Phase 1 quality gate prioritizes source relevance, source rejection, qdrant/
 """
 
 
+def score_phase2_results(
+    results_path: Path,
+    *,
+    coverage_matrix_path: Path | None = None,
+) -> dict[str, Any]:
+    """Score Phase 2 acceptance results and produce a structured eval report.
+
+    Aggregates counts: passed, needs_clarification, not_found, failed,
+    unacceptable, and test_only_fallback_failures.
+
+    For each case:
+    - Fails if final_outcome=="passed" and dataset_count < 1 or script_count < 1 or trace_count < 5
+    - Fails if outcome/source/adapter mismatches with coverage matrix
+    - Fails if needs_clarification has no clarification question (via unacceptable_reasons)
+    - Fails if not_found has no rejection evidence
+    - Fails jury readiness when used_test_only_fallbacks is non-empty
+    """
+    results_data = json.loads(results_path.read_text(encoding="utf-8"))
+    coverage_matrix: dict[str, Any] = {}
+    if coverage_matrix_path and coverage_matrix_path.exists():
+        matrix_raw = json.loads(coverage_matrix_path.read_text(encoding="utf-8"))
+        for case in (matrix_raw.get("cases") or []):
+            case_id = str(case.get("case_id") or "")
+            if case_id:
+                coverage_matrix[case_id] = case
+
+    cases = results_data.get("cases") or []
+    scored_cases: list[dict[str, Any]] = []
+
+    for case in cases:
+        case_id = str(case.get("case_id") or "")
+        final_outcome = case.get("final_outcome")
+        dataset_count = int(case.get("dataset_count") or 0)
+        script_count = int(case.get("script_count") or 0)
+        trace_count = int(case.get("trace_count") or 0)
+        used_test_only_fallbacks = list(case.get("used_test_only_fallbacks") or [])
+        existing_unacceptable = list(case.get("unacceptable_reasons") or [])
+
+        fail_reasons: list[str] = list(existing_unacceptable)
+        jury_blocked = bool(used_test_only_fallbacks)
+
+        # Rule: passed cases must have dataset, script, and trace evidence
+        if final_outcome == "passed":
+            if dataset_count < 1:
+                fail_reasons.append("passed_missing_dataset")
+            if script_count < 1:
+                fail_reasons.append("passed_missing_script")
+            if trace_count < 5:
+                fail_reasons.append("passed_trace_too_short")
+
+        # Coverage matrix alignment check
+        matrix_case = coverage_matrix.get(case_id, {})
+        if matrix_case:
+            expected_outcome = matrix_case.get("expected_terminal_outcome")
+            if expected_outcome and final_outcome and final_outcome != expected_outcome:
+                # Both sides must be valid terminal outcomes for this to be a failure
+                valid = {"passed", "needs_clarification", "not_found"}
+                if final_outcome in valid and expected_outcome in valid:
+                    fail_reasons.append(
+                        f"matrix_outcome_mismatch:expected={expected_outcome},got={final_outcome}"
+                    )
+
+        # Unsupported numeric claim check (propagated from acceptance runner)
+        if any("unsupported_numeric_claim" in str(r) for r in fail_reasons):
+            jury_blocked = True
+
+        status = "failed" if fail_reasons else "test_only_fallback_failure" if jury_blocked else "ok"
+
+        scored_cases.append(
+            {
+                "case_id": case_id,
+                "final_outcome": final_outcome,
+                "status": status,
+                "dataset_count": dataset_count,
+                "script_count": script_count,
+                "trace_count": trace_count,
+                "used_test_only_fallbacks": used_test_only_fallbacks,
+                "fail_reasons": fail_reasons,
+                "jury_blocked": jury_blocked,
+            }
+        )
+
+    # Aggregates
+    outcome_counts: dict[str, int] = {}
+    for sc in scored_cases:
+        outcome = str(sc.get("final_outcome") or "unknown")
+        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+
+    unacceptable_count = sum(1 for sc in scored_cases if sc.get("fail_reasons"))
+    test_only_failure_count = sum(1 for sc in scored_cases if sc.get("jury_blocked"))
+
+    return {
+        "total_cases": len(scored_cases),
+        "passed": outcome_counts.get("passed", 0),
+        "needs_clarification": outcome_counts.get("needs_clarification", 0),
+        "not_found": outcome_counts.get("not_found", 0),
+        "failed": sum(v for k, v in outcome_counts.items() if k not in ("passed", "needs_clarification", "not_found")),
+        "unacceptable": unacceptable_count,
+        "test_only_fallback_failures": test_only_failure_count,
+        "jury_ready": unacceptable_count == 0 and test_only_failure_count == 0 and len(scored_cases) == 20,
+        "coverage_matrix_path": str(coverage_matrix_path) if coverage_matrix_path else None,
+        "cases": scored_cases,
+    }
+
+
+def _render_phase2_markdown(result: dict[str, Any]) -> str:
+    rows = "\n".join(
+        f"| {case['case_id']} | {case.get('final_outcome', '—')} | {case['status']} "
+        f"| {case['dataset_count']} | {case['script_count']} | {case['trace_count']} "
+        f"| {'; '.join(case.get('fail_reasons') or []) or '—'} |"
+        for case in result.get("cases", [])
+    )
+    return f"""# Phase 2 Workflow Eval
+
+## Aggregate
+
+- Total cases: {result['total_cases']}
+- Passed: {result['passed']}
+- Needs clarification: {result['needs_clarification']}
+- Not found: {result['not_found']}
+- Failed: {result['failed']}
+- Unacceptable: {result['unacceptable']}
+- Test-only fallback failures: {result['test_only_fallback_failures']}
+- Jury ready: {result['jury_ready']}
+
+## Cases
+
+| Case | Outcome | Status | Datasets | Scripts | Trace | Fail Reasons |
+|------|---------|--------|----------|---------|-------|--------------|
+{rows}
+"""
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Phase 1 data relevance evaluation.")
-    parser.add_argument("--goldens", required=True, type=Path)
-    parser.add_argument("--retrieval-eval", required=True, type=Path)
-    parser.add_argument("--extraction-probes", required=True, type=Path)
-    parser.add_argument("--index-manifest", required=True, type=Path)
-    parser.add_argument("--json-output", required=True, type=Path)
-    parser.add_argument("--markdown-output", required=True, type=Path)
+    parser.add_argument("--goldens", type=Path)
+    parser.add_argument("--retrieval-eval", type=Path)
+    parser.add_argument("--extraction-probes", type=Path)
+    parser.add_argument("--index-manifest", type=Path)
+    parser.add_argument("--json-output", type=Path)
+    parser.add_argument("--markdown-output", type=Path)
+    # Phase 2 scoring args
+    parser.add_argument("--phase2-results", type=Path, help="Path to phase2-golden-results.json")
+    parser.add_argument(
+        "--phase2-coverage-matrix",
+        type=Path,
+        help="Path to golden-coverage-matrix.json for Phase 2 scoring",
+    )
+    parser.add_argument("--phase2-json-output", type=Path, help="Phase 2 eval JSON output path")
+    parser.add_argument("--phase2-markdown-output", type=Path, help="Phase 2 eval Markdown output path")
+
     args = parser.parse_args()
+
+    # Phase 2 scoring mode
+    if args.phase2_results:
+        result = score_phase2_results(
+            args.phase2_results,
+            coverage_matrix_path=args.phase2_coverage_matrix,
+        )
+        if args.phase2_json_output:
+            args.phase2_json_output.parent.mkdir(parents=True, exist_ok=True)
+            args.phase2_json_output.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        if args.phase2_markdown_output:
+            args.phase2_markdown_output.write_text(
+                _render_phase2_markdown(result), encoding="utf-8"
+            )
+        print(json.dumps({"total_cases": result["total_cases"], "jury_ready": result["jury_ready"]}))
+        return
+
+    # Phase 1 mode (original)
+    if not all([args.goldens, args.retrieval_eval, args.extraction_probes, args.index_manifest,
+                args.json_output, args.markdown_output]):
+        parser.error("Phase 1 mode requires --goldens, --retrieval-eval, --extraction-probes, "
+                     "--index-manifest, --json-output, --markdown-output")
+
     result = run_evaluation(
         goldens_path=args.goldens,
         retrieval_eval_path=args.retrieval_eval,

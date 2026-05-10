@@ -312,6 +312,70 @@ def _rejected_source_examples(rows: list[dict[str, str]]) -> list[dict[str, str]
     return rejected
 
 
+def assess_phase2_readiness(
+    *,
+    phase2_eval: dict[str, Any],
+    coverage_matrix: dict[str, Any],
+) -> dict[str, Any]:
+    """Assess Phase 2 workflow eval readiness against the full-20-case acceptance bar.
+
+    overall_status is 'ready' only when:
+    - phase2_eval.total_cases == 20
+    - phase2_eval.failed == 0
+    - phase2_eval.unacceptable == 0
+    - phase2_eval.test_only_fallback_failures == 0
+    - coverage_matrix.total_cases == 20
+    - coverage_matrix.unresolved_data_gaps is empty
+
+    Returns a dict with phase2_workflow_eval_status, phase2_coverage_matrix_status,
+    phase2_total_cases, phase2_unacceptable_count, phase2_test_only_fallback_failures,
+    and overall_status.
+    """
+    total_cases = int(phase2_eval.get("total_cases") or 0)
+    failed = int(phase2_eval.get("failed") or 0)
+    unacceptable = int(phase2_eval.get("unacceptable") or 0)
+    test_only_fallback_failures = int(phase2_eval.get("test_only_fallback_failures") or 0)
+
+    matrix_total = int(coverage_matrix.get("total_cases") or 0)
+    unresolved_gaps = list(coverage_matrix.get("unresolved_data_gaps") or [])
+
+    # Determine sub-statuses
+    eval_blockers: list[str] = []
+    if total_cases != 20:
+        eval_blockers.append(f"total_cases={total_cases} (expected 20)")
+    if failed > 0:
+        eval_blockers.append(f"failed={failed}")
+    if unacceptable > 0:
+        eval_blockers.append(f"unacceptable={unacceptable}")
+    if test_only_fallback_failures > 0:
+        eval_blockers.append(f"test_only_fallback_failures={test_only_fallback_failures}")
+
+    phase2_workflow_eval_status = "ready" if not eval_blockers else "blocked"
+
+    matrix_blockers: list[str] = []
+    if matrix_total != 20:
+        matrix_blockers.append(f"coverage_matrix_total_cases={matrix_total} (expected 20)")
+    if unresolved_gaps:
+        matrix_blockers.append(f"unresolved_data_gaps={len(unresolved_gaps)}")
+
+    phase2_coverage_matrix_status = "ready" if not matrix_blockers else "blocked"
+
+    all_blockers = eval_blockers + matrix_blockers
+    overall_status = "ready" if not all_blockers else "blocked"
+
+    return {
+        "overall_status": overall_status,
+        "phase2_workflow_eval_status": phase2_workflow_eval_status,
+        "phase2_coverage_matrix_status": phase2_coverage_matrix_status,
+        "phase2_total_cases": total_cases,
+        "phase2_unacceptable_count": unacceptable,
+        "phase2_test_only_fallback_failures": test_only_fallback_failures,
+        "phase2_eval_blockers": eval_blockers,
+        "phase2_matrix_blockers": matrix_blockers,
+        "all_blockers": all_blockers,
+    }
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"_missing_path": str(path)}

@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: replanning
-last_updated: "2026-05-10T01:40:00+03:00"
+status: ready_to_execute
+last_updated: "2026-05-10T03:38:00+03:00"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 0
 ---
 
 # Project State: DataAgent
@@ -25,9 +25,9 @@ See: `.planning/PROJECT.md`
 **Phase:** 1  
 **Slug:** `01-data-architecture-research`  
 **Name:** Data Architecture Implementation  
-**Status:** Replanning after data-relevance, Qdrant, and executable-verification correction
+**Status:** Ready to execute; no Phase 1 plan has started
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** resume execution at revised `01-02-PLAN.md`; do not continue old Wave 2 until the prepared-data, Qdrant, data-relevance, and executable-verification gates are accepted.
+**Next action:** start execution at revised `01-01-PLAN.md`; do not skip ahead to `01-02` until Plan 01 writes an accepted `01-01-SUMMARY.md`.
 
 ## Phase Boundary
 
@@ -113,11 +113,17 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 Run the revised Phase 1 plans in order:
 
-1. Treat existing `01-01-SUMMARY.md` as an eval-foundation artifact, but do not mark product NLU requirements complete from it alone.
-2. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md`.
+1. Execute revised `.planning/phases/01-data-architecture-research/01-01-PLAN.md`.
+2. Execute revised `.planning/phases/01-data-architecture-research/01-02-PLAN.md` only after Plan 01 has an accepted summary.
 3. Start the long-running embedding/index build in revised `01-03` as soon as the corpus is ready; prepare `01-04` work while indexing runs.
 4. Run revised `01-05` only after prepared-index status and independent contracts are clear.
 5. Run `$gsd-verify-work 1` after all five summaries exist.
 
+## Session Continuity
+
+Last session: 2026-05-10T03:38:00+03:00
+Stopped at: Corrected plan state; no Phase 1 plan has started, next action is executing revised `01-01-PLAN.md`.
+Resume file: none
+
 ---
-*Last updated: 2026-05-10 after single-phase cleanup*
+*Last updated: 2026-05-10 after correcting plan progress to zero started*

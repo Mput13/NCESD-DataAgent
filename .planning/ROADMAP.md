@@ -25,7 +25,7 @@
 
 ### Plans
 
-- [x] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
+- [ ] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
 - [ ] `01-02-PLAN.md` — Prepared-data contract, source-card builders, and embedding corpus format
 - [ ] `01-03-PLAN.md` — Materialized embedding/search index and retrieval evaluation
 - [ ] `01-04-PLAN.md` — Qwen/Yandex, runnable LangGraph narrow flow, deterministic extraction, data-relevance eval, and diagnostic UI models while indexing runs

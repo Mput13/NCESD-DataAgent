@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-data-architecture-research-04-PLAN.md
-last_updated: "2026-05-10T01:16:51.762Z"
+status: ready_for_verification
+stopped_at: Completed 01-data-architecture-research-05-PLAN.md
+last_updated: "2026-05-10T04:37:04Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State: DataAgent
@@ -26,9 +26,9 @@ See: `.planning/PROJECT.md`
 **Phase:** 1  
 **Slug:** `01-data-architecture-research`  
 **Name:** Data Architecture Implementation  
-**Status:** Executing Phase 01
+**Status:** Ready for Phase 01 verification
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** execute revised `01-05-PLAN.md`; Plans 01, 02, 03, and 04 have accepted summaries.
+**Next action:** run `$gsd-verify-work 1`; Plans 01, 02, 03, 04, and 05 have accepted summaries.
 
 ## Phase Boundary
 
@@ -64,6 +64,9 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - **2026-05-10 — Plan 04 orchestration, extraction probes, and data relevance eval completed.**
   `01-04-SUMMARY.md` accepted the Qwen/Yandex structured-output gate, canonical workflow artifacts and TraceEvent ownership, runnable graph smoke output, DuckDB SQL-first extraction probe evidence, diagnostic trace UI models, and data relevance eval reports.
 
+- **2026-05-10 — Plan 05 demo readiness and decision package completed.**
+  `01-05-SUMMARY.md` accepted the demo readiness runner, minimal diagnostic Streamlit shell, prepared-data readiness report, final recommendation package, implementation decision brief, and architecture growth map. The current demo status is explicitly `gated`, not falsely ready: Qdrant/dense retrieval awaits embedding credentials and deterministic numeric output awaits promoted extraction cases.
+
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
   Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
@@ -74,8 +77,10 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - `app/workflow/run_graph.py` — runnable narrow workflow graph entrypoint emitting trace/source/coverage/extraction/Qdrant evidence.
 - `app/data/deterministic_tools.py` and `scripts/run_extraction_probes.py` — DuckDB SQL-first deterministic tool contracts and source-family extraction probes.
 - `app/evals/run_eval.py` — data relevance and extraction evaluation gate over golden cases.
+- `app/demo/run_demo.py` — prepared-data demo readiness runner that consumes corpus/catalog/index/eval/probe artifacts and refuses false dense readiness.
+- `app/ui/streamlit_app.py` — minimal diagnostic Streamlit shell exposing chat input, examples, state machine, trace, artifacts, rejection details, index readiness, and feedback/fix requests.
 - `docs/PROJECT_WORKFLOW.md` — GSD workflow explanation for the project.
-- `requirements.txt` — includes Yandex/OpenAI client, Pydantic, Qdrant, DuckDB/PyArrow/Polars/Altair, and HTTP/runtime dependencies.
+- `requirements.txt` — includes Yandex/OpenAI client, Pydantic, Qdrant, DuckDB/PyArrow/Polars/Altair, Streamlit, and HTTP/runtime dependencies.
 - Accepted Phase 1 artifacts now include golden eval cases, source-card contracts, deterministic source-card builders, a SQLite source catalog, generated source-card/catalog/embedding-corpus manifests, Qdrant embedding-index manifest/build log, hybrid retrieval eval artifacts, and tests for those contracts.
 
 ## Verified Local Data Locations
@@ -145,20 +150,20 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - [x] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
 - [x] Materialize Qdrant embedding/search index and retrieval relevance eval in revised `01-03-PLAN.md`
 - [x] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04`
-- [ ] Package the integrated demo path through revised `01-05`
+- [x] Package the integrated demo path through revised `01-05`
 
 ## Recommended Next Action
 
-Run the revised Phase 1 plans in order:
+Phase 1 plans are complete. Next:
 
-1. Execute revised `.planning/phases/01-data-architecture-research/01-05-PLAN.md`.
-2. Consume the `01-04` Qwen gate, graph smoke output, extraction probes, trace UI models, and data relevance eval for demo readiness work.
-3. Run `$gsd-verify-work 1` after all five summaries exist.
+1. Run `$gsd-verify-work 1`.
+2. Treat dense Qdrant retrieval as gated until embedding credentials populate vectors.
+3. Promote 2-3 golden cases to deterministic extraction only after verification identifies the highest-value demo path.
 
 ## Session Continuity
 
-Last session: 2026-05-10T01:16:51.760Z
-Stopped at: Completed 01-data-architecture-research-04-PLAN.md
+Last session: 2026-05-10T04:37:04Z
+Stopped at: Completed 01-data-architecture-research-05-PLAN.md; ready for `$gsd-verify-work 1`
 Resume file: None
 
 ---
@@ -168,6 +173,7 @@ Resume file: None
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `02`: 5 min, 2 tasks, 15 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `03`: 7 min, 2 tasks, 12 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `04`: 8 min, 4 tasks, 27 artifact/code/test files.
+- 2026-05-10 — Phase `01-data-architecture-research`, Plan `05`: 9 min, 2 tasks, 14 artifact/code/test files.
 
 ---
-*Last updated: 2026-05-10 after completing Plan 04*
+*Last updated: 2026-05-10 after completing Plan 05*

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: phase_2_planned_ready_for_execute
-stopped_at: Phase 2 planning complete; third checker pass accepted all 10 plans
-last_updated: "2026-05-10"
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-05-10T11:53:31.083Z"
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 15
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State: DataAgent
@@ -19,14 +19,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код, не LLM  
-**Current focus:** Phase 02 — jury MVP planning
+**Current focus:** Phase 02 — jury-mvp
 
 ## Current Phase
 
 **Phase:** 2  
 **Slug:** `02-jury-mvp`  
 **Name:** Full Jury MVP  
-**Status:** Planned; ready for `$gsd-execute-phase 2`
+**Status:** Executing Phase 02
 **Canonical directory:** `.planning/phases/02-jury-mvp`  
 **Next action:** execute the accepted 10-plan Phase 2 plan set with `$gsd-execute-phase 2`.
 
@@ -137,6 +137,12 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Decisions Log
 
+- **2026-05-10 — Plan 02-01 constrains final user outcomes.**
+  Phase 2 final user outcomes are limited to `passed`, `needs_clarification`, and `not_found`; internal gated/stale/skipped/no_candidate states stay visible only as component-level status.
+
+- **2026-05-10 — Plan 02-01 defines one guarded workflow service entrypoint.**
+  `run_user_query` is the shared frontend/eval/CLI import path and deliberately raises until plan `02-06` implements real final `WorkflowResponse` assembly.
+
 - **2026-05-10 — Plan 04 keeps Qwen as the target with explicit credential gates.**
   The verified AI Studio host is `https://llm.api.cloud.yandex.net/v1` with `Api-Key` auth. Missing Qwen credentials produce `gated_skip` evidence instead of silent success; DeepSeek remains historical fallback evidence only.
 
@@ -193,22 +199,23 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Recommended Next Action
 
-Phase 1 plans are complete and accepted only as infrastructure. Phase 2 planning is complete and verified. Next:
+Phase 1 plans are complete and accepted only as infrastructure. Phase 2 execution has completed plan `02-01`; continue through the accepted 10-plan Phase 2 set. Next:
 
 1. Stay on `codex/phase-2-jury-mvp-planning`.
 2. Keep unrelated embedding-experiment dirty files isolated from Phase 2 planning commits.
-3. Run `$gsd-execute-phase 2`.
+3. Continue `$gsd-execute-phase 2` from the remaining Phase 2 plans.
 4. During execution, preserve the all-20 golden acceptance target and do not accept stale/gated/skipped/no_candidate final states.
 
 ## Session Continuity
 
-Last session: 2026-05-10
-Stopped at: Phase 2 planning verified; ready for execute-phase
+Last session: 2026-05-10T11:53:31.081Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
 
 ---
 ## Performance Metrics
 
+- 2026-05-10 — Phase `02-jury-mvp`, Plan `01`: 3 min, 3 tasks, 4 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `01`: 1 min, 3 tasks, 3 artifact files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `02`: 5 min, 2 tasks, 15 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `03`: 7 min, 2 tasks, 12 artifact/code/test files.

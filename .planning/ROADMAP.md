@@ -67,7 +67,7 @@
 
 **Canonical directory:** `.planning/phases/02-jury-mvp`
 
-**Status:** Planned; ready for `$gsd-execute-phase 02`.
+**Status:** In Progress; plan `02-01` completed.
 
 **Why this phase exists:** Phase 1 is accepted only as infrastructure. The acceptance report `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` shows the current system is not a functional MVP: pytest is 26/27, demo readiness is blocked/stale, dense retrieval is gated for all 20 golden cases, extraction is probe-level, data relevance eval is 0 passed / 20 gated, and the current Streamlit UI is diagnostic rather than a jury UI.
 
@@ -93,7 +93,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 
 ### Plans
 
-- [ ] `02-01-PLAN.md` — Response/status/artifact contract and shared workflow service interface
+- [x] `02-01-PLAN.md` — Response/status/artifact contract and shared workflow service interface
 - [ ] `02-09-PLAN.md` — Operational Qdrant server promotion, population, and readiness evidence
 - [ ] `02-02-PLAN.md` — Source retrieval ranking hardening and all-20 retrieval evidence
 - [ ] `02-03-PLAN.md` — FedStat and World Bank deterministic extraction adapters
@@ -134,7 +134,7 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 **Total v1 requirements:** 27  
 **Coverage:** 100% mapped; functional acceptance deferred to Phase 2  
 **Phase 1 status:** accepted as infrastructure, not product MVP  
-**Phase 2 status:** planned; ready for `$gsd-execute-phase 2`  
+**Phase 2 status:** in progress; 1/10 plans complete  
 
 ---
-*Last updated: 2026-05-10 — Phase 2 explicitly added after Phase 1 test acceptance*
+*Last updated: 2026-05-10 — Phase 2 plan 02-01 completed*

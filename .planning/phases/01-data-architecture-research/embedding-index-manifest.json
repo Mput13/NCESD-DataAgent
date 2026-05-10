@@ -1,12 +1,12 @@
 {
   "build_log_path": ".planning/phases/01-data-architecture-research/embedding-index-build.md",
-  "chunk_count": 11,
+  "chunk_count": 36321,
   "collection_name": "phase1_source_cards",
   "corpus_artifact_path": ".local/dataagent/phase1/embedding-corpus.jsonl",
-  "corpus_hash": "1853358e6135e2843127fee929de50e597a4ad8a14ea5d746795df9c9aadda09",
+  "corpus_hash": "2eee2f17d877773569acdf695bd6f9b728dc0d088d4a0f487e46b7dff126da38",
   "corpus_manifest_path": ".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
   "created_at": "2026-05-10T00:59:22Z",
-  "dense_status": "gated_skip",
+  "dense_status": "ready",
   "dimensions": 256,
   "document_model": "emb://<folder_id>/text-search-doc/latest",
   "document_model_uri": "emb://<folder_id>/text-search-doc/latest",
@@ -17,28 +17,25 @@
   "gate_reason": "Yandex embedding credentials are unavailable; Qdrant collection abstraction is preserved.",
   "input_format_version": "source-card-embedding-text-v1",
   "local_artifact_paths": [
-    ".local/dataagent/phase1/embedding-corpus.jsonl",
-    ".local/qdrant"
+    ".local/dataagent/phase1/embedding-corpus.jsonl"
   ],
   "manifest_path": ".planning/phases/01-data-architecture-research/embedding-index-manifest.json",
   "metadata_version": "source-card-v1",
-  "missing_env_vars": [
-    "YANDEX_AI_STUDIO_API_KEY or YANDEX_EMBEDDING_API_KEY"
-  ],
+  "missing_env_vars": [],
   "provider": "yandex_ai_studio",
   "provider_model_uri": "emb://<folder_id>/text-search-doc/latest",
-  "qdrant_collection_status": "not_populated_credentials_missing",
-  "qdrant_mode": "local",
-  "qdrant_path": ".local/qdrant",
+  "qdrant_collection_status": "ready",
+  "qdrant_mode": "remote",
+  "qdrant_reported_status": "green",
+  "qdrant_url": "http://localhost:6333",
   "query_model": "emb://<folder_id>/text-search-query/latest",
   "query_model_uri": "emb://<folder_id>/text-search-query/latest",
   "rebuild_command": "PATH=\"$PWD/.local/bin:$PATH\" python scripts/build_embedding_index.py --corpus-manifest .planning/phases/01-data-architecture-research/embedding-corpus-manifest.json --manifest .planning/phases/01-data-architecture-research/embedding-index-manifest.json --build-log .planning/phases/01-data-architecture-research/embedding-index-build.md",
   "source_families": [
-    "ckan",
     "fedstat",
     "world_bank"
   ],
-  "status": "gated_skip",
-  "vector_count": 0,
+  "status": "ready",
+  "vector_count": 36321,
   "vector_store": "qdrant"
 }

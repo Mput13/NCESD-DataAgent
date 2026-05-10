@@ -140,6 +140,14 @@ def promote_qdrant_server(
         and existing["vector_count"] == expected_count
         and existing["corpus_hash"] == corpus_hash
     ):
+        _update_index_manifest_for_server(
+            index_manifest_path=index_manifest_path,
+            index_manifest=index_manifest,
+            corpus_manifest=corpus_manifest,
+            qdrant_url=qdrant_url,
+            collection=collection,
+            vector_count=existing["vector_count"],
+        )
         manifest = _server_manifest(
             status="ready",
             qdrant_url=qdrant_url,
@@ -168,6 +176,14 @@ def promote_qdrant_server(
         raise RuntimeError(
             f"server_vector_count_mismatch: expected {expected_count}, got {vector_count}"
         )
+    _update_index_manifest_for_server(
+        index_manifest_path=index_manifest_path,
+        index_manifest=index_manifest,
+        corpus_manifest=corpus_manifest,
+        qdrant_url=qdrant_url,
+        collection=collection,
+        vector_count=vector_count,
+    )
     manifest = _server_manifest(
         status="ready",
         qdrant_url=qdrant_url,
@@ -243,13 +259,14 @@ def _load_embedding_cache(
     dimensions: int,
 ) -> dict[str, list[float]]:
     vectors: dict[str, list[float]] = {}
+    enforce_model_uri = bool(model_uri and "<folder_id>" not in model_uri)
     if not cache_path.exists():
         return vectors
     for line in cache_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         record = json.loads(line)
-        if model_uri and record.get("model_uri") != model_uri:
+        if enforce_model_uri and record.get("model_uri") != model_uri:
             continue
         if int(record.get("dimensions") or 0) != dimensions:
             continue
@@ -282,6 +299,46 @@ def _server_manifest(
             f"--manifest-output {manifest_output}"
         ),
     }
+
+
+def _update_index_manifest_for_server(
+    *,
+    index_manifest_path: Path,
+    index_manifest: dict[str, Any],
+    corpus_manifest: dict[str, Any],
+    qdrant_url: str,
+    collection: str,
+    vector_count: int,
+) -> None:
+    updated = {
+        **index_manifest,
+        "status": "ready",
+        "dense_status": "ready",
+        "chunk_count": int(corpus_manifest.get("chunk_count") or vector_count),
+        "vector_count": vector_count,
+        "corpus_hash": corpus_manifest.get("content_hash"),
+        "corpus_artifact_path": corpus_manifest.get("artifact_path"),
+        "source_families": corpus_manifest.get("source_families", index_manifest.get("source_families", [])),
+        "metadata_version": corpus_manifest.get("metadata_version", index_manifest.get("metadata_version")),
+        "input_format_version": corpus_manifest.get(
+            "input_format_version",
+            index_manifest.get("input_format_version"),
+        ),
+        "qdrant_mode": "remote",
+        "qdrant_url": qdrant_url,
+        "collection_name": collection,
+        "qdrant_collection_status": "ready",
+        "qdrant_reported_status": "green",
+        "missing_env_vars": [],
+    }
+    updated.pop("qdrant_path", None)
+    local_artifacts = [
+        path
+        for path in updated.get("local_artifact_paths", [])
+        if str(path) != ".local/qdrant"
+    ]
+    updated["local_artifact_paths"] = sorted(set(local_artifacts))
+    _write_json(index_manifest_path, updated)
 
 
 def _chunks(items: list[Any], size: int) -> Iterator[list[Any]]:

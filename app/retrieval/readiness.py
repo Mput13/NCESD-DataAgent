@@ -25,9 +25,12 @@ def assess_phase2_index_readiness(
     status = str(index_manifest.get("status") or "")
     dense_status = str(index_manifest.get("dense_status") or "")
     chunk_count = int(corpus_manifest.get("chunk_count") or index_manifest.get("chunk_count") or 0)
-    vector_count = int(index_manifest.get("vector_count") or 0)
+    index_vector_count = int(index_manifest.get("vector_count") or 0)
+    server_vector_count = int(server_manifest.get("vector_count") or 0)
+    vector_count = server_vector_count if server_manifest else index_vector_count
     corpus_hash = str(corpus_manifest.get("content_hash") or "")
     index_corpus_hash = str(index_manifest.get("corpus_hash") or "")
+    server_corpus_hash = str(server_manifest.get("corpus_hash") or "")
     qdrant_mode = str(index_manifest.get("qdrant_mode") or "")
     qdrant_collection = str(
         server_manifest.get("collection")
@@ -49,6 +52,18 @@ def assess_phase2_index_readiness(
         reasons.append("dense_status_not_ready")
     if corpus_hash and index_corpus_hash and corpus_hash != index_corpus_hash:
         reasons.append("corpus_hash_mismatch")
+    if server_manifest:
+        if server_manifest_status != "ready":
+            reasons.append("server_manifest_status_not_ready")
+        if corpus_hash and server_corpus_hash and corpus_hash != server_corpus_hash:
+            reasons.append("corpus_hash_mismatch")
+        if not qdrant_url:
+            reasons.append("qdrant_url_missing")
+        if not qdrant_collection:
+            reasons.append("qdrant_collection_missing")
+        qdrant_mode = "remote"
+    else:
+        reasons.append("server_manifest_missing")
     if chunk_count != PHASE2_BASELINE_VECTOR_COUNT:
         reasons.append("chunk_count_mismatch")
     if vector_count != chunk_count or vector_count != PHASE2_BASELINE_VECTOR_COUNT:

@@ -96,7 +96,7 @@ class SourceCardsContractTest(unittest.TestCase):
         self.assertEqual(MatchMode.METHODOLOGY_MATCH.value, "methodology_match")
 
     def test_source_card_builds_stable_embedding_chunk_contract(self) -> None:
-        from app.artifacts.source_cards import CoverageHint, MatchMode, SourceCandidateCard
+        from app.artifacts.source_cards import CoverageHint, EmbeddingDocument, MatchMode, SourceCandidateCard
 
         card = SourceCandidateCard(
             source="ckan",
@@ -130,6 +130,27 @@ class SourceCardsContractTest(unittest.TestCase):
         self.assertIn("dataset_id: emiss_57319", dumped["embedding_text"])
         self.assertIn("dimensions: OKATO; period", dumped["embedding_text"])
         self.assertNotIn("numeric_answer", dumped["embedding_text"])
+        self.assertIsInstance(chunk, EmbeddingDocument)
+
+    def test_embedding_corpus_manifest_records_durable_index_contract(self) -> None:
+        from app.artifacts.source_cards import EmbeddingCorpusManifest
+
+        manifest = EmbeddingCorpusManifest(
+            artifact_path=".local/dataagent/phase1/embedding-corpus.jsonl",
+            manifest_path=".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
+            chunk_count=1,
+            source_families=["FedStat", "World Bank", "CKAN"],
+            content_hash="0" * 64,
+            chunk_hashes={"fedstat:57319:metadata:source-card-v1:abc": "1" * 64},
+        )
+
+        dumped = manifest.model_dump()
+        self.assertEqual(dumped["provider"], "yandex_ai_studio")
+        self.assertEqual(dumped["document_model"], "text-search-doc")
+        self.assertEqual(dumped["query_model"], "text-search-query")
+        self.assertEqual(dumped["metadata_version"], "source-card-v1")
+        self.assertEqual(dumped["input_format_version"], "source-card-embedding-text-v1")
+        self.assertEqual(dumped["chunk_count"], 1)
 
 
 if __name__ == "__main__":

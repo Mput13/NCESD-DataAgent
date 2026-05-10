@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-data-architecture-research-03-PLAN.md
-last_updated: "2026-05-10T01:05:24.332Z"
+stopped_at: Completed 01-data-architecture-research-04-PLAN.md
+last_updated: "2026-05-10T01:16:51.762Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State: DataAgent
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md`
 **Name:** Data Architecture Implementation  
 **Status:** Executing Phase 01
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** execute revised `01-04-PLAN.md`; Plans 01, 02, and 03 have accepted summaries.
+**Next action:** execute revised `01-05-PLAN.md`; Plans 01, 02, 03, and 04 have accepted summaries.
 
 ## Phase Boundary
 
@@ -61,15 +61,21 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - **2026-05-10 — Plan 03 embedding/search index and retrieval eval completed.**
   `01-03-SUMMARY.md` accepted the Qdrant embedding index build path, credential-gated Yandex vector population evidence, hybrid lexical/dense/rerank retrieval interface, retrieval comparison, and retrieval eval CSV.
 
+- **2026-05-10 — Plan 04 orchestration, extraction probes, and data relevance eval completed.**
+  `01-04-SUMMARY.md` accepted the Qwen/Yandex structured-output gate, canonical workflow artifacts and TraceEvent ownership, runnable graph smoke output, DuckDB SQL-first extraction probe evidence, diagnostic trace UI models, and data relevance eval reports.
+
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
   Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
 
 ## Current Repository Surface
 
-- `app/llm/yandex_ai_studio.py` — existing minimal Yandex AI Studio chat-completions client.
+- `app/llm/yandex_ai_studio.py` — Qwen-targeted Yandex AI Studio chat-completions client with structured-output helper and gated credential evidence.
+- `app/workflow/run_graph.py` — runnable narrow workflow graph entrypoint emitting trace/source/coverage/extraction/Qdrant evidence.
+- `app/data/deterministic_tools.py` and `scripts/run_extraction_probes.py` — DuckDB SQL-first deterministic tool contracts and source-family extraction probes.
+- `app/evals/run_eval.py` — data relevance and extraction evaluation gate over golden cases.
 - `docs/PROJECT_WORKFLOW.md` — GSD workflow explanation for the project.
-- `requirements.txt` — includes `python-dotenv`, `pydantic`, `PyYAML`, `qdrant-client`, and `requests`.
+- `requirements.txt` — includes Yandex/OpenAI client, Pydantic, Qdrant, DuckDB/PyArrow/Polars/Altair, and HTTP/runtime dependencies.
 - Accepted Phase 1 artifacts now include golden eval cases, source-card contracts, deterministic source-card builders, a SQLite source catalog, generated source-card/catalog/embedding-corpus manifests, Qdrant embedding-index manifest/build log, hybrid retrieval eval artifacts, and tests for those contracts.
 
 ## Verified Local Data Locations
@@ -86,6 +92,15 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - `.planning/YANDEX_AI_STUDIO_RESEARCH.md` records the existing DeepSeek 3.2 smoke-test history. Qwen remains the target model path for Phase 1 unless a plan records a blocker.
 
 ## Decisions Log
+
+- **2026-05-10 — Plan 04 keeps Qwen as the target with explicit credential gates.**
+  The verified AI Studio host is `https://llm.api.cloud.yandex.net/v1` with `Api-Key` auth. Missing Qwen credentials produce `gated_skip` evidence instead of silent success; DeepSeek remains historical fallback evidence only.
+
+- **2026-05-10 — Plan 04 makes workflow artifacts the trace source of truth.**
+  `TraceEvent` is owned by `app/artifacts/workflow_artifacts.py`; graph and UI modules import it rather than duplicating trace schemas.
+
+- **2026-05-10 — Plan 04 evaluates gated states explicitly.**
+  Data relevance eval records dense/Qdrant and extraction probe gates without counting them as retrieval or extraction success.
 
 - **2026-05-10 — Plan 03 uses Qdrant as the vector-store abstraction even when credentials are absent.**
   Missing Yandex embedding credentials gate vector population as `gated_skip`; they do not permit a custom local vector index. Retrieval code reads the prepared manifest and preserves dense/rerank status in eval output.
@@ -129,21 +144,21 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - [x] Create the 15-20 case golden set in `01-01-PLAN.md`
 - [x] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
 - [x] Materialize Qdrant embedding/search index and retrieval relevance eval in revised `01-03-PLAN.md`
-- [ ] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04` and integrated demo package in `01-05`
+- [x] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04`
+- [ ] Package the integrated demo path through revised `01-05`
 
 ## Recommended Next Action
 
 Run the revised Phase 1 plans in order:
 
-1. Execute revised `.planning/phases/01-data-architecture-research/01-04-PLAN.md`.
-2. Consume the `01-03` prepared-index manifest, Qdrant status, retrieval comparison, and eval CSV for orchestration/extraction/UI work.
-3. Run revised `01-05` only after prepared-index status and independent contracts are clear.
-4. Run `$gsd-verify-work 1` after all five summaries exist.
+1. Execute revised `.planning/phases/01-data-architecture-research/01-05-PLAN.md`.
+2. Consume the `01-04` Qwen gate, graph smoke output, extraction probes, trace UI models, and data relevance eval for demo readiness work.
+3. Run `$gsd-verify-work 1` after all five summaries exist.
 
 ## Session Continuity
 
-Last session: 2026-05-10T01:05:24.330Z
-Stopped at: Completed 01-data-architecture-research-03-PLAN.md
+Last session: 2026-05-10T01:16:51.760Z
+Stopped at: Completed 01-data-architecture-research-04-PLAN.md
 Resume file: None
 
 ---
@@ -152,6 +167,7 @@ Resume file: None
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `01`: 1 min, 3 tasks, 3 artifact files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `02`: 5 min, 2 tasks, 15 artifact/code/test files.
 - 2026-05-10 — Phase `01-data-architecture-research`, Plan `03`: 7 min, 2 tasks, 12 artifact/code/test files.
+- 2026-05-10 — Phase `01-data-architecture-research`, Plan `04`: 8 min, 4 tasks, 27 artifact/code/test files.
 
 ---
-*Last updated: 2026-05-10 after completing Plan 03*
+*Last updated: 2026-05-10 after completing Plan 04*

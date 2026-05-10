@@ -28,7 +28,7 @@
 - [x] `01-01-PLAN.md` — Requirements map, 15-20 golden cases, and eval rubric
 - [x] `01-02-PLAN.md` — Prepared-data contract, source-card builders, and embedding corpus format
 - [x] `01-03-PLAN.md` — Materialized embedding/search index and retrieval evaluation
-- [ ] `01-04-PLAN.md` — Qwen/Yandex, runnable LangGraph narrow flow, deterministic extraction, data-relevance eval, and diagnostic UI models while indexing runs
+- [x] `01-04-PLAN.md` — Qwen/Yandex, runnable LangGraph narrow flow, deterministic extraction, data-relevance eval, and diagnostic UI models while indexing runs
 - [ ] `01-05-PLAN.md` — Runnable readiness/demo package over prepared data, Qdrant status, relevance/extraction evidence, and minimal diagnostic Streamlit surface
 
 ### Deliverables
@@ -54,13 +54,13 @@
 - [x] Local data and CKAN access paths are documented with bounded, reproducible commands.
 - [x] The source-card corpus and Qdrant embedding/search collection are built or explicitly gated by missing credentials, with a manifest that records provider, model URI, dimensions, chunk counts, hashes, collection name, Qdrant mode/path or URL, and local artifact paths.
 - [ ] Long-running embedding/indexing work starts as soon as the source-card corpus is ready; orchestration, UI, and extraction work proceeds in parallel while it runs.
-- [ ] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.
-- [ ] Retrieval and extraction decisions are backed by artifacts, not only prose.
-- [ ] Data relevance evaluation runs against golden cases and records pass/fail/gated status for source selection, source rejection, Qdrant/dense status, coverage, extraction, no-data, and trace evidence.
-- [ ] The visible trace shows selected sources, rejected sources, coverage checks, extraction plans, and no-data reasoning.
+- [x] No numeric claim is produced from LLM memory; numeric data comes only from deterministic code or trusted source adapters.
+- [x] Retrieval and extraction decisions are backed by artifacts, not only prose.
+- [x] Data relevance evaluation runs against golden cases and records pass/fail/gated status for source selection, source rejection, Qdrant/dense status, coverage, extraction, no-data, and trace evidence.
+- [x] The visible trace contract shows selected sources, rejected sources, coverage checks, extraction plans, and no-data/gated reasoning.
 - [ ] At least 2-3 representative golden cases run through the integrated demo path with trace/artifacts, or block on explicit credential/data gates with recorded evidence.
-- [ ] `requirements.txt` and run/test commands reproduce the implemented slices.
-- [ ] Phase summaries exist for completed plans before the phase is marked complete.
+- [x] `requirements.txt` and run/test commands reproduce the implemented slices.
+- [x] Phase summaries exist for completed plans before the phase is marked complete.
 - [ ] The final decision package identifies extension seams and deferred full-stack capabilities without treating them as discarded scope.
 
 ---
@@ -70,4 +70,4 @@
 **Coverage:** 100%
 
 ---
-*Last updated: 2026-05-10 — Plan 03 completed with Qdrant index manifest and retrieval eval*
+*Last updated: 2026-05-10 — Plan 04 completed with Qwen gate, workflow trace, extraction probes, and data relevance eval*

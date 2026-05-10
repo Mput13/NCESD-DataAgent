@@ -89,18 +89,20 @@ The following are not acceptable final outcomes for golden cases: `gated`, `stal
 
 **Covers:** all v1 requirements that are still pending or only infrastructure-level after Phase 1, especially ART-01..06, RBST-01..03, UI-01..04, ENG-01..04, and the functional versions of NLU/SRCH/DATA requirements across all golden cases.
 
-**Plans:** 8 plans
+**Plans:** 10 plans
 
 ### Plans
 
 - [ ] `02-01-PLAN.md` — Response/status/artifact contract and shared workflow service interface
-- [ ] `02-02-PLAN.md` — Qdrant readiness evidence and source retrieval ranking hardening
+- [ ] `02-09-PLAN.md` — Operational Qdrant server promotion, population, and readiness evidence
+- [ ] `02-02-PLAN.md` — Source retrieval ranking hardening and all-20 retrieval evidence
 - [ ] `02-03-PLAN.md` — FedStat and World Bank deterministic extraction adapters
-- [ ] `02-04-PLAN.md` — CKAN promotion, source scouts, coverage, and safe extraction planning nodes
-- [ ] `02-05-PLAN.md` — LangGraph workflow runtime and shared service/CLI execution path
-- [ ] `02-06-PLAN.md` — Methodology critic, visualization, narrator, and numeric guardrails
-- [ ] `02-07-PLAN.md` — All-20 golden acceptance eval and strict demo readiness gate
-- [ ] `02-08-PLAN.md` — Streamlit workflow surface, reproducibility docs, and manual UAT
+- [ ] `02-04-PLAN.md` — CKAN promotion/extraction, source scouts, coverage, and safe extraction planning nodes
+- [ ] `02-10-PLAN.md` — All-20 golden coverage/extraction matrix over Phase 1 cards and dumps
+- [ ] `02-05-PLAN.md` — LangGraph workflow runtime through extraction with explicit finalization pending
+- [ ] `02-06-PLAN.md` — Methodology critic, visualization, narrator, final service response, and clarification follow-up
+- [ ] `02-07-PLAN.md` — Matrix-backed all-20 golden acceptance eval and strict demo readiness gate
+- [ ] `02-08-PLAN.md` — Streamlit workflow/clarification surface, reproducibility docs, and manual UAT
 
 ### Required Capabilities
 

@@ -1,0 +1,146 @@
+{
+  "run_id": "phase2-ca26f8a43740",
+  "query": "Какая динамика ВВП России?",
+  "intent": {
+    "query": "Какая динамика ВВП России?",
+    "category": "research",
+    "known_fields": {},
+    "missing_fields": [],
+    "needs_clarification": false,
+    "source_preferences": [],
+    "open_reasoning": [
+      "test_only_intent_fallback",
+      "deterministic_classifier_test_only",
+      "component_status:test_only"
+    ]
+  },
+  "research_design": {
+    "artifact_id": "research-design-5cd2b458",
+    "route": "research",
+    "hypotheses": [
+      "Deterministic fallback: retrieve data for 'Какая динамика ВВП России?'",
+      "Source-bound extraction required; no LLM numeric interpretation"
+    ],
+    "dimensions": [
+      "geography",
+      "period",
+      "indicator"
+    ],
+    "indicators": [
+      "Какая динамика ВВП России?"
+    ],
+    "grouping_policy": null,
+    "assumptions": [
+      "test_only_research_design_fallback",
+      "component_status:test_only",
+      "Use real Qwen call in production (live_llm_required=True)"
+    ]
+  },
+  "evidence": {
+    "selected_sources": [],
+    "rejected_sources": [],
+    "retrieval_status": "gated",
+    "qdrant_status": "unknown",
+    "dense_status": "unknown"
+  },
+  "coverage_reports": [],
+  "extraction_plan": null,
+  "dataset_artifacts": [],
+  "script_artifacts": [],
+  "final_outcome": null,
+  "finalization_pending": true,
+  "pending_reason": "awaiting_plan_02_06_finalization",
+  "trace_events": [
+    {
+      "run_id": "phase2-ca26f8a43740",
+      "state": "supervisor",
+      "agent": "Supervisor",
+      "input_summary": "Какая динамика ВВП России?",
+      "tool_calls": [],
+      "output_artifact": null,
+      "decision": "start",
+      "warnings": [],
+      "started_at": "2026-05-10T13:43:50Z",
+      "duration_ms": 0,
+      "payload": {
+        "run_id": "phase2-ca26f8a43740"
+      }
+    },
+    {
+      "run_id": "phase2-ca26f8a43740",
+      "state": "intent_analyst",
+      "agent": "Intent Analyst",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": "IntentFrame",
+      "decision": "test_only",
+      "warnings": [],
+      "started_at": "2026-05-10T13:43:50Z",
+      "duration_ms": 0,
+      "payload": {
+        "category": "research",
+        "needs_clarification": false,
+        "status": "test_only"
+      }
+    },
+    {
+      "run_id": "phase2-ca26f8a43740",
+      "state": "research_designer",
+      "agent": "Research Designer",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": "research-design-5cd2b458",
+      "decision": "test_only",
+      "warnings": [],
+      "started_at": "2026-05-10T13:43:50Z",
+      "duration_ms": 0,
+      "payload": {
+        "artifact_id": "research-design-5cd2b458",
+        "hypotheses_count": 2,
+        "status": "test_only"
+      }
+    },
+    {
+      "run_id": "phase2-ca26f8a43740",
+      "state": "source_scouts",
+      "agent": "FedStat Scout, World Bank Scout, CKAN Scout",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": "EvidenceBundleArtifact",
+      "decision": "gated_no_index",
+      "warnings": [],
+      "started_at": "2026-05-10T13:43:50Z",
+      "duration_ms": 0,
+      "payload": {
+        "selected_count": 0,
+        "rejected_count": 0,
+        "qdrant_status": "unknown",
+        "status": "gated_no_index"
+      }
+    },
+    {
+      "run_id": "phase2-ca26f8a43740",
+      "state": "finalization_pending",
+      "agent": "Supervisor",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": null,
+      "decision": "finalization_pending",
+      "warnings": [],
+      "started_at": "2026-05-10T13:43:50Z",
+      "duration_ms": 0,
+      "payload": {
+        "pending_reason": "awaiting_plan_02_06_finalization",
+        "dataset_artifacts": 0,
+        "script_artifacts": 0
+      }
+    }
+  ],
+  "component_statuses": {
+    "supervisor": "ok",
+    "intent_analyst": "test_only",
+    "research_designer": "test_only",
+    "source_scouts": "gated_no_index",
+    "finalization": "pending"
+  }
+}

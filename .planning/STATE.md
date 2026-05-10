@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_for_verification
-stopped_at: Completed 01-data-architecture-research-05-PLAN.md
-last_updated: "2026-05-10T04:37:04Z"
+status: ready_for_phase_2_discussion
+stopped_at: Phase 1 accepted as infrastructure; Phase 2 jury MVP added to roadmap
+last_updated: "2026-05-10T10:20:00Z"
 progress:
-  total_phases: 1
-  completed_phases: 0
+  total_phases: 2
+  completed_phases: 1
   total_plans: 5
   completed_plans: 5
 ---
@@ -19,20 +19,22 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код, не LLM  
-**Current focus:** Phase 01 — data-architecture-research
+**Current focus:** Phase 02 — jury MVP discussion
 
 ## Current Phase
 
-**Phase:** 1  
-**Slug:** `01-data-architecture-research`  
-**Name:** Data Architecture Implementation  
-**Status:** Ready for Phase 01 verification
-**Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** run `$gsd-verify-work 1`; Plans 01, 02, 03, 04, and 05 have accepted summaries.
+**Phase:** 2  
+**Slug:** `02-jury-mvp`  
+**Name:** Full Jury MVP  
+**Status:** Ready for `$gsd-discuss-phase 2`
+**Canonical directory:** `.planning/phases/02-jury-mvp`  
+**Next action:** run `$gsd-discuss-phase 2`; use `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md`, `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md`, and `.planning/ARCHITECTURE_STACK.md` as the starting context.
 
 ## Phase Boundary
 
-The current milestone has exactly one active phase. Despite the historical slug, Phase 1 is implementation-oriented: it should produce code, scripts, tests, prepared-data artifacts, embedding/search index manifests, data/retrieval/extraction evidence, and UI trace contracts where the plans require them.
+The roadmap now has two explicit phases in the current milestone: Phase 1 infrastructure acceptance and Phase 2 full jury MVP. Do not infer additional numbered phases unless `.planning/ROADMAP.md` is changed again.
+
+Despite the historical slug, Phase 1 was implementation-oriented: it produced code, scripts, tests, prepared-data artifacts, embedding/search index manifests, data/retrieval/extraction evidence, and UI trace contracts where the plans required them.
 
 Phase 1 is not a license to build an unverified full product in one jump. Each slice must follow its plan, produce its expected artifacts, run its verification commands, and write the corresponding `01-xx-SUMMARY.md`.
 
@@ -40,11 +42,19 @@ The corrected Phase 1 boundary is stronger than the original plan: by the end of
 
 Current priority clarification: do not optimize for UI beauty or polished output yet. The priority is correctly deciding which data is relevant to a query, proving coverage, using Qdrant for the vector-store path, rejecting weak sources with reasons, and extracting numeric data through deterministic code. Streamlit remains a diagnostic surface for trace/artifacts/feedback, not a visual-design workstream.
 
+## Current Phase 2 Boundary
+
+Phase 2 is now explicitly added in `.planning/ROADMAP.md`. It is the full jury MVP phase, not a small demo subset. Acceptance target: all 20 golden cases must reach a correct terminal outcome (`passed`, `needs_clarification`, or `not_found`). `gated`, `stale`, `skipped_with_reason`, `no_candidate`, or `final_answer.status=ok` while coverage/extraction is gated are not acceptable final states.
+
+The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 must make Streamlit submit user queries into the real evaluated workflow:
+
+`User query → Supervisor → Intent Analyst → Research Designer / Direct path → FedStat/WB/CKAN Scouts → Coverage & Schema → Extraction Planner → Deterministic Tools → Methodology Critic → Visualization → Narrator → answer + dataset + script + sources + trace`.
+
 ## Phase History
 
-- **2026-05-10 — Planning reset to one canonical phase.**
+- **2026-05-10 — Planning reset to one canonical Phase 1.**
   Removed the failed core/workflow skeleton, deprecated duplicate Phase 1 directory, forensic incident artifact, and three-person workstream documents from the active tree.
-  The active roadmap now has one phase only: `.planning/phases/01-data-architecture-research`.
+  At that time the active roadmap had one phase only: `.planning/phases/01-data-architecture-research`. This was superseded on 2026-05-10 by the explicit Phase 2 roadmap addition.
 
 - **2026-05-10 — Phase 1 boundary corrected for prepared data and embeddings.**
   User clarified that Phase 1 must finish with prepared data and embedding/search index ready for demo use. Later reprocessing is exceptional. Plans `01-02` through `01-05` were revised so embedding corpus/indexing starts early and independent workflow/UI/extraction work proceeds while it runs.
@@ -67,6 +77,15 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - **2026-05-10 — Plan 05 demo readiness and decision package completed.**
   `01-05-SUMMARY.md` accepted the demo readiness runner, minimal diagnostic Streamlit shell, prepared-data readiness report, final recommendation package, implementation decision brief, and architecture growth map. The current demo status is explicitly `gated`, not falsely ready: Qdrant/dense retrieval awaits embedding credentials and deterministic numeric output awaits promoted extraction cases.
 
+- **2026-05-10 — Actual Phase 1 state verified after full-corpus recovery.**
+  `.planning/phases/01-data-architecture-research/phase1-actual-state-verification.md` records the real runnable surface. Streamlit starts at `http://localhost:8501`, workflow smoke runs via `python3 -m app.workflow.run_graph` against the partial index, and demo readiness returns `blocked` / `qdrant_status=stale` because `embedding-index-manifest.json` still points at the old 11-card corpus while the rebuilt corpus has 36,321 chunks. Full embedding build PID `77528` was alive with cache progress 17,595 / 36,321 at 2026-05-10T09:08:39Z.
+
+- **2026-05-10 — Phase 1 test acceptance recorded.**
+  `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` freezes the current test and gate outputs. Pytest is 26 passed / 1 failed; demo readiness is `blocked` with `qdrant_status=stale`; retrieval eval over 20 golden cases has all dense rows `gated_skip`, 14 source-family matches, 6 no-candidate cases; extraction probes are coverage evidence only with `skipped_with_reason`; data relevance eval is 0 passed / 0 failed / 20 gated. Decision: Phase 1 is acceptable as infrastructure, not as a functional MVP or jury-demo agent.
+
+- **2026-05-10 — Phase 2 explicitly added for full jury MVP.**
+  Roadmap now has canonical Phase 2 at `.planning/phases/02-jury-mvp`. The next session should run `$gsd-discuss-phase 2`. The user explicitly rejected a low acceptance bar; all 20 golden cases are the target. Remote branch `origin/workstream-1/core-integration` was reviewed and is not directly mergeable because it deletes current Phase 1 artifacts/tests/scripts, rewinds `.planning`, keeps scout/extraction stubs, and regresses Yandex AI Studio endpoint/auth. Treat it as reference only.
+
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
   Phase 1 should follow the architecture stack fully, include FedStat + World Bank + CKAN from the start, prepare 15-20 test cases, and prioritize visible multi-agent trace/UI impact while preserving source-bound deterministic extraction.
@@ -79,6 +98,10 @@ Current priority clarification: do not optimize for UI beauty or polished output
 - `app/evals/run_eval.py` — data relevance and extraction evaluation gate over golden cases.
 - `app/demo/run_demo.py` — prepared-data demo readiness runner that consumes corpus/catalog/index/eval/probe artifacts and refuses false dense readiness.
 - `app/ui/streamlit_app.py` — minimal diagnostic Streamlit shell exposing chat input, examples, state machine, trace, artifacts, rejection details, index readiness, and feedback/fix requests.
+- `.planning/phases/01-data-architecture-research/phase1-actual-state-verification.md` — actual-state verification report for the Phase 1 runnable surface, test results, interface, and incomplete/gated pieces.
+- `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` — full current acceptance report covering all pytest tests and Phase 1 gates.
+- `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md` — Phase 2 seed context for `$gsd-discuss-phase 2`; intentionally not named `02-CONTEXT.md` so the discussion workflow still runs.
+- `.planning/phases/02-jury-mvp/remote-workstream-review.md` — review of `origin/workstream-1/core-integration`; records why it is not directly mergeable and which ideas may be ported selectively.
 - `docs/PROJECT_WORKFLOW.md` — GSD workflow explanation for the project.
 - `requirements.txt` — includes Yandex/OpenAI client, Pydantic, Qdrant, DuckDB/PyArrow/Polars/Altair, Streamlit, and HTTP/runtime dependencies.
 - Accepted Phase 1 artifacts now include golden eval cases, source-card contracts, deterministic source-card builders, a SQLite source catalog, generated source-card/catalog/embedding-corpus manifests, Qdrant embedding-index manifest/build log, hybrid retrieval eval artifacts, and tests for those contracts.
@@ -154,16 +177,18 @@ Current priority clarification: do not optimize for UI beauty or polished output
 
 ## Recommended Next Action
 
-Phase 1 plans are complete. Next:
+Phase 1 plans are complete and accepted only as infrastructure. Phase 2 is ready for discussion. Next:
 
-1. Run `$gsd-verify-work 1`.
-2. Treat dense Qdrant retrieval as gated until embedding credentials populate vectors.
-3. Promote 2-3 golden cases to deterministic extraction only after verification identifies the highest-value demo path.
+1. Keep the full embedding build and heartbeat monitor active until the cache reaches the 36,321-chunk corpus.
+2. Do not merge `origin/workstream-1/core-integration` wholesale; port only reviewed ideas into Phase 2 plans if they satisfy current acceptance gates.
+3. Run `$gsd-discuss-phase 2`.
+4. In Phase 2, target all 20 golden cases. Staged implementation order is allowed, but final acceptance is all cases with correct terminal outcomes.
+5. Refresh index/readiness artifacts and rerun `python3 -m pytest -q` before claiming MVP readiness.
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:37:04Z
-Stopped at: Completed 01-data-architecture-research-05-PLAN.md; ready for `$gsd-verify-work 1`
+Last session: 2026-05-10T10:20:00Z
+Stopped at: Phase 1 accepted as infrastructure, Phase 2 jury MVP added, remote workstream reviewed as not directly mergeable
 Resume file: None
 
 ---

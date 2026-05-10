@@ -2,7 +2,7 @@
 
 **Created:** 2026-05-08  
 **Reset:** 2026-05-10  
-**Granularity:** Single active phase for the current milestone  
+**Granularity:** Explicit Phase 1 infrastructure acceptance followed by Phase 2 jury MVP  
 **Core Value:** Опора на факты — каждая цифра со ссылкой, числа извлекает код
 
 ---
@@ -58,16 +58,68 @@
 - [x] Retrieval and extraction decisions are backed by artifacts, not only prose.
 - [x] Data relevance evaluation runs against golden cases and records pass/fail/gated status for source selection, source rejection, Qdrant/dense status, coverage, extraction, no-data, and trace evidence.
 - [x] The visible trace contract shows selected sources, rejected sources, coverage checks, extraction plans, and no-data/gated reasoning.
-- [x] At least 2-3 representative golden cases run through the integrated demo path with trace/artifacts, or block on explicit credential/data gates with recorded evidence.
+- [x] Representative Phase 1 diagnostic paths run with trace/artifacts or explicit gates. This is accepted only as infrastructure evidence; Phase 2 acceptance requires all 20 golden cases to reach correct terminal outcomes.
 - [x] `requirements.txt` and run/test commands reproduce the implemented slices.
 - [x] Phase summaries exist for completed plans before the phase is marked complete.
 - [x] The final decision package identifies extension seams and deferred full-stack capabilities without treating them as discarded scope.
 
+## Phase 2: Full Jury MVP (`02-jury-mvp`)
+
+**Canonical directory:** `.planning/phases/02-jury-mvp`
+
+**Status:** Ready for `$gsd-discuss-phase 2`; no Phase 2 plan has been accepted yet.
+
+**Why this phase exists:** Phase 1 is accepted only as infrastructure. The acceptance report `.planning/phases/01-data-architecture-research/phase1-test-acceptance.md` shows the current system is not a functional MVP: pytest is 26/27, demo readiness is blocked/stale, dense retrieval is gated for all 20 golden cases, extraction is probe-level, data relevance eval is 0 passed / 20 gated, and the current Streamlit UI is diagnostic rather than a jury UI.
+
+**Goal:** Build the full source-bound DataAgent MVP that can be shown to the jury: a user enters a natural-language economic query in Streamlit and the UI runs the real workflow
+
+`User query → Supervisor → Intent Analyst → Research Designer / Direct path → FedStat/WB/CKAN Scouts → Coverage & Schema → Extraction Planner → Deterministic Tools → Methodology Critic → Visualization → Narrator → answer + dataset + script + sources + trace`.
+
+**Non-negotiable acceptance target:** all 20 golden cases must reach a correct terminal outcome. A correct terminal outcome is one of:
+
+- `passed`: source selection is relevant, coverage is checked, deterministic extraction produced the required data, answer is source-bound, dataset/script/artifacts are available, and trace is visible.
+- `needs_clarification`: the request is genuinely ambiguous and the system asks a specific useful question instead of pretending to answer.
+- `not_found`: the system proves that available/trusted sources do not contain the requested data and explains checked/rejected sources.
+
+The following are not acceptable final outcomes for golden cases: `gated`, `stale`, `skipped_with_reason`, `no_candidate`, `final_answer.status=ok` while coverage/extraction is gated, unsupported numeric claims, or UI-only demo paths that bypass the evaluated workflow.
+
+**Phase 2 boundary:** This phase may replace the Phase 1 diagnostic shell with a real product UI and may refactor the workflow runtime, but it must preserve source-bound invariants, full prepared-data artifacts, traceability, and deterministic extraction. It should not merge stale workstream branches that delete Phase 1 evidence or replace real artifacts with unverified stubs.
+
+**Remote workstream note:** `origin/workstream-1/core-integration` contains useful architectural ideas for a LangGraph skeleton and typed contracts, but it is not directly mergeable into the current branch. It deletes Phase 1 artifacts/tests/scripts, rewinds `.planning` to a pre-execution state, includes stub extraction/scout behavior, and regresses the verified Yandex API base URL/auth header. Treat it as reference material only unless individual pieces are ported and verified against the Phase 2 acceptance gates.
+
+**Covers:** all v1 requirements that are still pending or only infrastructure-level after Phase 1, especially ART-01..06, RBST-01..03, UI-01..04, ENG-01..04, and the functional versions of NLU/SRCH/DATA requirements across all golden cases.
+
+### Required Capabilities
+
+- Real Streamlit jury UI where query submission invokes the same workflow used by tests/evals.
+- Real workflow runtime with explicit node artifacts for every architecture role.
+- Separate source scouts for FedStat, World Bank, and CKAN, with selected and rejected source cards.
+- Ranking good enough that direct indicator requests beat weak contextual matches.
+- Coverage preview that checks periods, geographies, units, frequency, missing values, and source-specific risks before extraction.
+- Deterministic extraction for FedStat wide Parquet, World Bank long Parquet, and promoted CKAN resources where cases require them.
+- Dataset export plus reproducibility script for accepted answers.
+- Methodology critic that blocks or repairs bad outputs; final answer status must match coverage/extraction truth.
+- Visualization generated from `DatasetArtifact`, not from free-form LLM text.
+- No numeric value outside deterministic dataset/tool artifacts.
+- All 20 golden cases evaluated with machine-readable acceptance output.
+
+### Validation
+
+- [ ] `python3 -m pytest -q` passes.
+- [ ] Golden-case eval covers all 20 cases and records no unacceptable final states.
+- [ ] Demo readiness is `ready`, not `blocked`, `stale`, or `gated`.
+- [ ] UI can run at `http://localhost:8501` and execute the real workflow from user input.
+- [ ] Each passed case has sources, coverage, deterministic dataset, generated script, answer, and trace.
+- [ ] Each `needs_clarification` or `not_found` case has explicit evidence and is not counted as a hidden failure.
+- [ ] All Phase 2 decisions and limitations are recorded before jury-demo readiness is claimed.
+
 ---
 
-**Total active phases:** 1  
+**Total active phases:** 2  
 **Total v1 requirements:** 27  
-**Coverage:** 100%
+**Coverage:** 100% mapped; functional acceptance deferred to Phase 2  
+**Phase 1 status:** accepted as infrastructure, not product MVP  
+**Phase 2 status:** ready for discussion  
 
 ---
-*Last updated: 2026-05-10 — Plan 05 completed with gated demo readiness, diagnostic Streamlit shell, and final decision package*
+*Last updated: 2026-05-10 — Phase 2 explicitly added after Phase 1 test acceptance*

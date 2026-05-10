@@ -1,186 +1,90 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-10T07:34:18.858Z",
-  "phase": "01",
-  "phase_name": "Data Architecture Implementation",
-  "phase_dir": ".planning/phases/01-data-architecture-research",
-  "plan": 5,
-  "task": 5,
-  "total_tasks": 5,
-  "status": "paused_with_background_embedding_running",
+  "timestamp": "2026-05-10T10:20:00Z",
+  "phase": "02",
+  "phase_name": "Full Jury MVP",
+  "phase_dir": ".planning/phases/02-jury-mvp",
+  "status": "ready_for_gsd_discuss_phase_2",
   "completed_tasks": [
     {
       "id": 1,
-      "name": "Plan 01 requirements map, golden cases, and eval rubric",
+      "name": "Phase 1 accepted as infrastructure, not product MVP",
       "status": "done",
-      "evidence": ".planning/phases/01-data-architecture-research/01-01-SUMMARY.md"
+      "evidence": ".planning/phases/01-data-architecture-research/phase1-test-acceptance.md"
     },
     {
       "id": 2,
-      "name": "Plan 02 prepared-data contracts, source-card builders, SQLite catalog, and embedding corpus format",
-      "status": "done_but_superseded_by_full_rebuild",
-      "evidence": ".planning/phases/01-data-architecture-research/01-02-SUMMARY.md"
+      "name": "Remote workstream-1/core-integration reviewed",
+      "status": "done",
+      "progress": "Do not merge wholesale. Treat as reference only because it deletes current Phase 1 artifacts/tests/scripts, rewinds planning, leaves scouts/extraction stubbed, and regresses verified Yandex endpoint/auth."
     },
     {
       "id": 3,
-      "name": "Plan 03 Qdrant embedding/search index path and retrieval evaluation",
-      "status": "done_but_full_vector_population_in_progress",
-      "evidence": ".planning/phases/01-data-architecture-research/01-03-SUMMARY.md"
+      "name": "Phase 2 added to roadmap",
+      "status": "done",
+      "evidence": ".planning/ROADMAP.md"
     },
     {
       "id": 4,
-      "name": "Plan 04 Qwen/Yandex gates, runnable workflow smoke, deterministic extraction probes, and diagnostic trace contracts",
+      "name": "Phase 2 seed context created",
       "status": "done",
-      "evidence": ".planning/phases/01-data-architecture-research/01-04-SUMMARY.md"
-    },
-    {
-      "id": 5,
-      "name": "Plan 05 demo readiness package and Streamlit diagnostic shell",
-      "status": "done_but_readiness_artifacts_need_refresh_after_full_rebuild",
-      "evidence": ".planning/phases/01-data-architecture-research/01-05-SUMMARY.md"
-    },
-    {
-      "id": 6,
-      "name": "Recovery: rebuild full source-card corpus/catalog/embedding corpus after user clarified all sources must be prepared",
-      "status": "done",
-      "progress": "Full local corpus now has 36321 source cards/chunks: FedStat 6905 and World Bank 29416 after deterministic duplicate handling. CKAN remains skipped unless network/catalog access is explicitly enabled."
-    },
-    {
-      "id": 7,
-      "name": "Recovery: full Qdrant/Yandex embedding build",
-      "status": "in_progress",
-      "progress": "Embedding cache was 9630/36321 at 2026-05-10T07:34Z. Build PID file points to 77528 with workers=3 and batch-size=64. Heartbeat automation monitor-full-embedding-build is ACTIVE every 5 minutes and must remain active."
+      "evidence": ".planning/phases/02-jury-mvp/02-SEED-CONTEXT.md"
     }
   ],
   "remaining_tasks": [
     {
       "id": 1,
-      "name": "Let full embedding build finish or be restarted by the heartbeat monitor if PID stops before cache reaches corpus count",
-      "status": "in_progress"
+      "name": "Run $gsd-discuss-phase 2 in the next session",
+      "status": "not_started"
     },
     {
       "id": 2,
-      "name": "After full cache/index completion, verify embedding-index-manifest.json records ready status, current corpus hash, vector_count 36321, and Qdrant collection phase1_source_cards",
-      "status": "not_started"
+      "name": "Keep full embedding build/heartbeat active until cache reaches the 36,321 chunk corpus and index/readiness artifacts are refreshed",
+      "status": "in_progress"
     },
     {
       "id": 3,
-      "name": "Refresh prepared-data-readiness.md and demo-readiness.json, which still describe the old 11-card gated demo state",
-      "status": "not_started"
-    },
-    {
-      "id": 4,
-      "name": "Run source discovery and agent smoke tests on the full index, including FedStat and World Bank cases; CKAN cases should remain explicit gates until CKAN data is prepared",
-      "status": "not_started"
-    },
-    {
-      "id": 5,
-      "name": "Promote 2-3 golden cases into deterministic extraction smoke once retrieval returns relevant source cards",
-      "status": "not_started"
-    },
-    {
-      "id": 6,
-      "name": "Run gsd verification for Phase 1 after refreshed readiness and smoke evidence are in place",
+      "name": "Plan Phase 2 only after discussion captures unresolved decisions",
       "status": "not_started"
     }
   ],
   "blockers": [
     {
-      "description": "Full embedding population depends on Yandex embedding API network/DNS stability and rate limits.",
-      "type": "external",
-      "workaround": "Embedding cache is append-only/resumable. Default retries were increased to 20. Heartbeat monitor restarts the build with workers=3 if PID stops before completion."
+      "description": "Current Phase 1 system is infrastructure only: data relevance eval is 0 passed / 20 gated and demo readiness is blocked/stale.",
+      "type": "acceptance",
+      "workaround": "Phase 2 acceptance target is all 20 golden cases with correct terminal outcomes."
     },
     {
-      "description": "CKAN/NSED is not included in the current full local source-card corpus.",
-      "type": "external",
-      "workaround": "Keep CKAN cases explicitly gated or run bounded CKAN API preparation when network/catalog access is available and approved."
-    },
-    {
-      "description": "Readiness artifacts from Plan 05 still report 11 cards and gated embeddings.",
-      "type": "technical",
-      "workaround": "Treat source-cards-manifest.json, source-catalog-manifest.json, and embedding-corpus-manifest.json as the current truth until readiness docs are regenerated."
-    }
-  ],
-  "human_actions_pending": [
-    {
-      "action": "Keep the monitor-full-embedding-build heartbeat active.",
-      "context": "The user explicitly asked for a handoff without stopping regular embedding checks.",
-      "blocking": true
-    },
-    {
-      "action": "Decide whether to enable bounded CKAN/NSED catalog preparation.",
-      "context": "FedStat and World Bank are prepared from local dumps; CKAN is trusted but not locally prepared in this recovery run.",
-      "blocking": false
+      "description": "Remote workstream branch is not directly mergeable.",
+      "type": "integration",
+      "workaround": "Port reviewed ideas selectively during Phase 2 planning and execution."
     }
   ],
   "decisions": [
     {
-      "decision": "Prepare and embed every locally available FedStat and World Bank source card, not the old 11-card demo subset.",
-      "rationale": "The user clarified Phase 1 goal was full data preparation without compromises.",
-      "phase": "01"
+      "decision": "Phase 2 acceptance target is all 20 golden cases, not a small demo subset.",
+      "phase": "02"
     },
     {
-      "decision": "Use the append-only embedding cache as the progress source of truth during long builds.",
-      "rationale": "Qdrant upsert can be resumed from cached vectors, and cache count is easy to compare with embedding-corpus.jsonl chunk count.",
-      "phase": "01"
+      "decision": "Valid terminal outcomes are passed, needs_clarification, or not_found. Gated/stale/skipped/no_candidate states are not acceptable final outcomes.",
+      "phase": "02"
     },
     {
-      "decision": "Run Yandex embedding requests with workers=3, not 6.",
-      "rationale": "workers=6 triggered 429 Too Many Requests; workers=3 made steady progress.",
-      "phase": "01"
+      "decision": "Do not merge origin/workstream-1/core-integration wholesale.",
+      "phase": "02"
     },
     {
-      "decision": "Bound source-card embedding text to avoid Yandex 400 errors on very long metadata.",
-      "rationale": "Long FedStat metadata text exceeded provider limits; source-card text is now truncated deterministically for embeddings.",
-      "phase": "01"
-    },
-    {
-      "decision": "Increase default Yandex embedding retries to 20.",
-      "rationale": "A transient DNS failure was killing the long build after too few attempts.",
-      "phase": "01"
-    },
-    {
-      "decision": "Use a separate partial Qdrant snapshot for development and smoke testing while the full build writes the main index.",
-      "rationale": "Partial read-only dev collection avoids disturbing the main collection and already proved FedStat source discovery is meaningful.",
-      "phase": "01"
+      "decision": "Keep Phase 2 seed context as 02-SEED-CONTEXT.md, not 02-CONTEXT.md, so $gsd-discuss-phase 2 still runs.",
+      "phase": "02"
     }
   ],
-  "background_processes": [
+  "human_actions_pending": [
     {
-      "name": "Full embedding build",
-      "pid_file": ".local/dataagent/phase1/embedding-build.pid",
-      "last_known_pid": 77528,
-      "command": "python3 scripts/build_embedding_index.py --corpus-manifest .planning/phases/01-data-architecture-research/embedding-corpus-manifest.json --manifest .planning/phases/01-data-architecture-research/embedding-index-manifest.json --build-log .planning/phases/01-data-architecture-research/embedding-index-build.md --cache .local/dataagent/phase1/embedding-cache.jsonl --batch-size 64 --workers 3",
-      "status": "running_at_handoff",
-      "progress": "9630/36321 cached at 2026-05-10T07:34Z"
-    },
-    {
-      "name": "Heartbeat monitor",
-      "automation_id": "monitor-full-embedding-build",
-      "status": "ACTIVE",
-      "schedule": "FREQ=MINUTELY;INTERVAL=5",
-      "instruction": "Do not delete or pause until full embedding build finishes."
+      "action": "Start the next session with $gsd-discuss-phase 2.",
+      "context": "The roadmap and seed context now contain the required state.",
+      "blocking": true
     }
   ],
-  "uncommitted_files": [
-    ".planning/phases/01-data-architecture-research/embedding-corpus-manifest.json",
-    ".planning/phases/01-data-architecture-research/source-cards-manifest.json",
-    ".planning/phases/01-data-architecture-research/source-catalog-manifest.json",
-    ".planning/phases/01-data-architecture-research/partial-embedding-index-manifest.json",
-    "app/artifacts/source_cards.py",
-    "app/retrieval/embedding_index.py",
-    "scripts/build_embedding_index.py",
-    "scripts/build_partial_embedding_snapshot.py",
-    "scripts/build_source_cards.py",
-    "scripts/monitor_embedding_build.py",
-    "tests/test_embedding_index.py",
-    "tests/test_source_catalog_and_corpus.py"
-  ],
-  "verification": [
-    "python3 -m pytest tests/test_embedding_index.py tests/test_source_catalog_and_corpus.py tests/test_hybrid_retrieval.py -q -> 7 passed",
-    "Partial source-discovery smoke over phase1_source_cards_partial returned meaningful FedStat hits for GDP, investment, population, credit organizations, and industrial production queries.",
-    "Embedding monitor automation file exists at /Users/a/.codex/automations/monitor-full-embedding-build/automation.toml and status is ACTIVE."
-  ],
-  "next_action": "Check embedding progress with wc -l .local/dataagent/phase1/embedding-cache.jsonl .local/dataagent/phase1/embedding-corpus.jsonl and ps -p $(cat .local/dataagent/phase1/embedding-build.pid). If cache equals corpus count, refresh the embedding index manifest/readiness docs and run full-index retrieval smoke tests.",
-  "context_notes": "The main correction after Plan 05 is that the early demo artifacts falsely represented a tiny prepared subset as enough. The durable truth is now the full source-card/catalog/corpus manifests with 36321 chunks. Keep monitoring embeddings; do not stop the heartbeat. Development can continue against a partial Qdrant snapshot for FedStat-only tests while the full build completes."
+  "next_action": "Run $gsd-discuss-phase 2. Read .planning/phases/02-jury-mvp/02-SEED-CONTEXT.md, .planning/phases/01-data-architecture-research/phase1-test-acceptance.md, .planning/ARCHITECTURE_STACK.md, .planning/ROADMAP.md, and .planning/STATE.md.",
+  "context_notes": "Phase 1 artifacts are not to be deleted or overwritten by stale remote planning. The full jury MVP must implement the real workflow behind Streamlit and pass all 20 golden cases with source-bound deterministic outputs or correct clarification/not-found outcomes."
 }

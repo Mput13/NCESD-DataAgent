@@ -86,20 +86,23 @@
 
 ## Traceability
 
-The current milestone has one active implementation-oriented phase: `01-data-architecture-research`.
-All v1 requirements map to Phase 1. Future phases must not be inferred from older artifacts; add them explicitly only after Phase 1 verification.
+The current milestone now has two explicit phases:
+
+- Phase 1: `01-data-architecture-research` — accepted as infrastructure only.
+- Phase 2: `02-jury-mvp` — full functional jury MVP acceptance.
+
+All v1 requirements map to Phase 2 for functional acceptance across all 20 golden cases. Phase 1 evidence remains valuable infrastructure but is not enough to mark product behavior complete.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NLU-01..04 | Phase 1 | Complete via `01-01-SUMMARY.md` |
-| SRCH-01..02 | Phase 1 | Complete via `01-03-SUMMARY.md` |
-| SRCH-03..04 | Phase 1 | Complete via `01-02-SUMMARY.md` |
-| DATA-01..05 | Phase 1 | Complete via `01-04-SUMMARY.md` |
-| ART-01..06 | Phase 1 | Pending |
-| RBST-01..03 | Phase 1 | Pending |
-| RBST-04 | Phase 1 | Complete via `01-04-SUMMARY.md` |
-| UI-01..04 | Phase 1 | Pending |
-| ENG-01..04 | Phase 1 | Pending |
+| NLU-01..04 | Phase 2 | Infrastructure exists from Phase 1; functional acceptance pending across all 20 golden cases |
+| SRCH-01..04 | Phase 2 | Source-card/catalog/retrieval infrastructure exists; reliable source selection pending |
+| DATA-01..05 | Phase 2 | Probe/tool contracts exist; deterministic end-to-end extraction pending |
+| ART-01..06 | Phase 2 | Pending |
+| RBST-01..03 | Phase 2 | Pending |
+| RBST-04 | Phase 2 | Invariant established in Phase 1; must hold in final MVP |
+| UI-01..04 | Phase 2 | Diagnostic shell exists; jury UI pending |
+| ENG-01..04 | Phase 2 | Pending final reproducibility and architecture docs |
 
 **Coverage:**
 - v1 requirements: 27 total

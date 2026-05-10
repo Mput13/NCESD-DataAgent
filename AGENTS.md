@@ -18,9 +18,10 @@ For small direct fixes, keep the change scoped, update `.planning/STATE.md` when
 ## Project-Specific Rules
 
 - Treat `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, and `.planning/STATE.md` as durable project memory.
-- The current milestone has one canonical phase only: `.planning/phases/01-data-architecture-research`. Do not use deprecated duplicate phase directories or infer numbered follow-up phases unless the roadmap is explicitly changed.
-- Execute work single-track through the canonical Phase 1 plans. Do not recreate a three-person Core/Data/UI owner split or owner-specific onboarding artifacts.
+- The roadmap now explicitly defines Phase 1 as accepted infrastructure and Phase 2 as the full jury MVP phase. Do not infer additional numbered follow-up phases unless the roadmap is explicitly changed again.
+- Execute work single-track through the canonical phase plans. Do not recreate a three-person Core/Data/UI owner split or owner-specific onboarding artifacts.
 - The `research` slug is historical. Phase 1 is implementation-oriented: produce code, scripts, tests, evidence artifacts, and summaries where the plans require them.
+- Phase 2 must target all 20 golden cases. Do not lower acceptance to a small demo subset; staged implementation is allowed, but final acceptance is all cases with correct pass / needs_clarification / not_found outcomes and no stale/gated/skipped final states.
 - The assistant is source-bound: numbers must come from deterministic code or trusted source adapters, never from LLM memory.
 - CKAN is a trusted NSED catalog API, not general web search. Use it through bounded package/resource search and cache only promoted metadata.
 - Keep local secrets in `.env`; never commit API keys.

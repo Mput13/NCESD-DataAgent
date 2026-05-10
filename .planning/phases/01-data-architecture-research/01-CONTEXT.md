@@ -46,7 +46,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-08D:** Embedding inputs are metadata/source-card chunks only. They must not include raw numeric series, generated factual answers, or unsupported numeric claims from an LLM.
 - **D-08E:** Long-running embedding/indexing work should run as early as possible after corpus readiness; independent orchestration, UI, extraction, and demo work should continue in parallel while it runs.
 - **D-08F:** Phase 1 source metadata must be materialized into a local SQLite or DuckDB catalog that stores source cards, schemas, coverage hints, embedding chunk ids, and rejection-ready metadata. Flat files may be exported for review, but the agent should query a catalog interface.
-- **D-08G:** Phase 1 uses Qdrant as the vector store, not a temporary custom local vector index. For speed and low ops overhead, execution may use Qdrant local persistent mode via `qdrant-client` (`QDRANT_MODE=local`, `QDRANT_PATH=.local/qdrant`) or a server URL if provided, but both paths must use the Qdrant client/collection abstraction. Later production deployment should be a configuration change, not a retrieval rewrite.
+- **D-08G:** Phase 1 uses Qdrant as the vector store, not a temporary custom local vector index. For speed and low ops overhead, execution may use Qdrant local persistent mode via `qdrant-client` (`QDRANT_MODE=local`, `QDRANT_PATH=.local/qdrant`) or a server URL if provided, but both paths must use the Qdrant client/collection abstraction. Later production deployment should be a configuration change, not a retrieval rewrite. Missing embedding credentials may gate vector population, but must not replace Qdrant with an ad hoc in-memory or flat-file vector search path.
 
 ### Deterministic Extraction
 - **D-09:** Implement/research data extraction fully according to `.planning/ARCHITECTURE_STACK.md`: DuckDB SQL-first with PyArrow/source adapters for normalization and Polars where useful.
@@ -77,16 +77,17 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - **D-23A:** Prepared data artifacts are first-class phase outputs: source-card corpus, embedding/index manifest, build log, provider/model metadata, artifact paths, and rebuild instructions.
 - **D-23B:** Typed workflow artifacts must include `DatasetArtifact`, `VisualizationSpec`, `FinalAnswer`, `MethodologyNote`, `FeedbackArtifact`, and source rejection records in addition to intent, research design, coverage, extraction plan, critique, and trace events.
 - **D-23C:** Deterministic tools must expose safe operations for coverage preview, DuckDB queries, dataset artifact export, CSV/Parquet/manifest output, and visualization rendering from `DatasetArtifact`; LLMs choose tool plans, not raw numeric values.
-- **D-23D:** The Streamlit deliverable must be runnable, not only a shell. It must execute the demo path, show trace/artifacts/source rejection/index readiness, and support feedback/fix-request capture for at least representative golden cases.
+- **D-23D:** The Streamlit deliverable must be runnable, not only a shell. For the current milestone it is a diagnostic interface, not a visual-polish target: it must execute the demo path, show trace/artifacts/source rejection/index readiness, and capture feedback/fix requests for at least representative golden cases, but styling and output beauty are explicitly secondary to correct data relevance and deterministic extraction.
 
 ### Success Criterion Priority
-- **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.
+- **D-24:** The main implementation criterion for the current replanning pass is correct data relevance and deterministic extraction: the system should pick relevant FedStat, World Bank, and CKAN sources for the user's query, prove coverage, and extract numbers through code. Multi-agent trace and UI transparency remain important because they make this evidence inspectable, but they must not displace source selection, Qdrant-backed retrieval, coverage, and extraction quality.
+- **D-24A:** UI work in Phase 1 should stay minimal and diagnostic until data relevance, Qdrant retrieval, source rejection, coverage preview, and deterministic extraction are working. Do not spend execution budget on visual polish, decorative layout, or beautiful final prose before the data pipeline is correct.
 - **D-25:** Reliability remains non-negotiable: every numeric value must be source-bound and reproducible, but among reliable options the preferred path is the one with the strongest visible agent workflow and trace.
 - **D-26:** Scalability matters: Phase 1 should leave the codebase easier, not harder, to grow into the full target architecture.
 
 ### the agent's Discretion
 - The planner may choose exact spike ordering, file/module boundaries, schemas, and test harness structure.
-- The planner may choose Qdrant local persistent mode or a configured Qdrant server URL, but must keep the Yandex document/query embedding contract, Qdrant collection contract, and durable manifest requirements intact.
+- The planner may choose Qdrant local persistent mode or a configured Qdrant server URL, but must keep the Yandex document/query embedding contract, Qdrant collection contract, and durable manifest requirements intact. Qdrant usage is mandatory for the vector-store abstraction in Phase 1; fallback logic may gate dense results when embeddings are unavailable, but it must still report Qdrant readiness explicitly.
 - The planner may choose specific charting/eval libraries within the stack constraints.
 
 </decisions>
@@ -143,7 +144,7 @@ The prepared source-card corpus and embedding/search index are Phase 1 deliverab
 - The user wants the broader 15-20 task test-case set prepared in Phase 1.
 - The user expects Phase 1 to finish with prepared data and a ready embedding/search index. Reprocessing later is an exception, not the normal continuation path.
 - The user wants long-running embedding to start early; while it runs, agents should prepare the workflow, extraction, UI, and demo integration that can consume the completed index.
-- The user selected multi-agent trace and transparent UI wow-effect as the dominant implementation criterion, while preserving source-bound reliability.
+- The user clarified that UI beauty and polished output are not the current focus. The dominant implementation priority is now correct data relevance and deterministic data extraction, with Qdrant used for the vector-store path. Trace/UI remain useful as diagnostic surfaces that expose why sources were selected or rejected.
 - The user accepts that not every full-stack capability will be complete in Phase 1, as long as the result is a working scalable seed that can grow into `.planning/ARCHITECTURE_STACK.md`.
 
 </specifics>

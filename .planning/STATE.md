@@ -25,9 +25,9 @@ See: `.planning/PROJECT.md`
 **Phase:** 1  
 **Slug:** `01-data-architecture-research`  
 **Name:** Data Architecture Implementation  
-**Status:** Replanning after embedding/data-readiness boundary correction
+**Status:** Replanning after data-relevance, Qdrant, and executable-verification correction
 **Canonical directory:** `.planning/phases/01-data-architecture-research`  
-**Next action:** resume execution at revised `01-02-PLAN.md`; do not continue old Wave 2 until the prepared-data and embedding-corpus contract is accepted.
+**Next action:** resume execution at revised `01-02-PLAN.md`; do not continue old Wave 2 until the prepared-data, Qdrant, data-relevance, and executable-verification gates are accepted.
 
 ## Phase Boundary
 
@@ -37,6 +37,8 @@ Phase 1 is not a license to build an unverified full product in one jump. Each s
 
 The corrected Phase 1 boundary is stronger than the original plan: by the end of Phase 1 the source-card corpus and embedding/search index should be ready for demo use. Reprocessing or re-embedding all sources after Phase 1 is an exceptional recovery path, not the default next step. Because embedding may be long-running, execution should start the embedding/index build as soon as the source-card corpus is ready and use that time to prepare orchestration, extraction, UI, and demo integration.
 
+Current priority clarification: do not optimize for UI beauty or polished output yet. The priority is correctly deciding which data is relevant to a query, proving coverage, using Qdrant for the vector-store path, rejecting weak sources with reasons, and extracting numeric data through deterministic code. Streamlit remains a diagnostic surface for trace/artifacts/feedback, not a visual-design workstream.
+
 ## Phase History
 
 - **2026-05-10 — Planning reset to one canonical phase.**
@@ -45,6 +47,9 @@ The corrected Phase 1 boundary is stronger than the original plan: by the end of
 
 - **2026-05-10 — Phase 1 boundary corrected for prepared data and embeddings.**
   User clarified that Phase 1 must finish with prepared data and embedding/search index ready for demo use. Later reprocessing is exceptional. Plans `01-02` through `01-05` were revised so embedding corpus/indexing starts early and independent workflow/UI/extraction work proceeds while it runs.
+
+- **2026-05-10 — Data relevance and Qdrant priority clarified.**
+  User clarified that Phase 1 should prioritize relevant source selection and deterministic extraction over UI beauty. Qdrant must be used for the vector-store path. The revised plans must replace marker-only verification with executable build/eval gates for corpus/catalog, Qdrant index readiness or credential gates, retrieval relevance, extraction probes, graph execution, and demo readiness.
 
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
@@ -100,9 +105,9 @@ The corrected Phase 1 boundary is stronger than the original plan: by the end of
 - [x] Получить рабочий folder_id Yandex Cloud for DeepSeek 3.2 smoke test: `b1gbntotj1b57karq6qm`
 - [x] Понять фактическую структуру локального дампа после скачивания — summarized in `.planning/DATA_REPORT.md`
 - [ ] Create the 15-20 case golden set in `01-01-PLAN.md`
-- [ ] Finish revised prepared-data and embedding-corpus contract in `01-02-PLAN.md`
-- [ ] Materialize embedding/search index and retrieval eval in revised `01-03-PLAN.md`
-- [ ] Define and verify orchestration, extraction, and UI trace contract through revised `01-04` and integrated demo package in `01-05`
+- [ ] Finish revised prepared-data, source-card catalog, and embedding-corpus contract in `01-02-PLAN.md` with executable builder verification
+- [ ] Materialize Qdrant embedding/search index and retrieval relevance eval in revised `01-03-PLAN.md`
+- [ ] Define and verify orchestration, deterministic extraction, data-relevance eval, and diagnostic UI trace contract through revised `01-04` and integrated demo package in `01-05`
 
 ## Recommended Next Action
 

@@ -262,13 +262,21 @@ class TestRunUserQueryToPendingFinalization:
         assert "run_id" in state
         assert state["run_id"].startswith("phase2-")
 
-    def test_run_user_query_still_raises_not_implemented(self) -> None:
-        from app.workflow.service import run_user_query
-        from app.workflow.service import WorkflowRunConfig
+    def test_run_user_query_now_implemented_by_plan_02_06(self, tmp_path: Path) -> None:
+        """After plan 02-06, run_user_query returns WorkflowResponse, not NotImplementedError."""
+        from app.workflow.service import WorkflowRunConfig, run_user_query
+        from app.artifacts.workflow_artifacts import WorkflowResponse
 
-        with pytest.raises(NotImplementedError) as exc_info:
-            run_user_query("test")
-        assert "plan 02-06" in str(exc_info.value)
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+        response = run_user_query("test", run_config=config)
+        assert isinstance(response, WorkflowResponse)
+        assert response.final_outcome in ("passed", "needs_clarification", "not_found")
 
 
 # ---------------------------------------------------------------------------

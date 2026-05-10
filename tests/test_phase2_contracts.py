@@ -121,30 +121,34 @@ def test_not_found_workflow_response_requires_no_data_evidence() -> None:
 
 
 def test_workflow_run_config_default_points_to_phase2_artifacts() -> None:
+    from pathlib import Path
     from app.workflow.service import WorkflowRunConfig
 
     config = WorkflowRunConfig.default()
 
-    assert str(config.goldens_path) == ".planning/phases/01-data-architecture-research/golden-cases.yaml"
-    assert (
-        str(config.phase1_index_manifest)
-        == ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
+    # Use Path comparison to be OS-agnostic (handles both / and \ separators)
+    assert config.goldens_path == Path(".planning/phases/01-data-architecture-research/golden-cases.yaml")
+    assert config.phase1_index_manifest == Path(
+        ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
     )
-    assert (
-        str(config.phase1_source_catalog_manifest)
-        == ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
+    assert config.phase1_source_catalog_manifest == Path(
+        ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
     )
-    assert str(config.artifact_dir) == ".planning/phases/02-jury-mvp/workflow-runs"
+    assert config.artifact_dir == Path(".planning/phases/02-jury-mvp/workflow-runs")
 
 
-def test_run_user_query_contract_is_not_fake_before_finalizer_plan() -> None:
+def test_run_user_query_now_implemented_by_plan_02_06(tmp_path) -> None:
+    """After plan 02-06, run_user_query returns WorkflowResponse (plan 02-06 implemented it)."""
     from app.workflow.service import WorkflowRunConfig, run_user_query
+    from app.artifacts.workflow_artifacts import WorkflowResponse
 
-    with pytest.raises(
-        NotImplementedError,
-        match="Phase 2 final WorkflowResponse implementation is provided by plan 02-06",
-    ):
-        run_user_query(
-            "Какая динамика ВВП России?",
-            run_config=WorkflowRunConfig.default(),
-        )
+    config = WorkflowRunConfig.default().model_copy(
+        update={
+            "artifact_dir": tmp_path / "artifacts",
+            "live_llm_required": False,
+            "live_embeddings_required": False,
+        }
+    )
+    response = run_user_query("Какая динамика ВВП России?", run_config=config)
+    assert isinstance(response, WorkflowResponse)
+    assert response.final_outcome in ("passed", "needs_clarification", "not_found")

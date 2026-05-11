@@ -1,136 +1,35 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-11T11:38:42.784Z",
-  "phase": "2",
-  "phase_name": "Full Jury MVP",
+  "timestamp": "2026-05-11T18:41:32Z",
+  "phase": "02",
+  "phase_name": "jury-mvp",
   "phase_dir": ".planning/phases/02-jury-mvp",
   "plan": null,
-  "task": 2,
-  "total_tasks": 4,
+  "task": null,
+  "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Verify fresh graph-aware retrieval/runtime handoff",
-      "status": "done",
-      "commit": "9445fa8",
-      "progress": "Branch codex/phase-2-jury-mvp-planning is active, Qdrant phase1_source_cards was verified green with 36321 vectors, retrieval mode comparison showed dense and graph paths ready, and live Yandex/Qwen smoke succeeded."
-    },
-    {
-      "id": 2,
-      "name": "Add headless batch runner for multiple data-agent queries",
-      "status": "done",
-      "commit": "9445fa8",
-      "progress": "scripts/run_workflow_batch.py supports txt/json/jsonl/yaml inputs, per-item request/response artifacts, summary json/md, workflow-runs output, and clarification follow-up handling."
-    },
-    {
-      "id": 3,
-      "name": "Implement external workflow audit layer",
-      "status": "in_progress",
-      "progress": "app/observability/workflow_audit.py and scripts/run_workflow_batch.py changes are implemented and py_compile passed. The layer patches boundary functions only inside WorkflowAuditSession and records node input/output state, Yandex/Qwen messages/responses, retrieval calls/results, and deterministic tool calls/results without changing workflow prompts, routing, state payloads, or return values."
-    },
-    {
-      "id": 4,
-      "name": "Run one audited smoke query and inspect saved objects",
-      "status": "done",
-      "progress": "Ran query 'ВВП россии за 2011' through the headless batch runner. It completed without runner errors, final_outcome was not_found, and audit files captured 28 LLM events, 20 node events, 16 retrieval events, and 6 tool events."
-    }
+    {"id": "plan-a", "name": "Schema hardening (intent/coverage/critic/narrator)", "status": "done", "commits": ["bfdeb52", "27f5764", "7bc6ea7", "cfc32b5"]},
+    {"id": "plan-b", "name": "Parquet path fallback + slice validation + zero-row gating", "status": "done", "commits": ["270a9d4", "dd31f6d", "e23dad5", "11f2019", "0526445", "a67f0e4"]},
+    {"id": "review", "name": "Code review of Plans A+B vs WORKFLOW-FIX-DIAGNOSIS.md", "status": "done"}
   ],
   "remaining_tasks": [
-    {
-      "id": 1,
-      "name": "Review and commit the observability layer",
-      "status": "not_started"
-    },
-    {
-      "id": 2,
-      "name": "Decide whether audited batch-run evidence should remain local, be force-added despite *.jsonl ignore, or be summarized into committed evidence",
-      "status": "not_started"
-    },
-    {
-      "id": 3,
-      "name": "Use audit evidence to fix workflow defects without making LLM agents write self-reports or replacing LLM work with code",
-      "status": "not_started"
-    },
-    {
-      "id": 4,
-      "name": "Run a broader batch over realistic/golden queries and analyze recurring failure patterns",
-      "status": "not_started"
-    }
+    {"id": "wr-06-fix", "name": "Fix WB preview_world_bank_coverage countries filter (both branches identical)", "status": "not_started", "priority": "high"},
+    {"id": "smoke-rerun", "name": "Re-run 7 smoke test cases to verify Plans A+B actually unblock them", "status": "not_started", "priority": "high"},
+    {"id": "bl-03-fix", "name": "Skip export_dataset_with_script when rows==0 (cosmetic)", "status": "not_started", "priority": "low"},
+    {"id": "finalization-tests", "name": "Fix 7 pre-existing failures in test_phase2_finalization.py (error string mismatch)", "status": "not_started", "priority": "medium"},
+    {"id": "plan-c", "name": "Plan C: cross-language retrieval improvement (Russian query vs English WB corpus)", "status": "not_started", "priority": "medium"}
   ],
   "blockers": [
-    {
-      "description": "The observability code is implemented but not committed yet.",
-      "type": "technical",
-      "workaround": "Review git diff, stage app/observability/workflow_audit.py and scripts/run_workflow_batch.py, then commit."
-    },
-    {
-      "description": "Audit JSONL files are ignored by the repo-wide *.jsonl rule.",
-      "type": "human_action",
-      "workaround": "Either keep them local as debug evidence, force-add selected audit files, or generate a committed markdown/json summary from them."
-    },
-    {
-      "description": "The audited query exposed workflow problems: research_designer overcomplicates a simple direct query, extraction_planner reasoning references one set of sources but emits source_id 40570, deterministic extraction returns zero rows, and critic returned repair_plan with the wrong type.",
-      "type": "technical",
-      "workaround": "Use node-events.jsonl, llm-calls.jsonl, retrieval.jsonl, tool-calls.jsonl, and phase2-state.json to isolate contract failures before changing workflow behavior."
-    }
+    {"description": "WR-06: World Bank countries filter is a no-op — both if/else branches produce identical matched_geos", "type": "technical", "workaround": "None; causes WB multi-country queries to pass extraction_ready=True incorrectly"},
+    {"description": "Cross-language retrieval: dense scores 0.05-0.06 for Russian queries vs English WB corpus", "type": "technical", "workaround": "Plan C addresses this but not yet implemented"}
   ],
-  "human_actions_pending": [
-    {
-      "action": "Commit/evidence policy",
-      "context": "The code layer is probably worth committing; generated audit/run artifacts may be too bulky or ignored and need an explicit keep/discard/summarize decision.",
-      "blocking": true
-    }
-  ],
+  "human_actions_pending": [],
   "decisions": [
-    {
-      "decision": "Do not touch Streamlit/UI for this workstream.",
-      "rationale": "User explicitly said Streamlit was abandoned for this context; current priority is running the data agent headlessly and validating retrieval/workflow behavior.",
-      "phase": "2"
-    },
-    {
-      "decision": "Runtime request understanding and reasoning must use live Yandex/Qwen.",
-      "rationale": "User rejected offline/no-response LLM fallback logic. Deterministic code is for retrieval, extraction, validation, numeric/provenance checks, not for replacing LLM interpretation/reasoning.",
-      "phase": "2"
-    },
-    {
-      "decision": "Observability must be external to workflow behavior.",
-      "rationale": "User stopped direct workflow changes and explicitly said not to make LLM agents write reports. The implemented audit layer uses runtime patching in the batch runner to capture boundaries without modifying node prompts or payload semantics.",
-      "phase": "2"
-    },
-    {
-      "decision": "Clarification handling in batch runner should preserve pending clarification and optionally continue with provided follow_up.",
-      "rationale": "Batch analysis needs to record what happens when the agent asks a clarification instead of treating it as a failed run.",
-      "phase": "2"
-    }
+    {"decision": "Plans A+B are plumbing patches only — architectural issues (matrix_hint leak, Supervisor silent fallback) intentionally deferred", "rationale": "Scope control for 5-hour session"},
+    {"decision": "Did not fix BL-03/BL-04 from reviewer — verified they are not blocking for smoke tests", "rationale": "Reviewer based findings on pre-fix diagnosis doc; manual code verification showed non-critical"}
   ],
-  "uncommitted_files": [
-    "scripts/run_workflow_batch.py",
-    "app/observability/workflow_audit.py",
-    ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/",
-    ".planning/phases/02-jury-mvp/workflow-runs/phase2-fb135f1cca03-q001/"
-  ],
-  "ignored_local_evidence": [
-    ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001/audit/node-events.jsonl",
-    ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001/audit/llm-calls.jsonl",
-    ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001/audit/retrieval.jsonl",
-    ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001/audit/tool-calls.jsonl"
-  ],
-  "latest_audited_run": {
-    "query": "ВВП россии за 2011",
-    "batch_dir": ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit",
-    "item_dir": ".planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001",
-    "workflow_run_id": "phase2-fb135f1cca03-q001",
-    "final_outcome": "not_found",
-    "selected_sources": 5,
-    "rejected_sources": 25,
-    "dataset_artifacts": 0,
-    "script_artifacts": 0,
-    "node_events": 20,
-    "llm_events": 28,
-    "retrieval_events": 16,
-    "tool_events": 6
-  },
-  "next_action": "Resume by running git status --short --ignored app/observability .planning/phases/02-jury-mvp/batch-runs/vvp-2011-audit/items/001-q001/audit, review app/observability/workflow_audit.py and scripts/run_workflow_batch.py, then commit the observability code or first decide what to do with the generated audit evidence.",
-  "context_notes": "The key mental model: every workflow node consumes a shared Phase2State and returns an updated Phase2State. The audit layer captures node_start.input_state and node_end.output_state, so it shows the actual objects passed between layers. Separate JSONL streams capture what went to Yandex/Qwen, what went to hybrid retrieval, and what deterministic tools executed. This is designed to identify workflow stupidity without asking LLM nodes to self-report."
+  "uncommitted_files": [],
+  "next_action": "Fix WR-06 in app/data/world_bank_adapter.py — make if countries: branch actually filter by requested country codes. Then run smoke batch.",
+  "context_notes": "10 commits from Plans A+B. 36/36 new tests pass. Key remaining gap: WB country filter broken. Smoke re-run needed to confirm actual improvement."
 }

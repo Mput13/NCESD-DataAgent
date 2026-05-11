@@ -1,6 +1,6 @@
 # External Integrations
 
-**Analysis Date:** 2026-05-10
+**Analysis Date:** 2026-05-11
 
 ## APIs & External Services
 
@@ -22,8 +22,8 @@
   - Auth: `Authorization: Api-Key ...`.
   - Env vars: `YANDEX_EMBEDDING_API_KEY`, fallback `YANDEX_AI_STUDIO_API_KEY` / `YANDEX_API_KEY`, `YANDEX_FOLDER_ID`, `YANDEX_EMBEDDING_DOC_MODEL`, `YANDEX_EMBEDDING_QUERY_MODEL`, `YANDEX_EMBEDDING_DIMENSIONS`, `YANDEX_EMBEDDING_BASE_URL`, `YANDEX_EMBEDDING_TIMEOUT`, and `YANDEX_EMBEDDING_RETRIES`.
   - Current model contract: document/query split using `emb://<folder_id>/text-search-doc/latest` and `emb://<folder_id>/text-search-query/latest`, 256 dimensions by default.
-  - Status: real build path exists, including cache and retry behavior, but current committed manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` is `gated_skip` with `vector_count=0` and stale against the full 36,321-chunk corpus.
-  - Phase 2 rule: finish or refresh this index before claiming dense retrieval readiness; do not substitute a custom vector path.
+  - Status: real build path exists, including cache and retry behavior. Current manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` records `status=ready`, `dense_status=ready`, `qdrant_mode=remote`, and `vector_count=36321`.
+  - Phase 2 rule: dense retrieval readiness is necessary but not sufficient. It does not replace source coverage checks, deterministic extraction, or final answer validation.
 
 **Trusted CKAN / NSED Repository:**
 - NSED CKAN API - trusted catalog source, not general web search.
@@ -32,7 +32,7 @@
   - Auth: none detected.
   - Query behavior: bounded package/resource search with `rows`, `start`, and resource inspection limits in `scripts/build_source_cards.py`.
   - Current default query: `57319` in `scripts/build_source_cards.py`.
-  - Status: real API wrappers exist; committed full source-card/catalog/corpus manifests currently list only `FedStat` and `World Bank` families after the 36,321-card rebuild, while the stale 11-chunk embedding index manifest still lists `ckan`, `fedstat`, and `world_bank`. Treat CKAN coverage as partially prepared and not MVP-ready until Phase 2 rebuild/eval proves it.
+  - Status: real API wrappers exist. Current full source-card/catalog/corpus manifests and embedding index primarily list `fedstat` and `world_bank`; CKAN remains a bounded live/catalog path for targeted discovery and promoted resources.
 
 **FedStat / Rosstat:**
 - Local FedStat dump - trusted local source material for source-card metadata and deterministic extraction planning.
@@ -50,11 +50,12 @@
   - Probe SQL: `.planning/phases/01-data-architecture-research/extraction-probe-artifacts/world-bank-coverage-preview.sql`.
   - Status: source-card/corpus preparation is real; extraction is still probe/coverage evidence, not full deterministic numeric answer production.
 
-**Reranking Endpoint:**
-- bge-reranker-compatible seam - optional future rerank service.
-  - Implementation: `app/retrieval/hybrid_retrieval.py` in `BGERerankerCompatible`.
-  - Env var: `BGE_RERANKER_URL`.
-  - Status: diagnostic seam only; if the env var exists, current code records `bge-reranker-v2-m3_endpoint_configured_not_called_in_phase1` and does not call the endpoint.
+**Graph-Aware Retrieval Internals:**
+- Graph-aware hybrid retrieval is an internal runtime integration over prepared source cards.
+  - Implementation: `app/retrieval/hybrid_retrieval.py`, `app/retrieval/graph_store.py`, and `app/retrieval/query_understanding.py`.
+  - Storage: in-memory SQLite graph built from source-card metadata at retrieval startup; no external graph database is required.
+  - Modes: lexical BM25, dense Qdrant, graph-first lookup, dense-seed graph expansion, and RRF fusion.
+  - Status: real code and tests exist. Graph output is retrieval context/evidence, not a trusted numeric source.
 
 ## Data Storage
 
@@ -76,10 +77,10 @@
   - Default collection: `phase1_source_cards`.
   - Implementation: `app/retrieval/embedding_index.py`, `scripts/build_embedding_index.py`, and `scripts/build_partial_embedding_snapshot.py`.
   - Manifest: `.planning/phases/01-data-architecture-research/embedding-index-manifest.json`.
-  - Status: current committed full-demo readiness is not ready: `.planning/phases/01-data-architecture-research/demo-readiness.current.json` records `qdrant_status=stale`, `dense_retrieval_ready=false`, and `qdrant_vector_count=0`.
+  - Status: supported for small/local development, but Phase 2 jury/eval/workflow path should prefer server mode to avoid local storage locks and concurrency issues.
 - Qdrant remote/server mode
   - Env vars: `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION`.
-  - Status: supported by configuration code in `app/retrieval/embedding_index.py`; no production/remote deployment evidence detected.
+  - Status: supported by configuration code in `app/retrieval/embedding_index.py`; Phase 2 manifest `.planning/phases/02-jury-mvp/qdrant-server-manifest.json` records ready local server evidence at `http://localhost:6333` for collection `phase1_source_cards` with 36,321 vectors.
 
 **File Storage:**
 - Local filesystem only.
@@ -193,21 +194,21 @@
 - Local SQLite catalog builder in `app/catalog/source_catalog.py` and `scripts/build_source_catalog.py`.
 - Embedding corpus generator in `scripts/build_embedding_corpus.py`.
 - Qdrant/Yandex embedding build path in `app/retrieval/embedding_index.py` and `scripts/build_embedding_index.py`.
-- Hybrid lexical/dense retrieval interface in `app/retrieval/hybrid_retrieval.py`.
+- Graph-aware hybrid retrieval interface in `app/retrieval/hybrid_retrieval.py`, plus `KnowledgeGraphStore` and `SubgraphContext` in `app/retrieval/graph_store.py`.
+- LangGraph Phase 2 workflow runtime in `app/workflow/graph.py` with shared service entrypoints in `app/workflow/service.py`.
 - Yandex AI Studio Qwen client in `app/llm/yandex_ai_studio.py`.
 
 **Diagnostic/probe-only:**
-- Streamlit UI in `app/ui/streamlit_app.py` reads readiness artifacts and does not execute the full user-query workflow.
-- Workflow in `app/workflow/run_graph.py` emits source-bound trace artifacts for a narrow Phase 1 path, but coverage/extraction remain gated.
+- Streamlit UI in `app/ui/streamlit_app.py` is a fast test surface over the shared workflow service, not a polished production frontend.
+- Legacy workflow CLI in `app/workflow/run_graph.py` emits source-bound trace artifacts and remains useful for smoke/debug compatibility.
 - Extraction probes in `scripts/run_extraction_probes.py` and `.planning/phases/01-data-architecture-research/extraction-probes.current.json` are coverage evidence, not full deterministic answer extraction for all golden cases.
-- Reranker seam in `app/retrieval/hybrid_retrieval.py` is configured-not-called for external BGE reranker service.
 
 **Not MVP-ready:**
-- Dense retrieval: current `.planning/phases/01-data-architecture-research/demo-readiness.current.json` records `qdrant_status=stale` and `dense_retrieval_ready=false`.
-- Full jury eval: `.planning/phases/01-data-architecture-research/data-relevance-eval.current.json` records 20 gated cases.
+- Dense retrieval alone: current Qdrant readiness is not enough to claim MVP readiness because retrieval still needs exact source/indicator quality, coverage, extraction, and answer checks.
+- Full jury eval: current Phase 2 acceptance artifacts are suspect because empty `not_found` outcomes can pass for expected `passed` cases; see `.planning/phases/02-jury-mvp/02-WORKFLOW-FIX-DIAGNOSIS.md`.
 - Final answer semantics: `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md` calls out that `final_answer.status=ok` while coverage/extraction are gated is invalid for Phase 2.
-- LangGraph runtime: target architecture exists in `.planning/ARCHITECTURE_STACK.md`, but current source code uses an internal graph contract in `app/workflow/graph_contract.py`; no `langgraph` package is present in `requirements.txt`.
+- Runtime/eval separation: `golden-coverage-matrix` must remain an external eval artifact and must not feed runtime agent prompts.
 
 ---
 
-*Integration audit: 2026-05-10*
+*Integration audit: 2026-05-11*

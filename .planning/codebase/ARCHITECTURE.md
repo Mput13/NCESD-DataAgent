@@ -1,17 +1,41 @@
 # Architecture
 
-**Analysis Date:** 2026-05-10
+**Analysis Date:** 2026-05-11
 
 ## Pattern Overview
 
-**Overall:** Source-bound economic data agent with prepared-data infrastructure, typed artifacts, diagnostic graph execution, deterministic extraction contracts, and a target Phase 2 hierarchical workflow.
+**Overall:** Source-bound economic data agent with prepared-data infrastructure, graph-aware hybrid retrieval, typed artifacts, LangGraph Phase 2 workflow execution, and deterministic extraction contracts.
 
 **Key Characteristics:**
-- Current Phase 1 code is infrastructure and diagnostic execution: `app/workflow/run_graph.py` emits trace/source/coverage/extraction gate evidence, but does not complete deterministic answer production.
+- Current Phase 2 code has a shared workflow service and LangGraph runtime in `app/workflow/service.py` and `app/workflow/graph.py`; it still needs audit/fix work before jury readiness because eval fixtures and runtime are not cleanly separated.
 - All numbers must come from deterministic code in `app/data/deterministic_tools.py` or trusted source adapters; LLM code in `app/llm/yandex_ai_studio.py` is for structured interpretation/planning/narration only.
 - Prepared data is first-class: source cards, catalog, embedding corpus, Qdrant manifest, retrieval eval, extraction probes, and readiness reports live under `.planning/phases/01-data-architecture-research/` and `.local/dataagent/phase1/`.
-- Qdrant is the vector-store abstraction through `app/retrieval/embedding_index.py` and `app/retrieval/hybrid_retrieval.py`; missing embedding credentials are represented as `gated_skip`, not as a different vector path.
-- Streamlit in `app/ui/streamlit_app.py` is currently a diagnostic shell; Phase 2 must wire user input into the real evaluated workflow.
+- Qdrant remains the vector-store abstraction, but retrieval is now graph-aware hybrid RAG: BM25 lexical search, dense Qdrant search, deterministic graph-first lookup, graph expansion from dense seeds, and RRF fusion over the prepared source-card corpus.
+- `app/retrieval/graph_store.py` builds an in-memory SQLite graph from source-card metadata at runtime. Current Graph RAG does not require a separate graph database or a separate graph embedding collection.
+- Streamlit in `app/ui/streamlit_app.py` calls shared workflow service entrypoints, but it is still a fast test/diagnostic surface rather than proof of polished product readiness.
+
+## 2026-05-11 Graph RAG Update
+
+Graph-aware retrieval changed the active retrieval contract:
+
+```text
+query
+-> LexicalBM25Retriever over embedding_text
+-> DenseQdrantRetriever over phase1_source_cards
+-> KnowledgeGraphStore.graph_first_card_ids(query)
+-> GraphExpander from dense seed card_ids
+-> Qdrant payload fetch by graph neighbour card_ids
+-> RRF fusion
+-> selected/rejected RetrievalCandidate lists
+-> HybridRetrievalResult with SubgraphContext
+```
+
+Important constraints after this update:
+
+- The graph is deterministic metadata structure, not a source of numeric facts.
+- Graph nodes and edges are built from source-card metadata: SourceCard, Indicator, Dataset, Provider, Unit, Geography, Period, Resource, Concept, and Alias.
+- `SubgraphContext` is useful retrieval evidence for downstream agents, but final numeric answers still require coverage preview and deterministic extraction.
+- Golden-case labels may be used by external eval scripts, but must not be fed into retrieval/workflow runtime as hidden hints.
 
 ## Current Workflow vs Target Workflow
 
@@ -38,12 +62,13 @@
    - `app/ui/streamlit_app.py`
    - `app/ui/trace_models.py`
 
-**Current Phase 1 Status:**
+**Current Prepared Data / Retrieval Status:**
 - Source-card corpus is present at `.local/dataagent/phase1/source-cards.json` with 36,321 cards recorded in `.planning/phases/01-data-architecture-research/source-cards-manifest.json`.
 - Source catalog is present at `.local/dataagent/phase1/source-catalog.sqlite` with manifest `.planning/phases/01-data-architecture-research/source-catalog-manifest.json`.
 - Embedding corpus is present at `.local/dataagent/phase1/embedding-corpus.jsonl` with 36,321 chunks recorded in `.planning/phases/01-data-architecture-research/embedding-corpus-manifest.json`.
-- The current index manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` records `status=gated_skip`, `dense_status=gated_skip`, `vector_count=0`, and a stale 11-chunk `corpus_hash` relative to the 36,321-chunk corpus.
-- Current eval artifacts are infrastructure-level: `.planning/phases/01-data-architecture-research/data-relevance-eval.json` covers 20 cases but records no accepted MVP pass across all cases.
+- The current index manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` records `status=ready`, `dense_status=ready`, `qdrant_mode=remote`, `qdrant_url=http://localhost:6333`, and `vector_count=36321`.
+- The Phase 2 server manifest `.planning/phases/02-jury-mvp/qdrant-server-manifest.json` records ready server Qdrant evidence for collection `phase1_source_cards`.
+- Graph-aware retrieval code and tests exist, but retrieval quality is not final MVP correctness; exact source/indicator selection, coverage, extraction, and final answer semantics still need strict verification.
 
 **Required Phase 2 Workflow:**
 
@@ -98,13 +123,13 @@
 - Used by: `scripts/build_source_catalog.py`, `.local/dataagent/phase1/source-catalog.sqlite`, `scripts/run_extraction_probes.py`.
 - Phase 2 guidance: keep catalog schema changes backward-compatible with current manifests or regenerate affected manifests explicitly.
 
-**Retrieval and Qdrant Layer:**
-- Purpose: Builds and queries source-card metadata embeddings through Qdrant with lexical fallback evidence and rerank seam.
+**Retrieval, Qdrant, and Graph RAG Layer:**
+- Purpose: Queries source-card metadata through lexical BM25, dense Qdrant, deterministic graph-first lookup, graph expansion, and RRF fusion.
 - Location: `app/retrieval/`
-- Contains: `app/retrieval/embedding_index.py`, `app/retrieval/hybrid_retrieval.py`.
+- Contains: `app/retrieval/embedding_index.py`, `app/retrieval/hybrid_retrieval.py`, `app/retrieval/graph_store.py`, `app/retrieval/query_understanding.py`.
 - Depends on: `qdrant_client`, Yandex embeddings endpoint, prepared embedding corpus manifest.
-- Used by: `scripts/build_embedding_index.py`, `scripts/run_retrieval_spike.py`, `app/workflow/run_graph.py`, tests in `tests/test_embedding_index.py` and `tests/test_hybrid_retrieval.py`.
-- Phase 2 guidance: improve ranking and source selection in this layer; do not replace Qdrant with a custom local vector path.
+- Used by: `scripts/build_embedding_index.py`, `scripts/run_retrieval_spike.py`, `scripts/evaluate_retrieval_modes.py`, `app/workflow/nodes/scouts.py`, tests in `tests/test_embedding_index.py`, `tests/test_hybrid_retrieval.py`, and `tests/test_retrieval_mode_comparison.py`.
+- Phase 2 guidance: improve ranking/source selection here, but keep graph output as retrieval evidence only. Do not let graph labels, golden matrix expectations, or source ids bypass coverage and deterministic extraction.
 
 **Deterministic Data Tools:**
 - Purpose: Execute source-bound coverage, extraction, dataset export, and visualization helper logic.
@@ -123,12 +148,12 @@
 - Phase 2 guidance: keep the verified endpoint `https://llm.api.cloud.yandex.net/v1` and `Api-Key` auth behavior.
 
 **Workflow Layer:**
-- Purpose: Defines graph contracts and current narrow runnable graph smoke path.
+- Purpose: Provides the shared Phase 2 workflow service, LangGraph routing, node implementations, and legacy smoke CLI.
 - Location: `app/workflow/`
-- Contains: `app/workflow/graph_contract.py`, `app/workflow/run_graph.py`.
-- Depends on: typed workflow artifacts, hybrid retrieval, golden cases, index manifest.
-- Used by: `tests/test_workflow_graph.py`, `.planning/phases/01-data-architecture-research/run-graph-smoke.json`.
-- Phase 2 guidance: replace the `Phase1Graph` checkpoint-only object with a real graph runtime while preserving `GraphState`, canonical `TraceEvent`, node contracts, budgets, and source-bound final states.
+- Contains: `app/workflow/service.py`, `app/workflow/graph.py`, `app/workflow/state.py`, `app/workflow/nodes/*`, `app/workflow/run_graph.py`, and legacy `app/workflow/graph_contract.py`.
+- Depends on: typed workflow artifacts, graph-aware hybrid retrieval, deterministic adapters, Yandex/Qwen client, LangGraph.
+- Used by: Streamlit, web/CLI workflow entrypoints, Phase 2 acceptance runner, tests in `tests/test_phase2_workflow_service.py`, `tests/test_phase2_workflow_nodes.py`, and `tests/test_workflow_graph.py`.
+- Phase 2 guidance: keep one shared workflow entrypoint for UI/eval/CLI, but remove eval fixture leakage (`case_id` / `golden-coverage-matrix` hints) from runtime before claiming product correctness.
 
 **Evaluation Layer:**
 - Purpose: Scores retrieval, extraction, Qdrant readiness, trace completeness, and unsupported numeric claim evidence against golden cases.
@@ -166,14 +191,18 @@
 6. `scripts/build_embedding_corpus.py` writes `.local/dataagent/phase1/embedding-corpus.jsonl`.
 7. `scripts/build_embedding_index.py` writes `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` and `.planning/phases/01-data-architecture-research/embedding-index-build.md`.
 
-**Retrieval Flow:**
+**Graph-Aware Retrieval Flow:**
 
 1. `scripts/run_retrieval_spike.py` reads `.planning/phases/01-data-architecture-research/golden-cases.yaml`.
 2. `app/retrieval/hybrid_retrieval.py` loads documents from `corpus_artifact_path` in `.planning/phases/01-data-architecture-research/embedding-index-manifest.json`.
 3. `LexicalBM25Retriever` ranks source-card embedding text.
-4. `DenseQdrantRetriever` queries Qdrant only when index and credentials are ready.
-5. `BGERerankerCompatible` applies deterministic fallback rerank unless `BGE_RERANKER_URL` is configured.
-6. `scripts/run_retrieval_spike.py` writes `.planning/phases/01-data-architecture-research/retrieval-eval.csv`.
+4. `DenseQdrantRetriever` embeds the query and queries Qdrant when index and credentials are ready.
+5. `KnowledgeGraphStore` builds an in-memory graph from the same source-card documents.
+6. `graph_first_card_ids(query)` returns cards linked to parsed concepts, geographies, years, and source families.
+7. `GraphExpander` expands from dense seed cards through graph neighbours and fetches neighbour payloads from Qdrant by `card_id`.
+8. `_rrf_fuse` combines lexical, dense, graph-first, and graph-neighbour candidates.
+9. `_split_rejections` records source preference mismatch, no-evidence, and contextual/direct-indicator rejection reasons.
+10. `scripts/evaluate_retrieval_modes.py` can compare `dense_only`, `lexical_only`, `graph_first`, `dense_plus_lexical`, and `hybrid_graph`.
 
 **Current Graph Smoke Flow:**
 
@@ -200,10 +229,11 @@
 11. Evals score all 20 golden cases with no unacceptable final states.
 
 **State Management:**
-- Current workflow state is `GraphState` in `app/workflow/graph_contract.py`.
+- Current Phase 2 workflow state is `Phase2State` in `app/workflow/state.py`.
+- Legacy smoke/test workflow state is `GraphState` in `app/workflow/graph_contract.py`.
 - Canonical trace state is `TraceEvent` in `app/artifacts/workflow_artifacts.py`.
 - UI state view is `WorkflowTraceViewModel` in `app/ui/trace_models.py`.
-- Phase 2 should preserve a single workflow state object instead of duplicating per-node ad hoc payloads.
+- Phase 2 should continue moving toward a single typed workflow state and explicit inter-agent artifacts instead of generic per-node dict payloads.
 
 ## Key Abstractions
 
@@ -223,9 +253,14 @@
 - Pattern: plain SQLite schema that DuckDB can attach or scan later.
 
 **HybridRetriever:**
-- Purpose: Unified lexical, dense Qdrant, and rerank retrieval interface.
-- Examples: `app/retrieval/hybrid_retrieval.py`, `scripts/run_retrieval_spike.py`.
-- Pattern: returns `HybridRetrievalResult` with accepted/rejected `RetrievalCandidate` records and explicit dense/rerank/index status.
+- Purpose: Unified lexical, dense Qdrant, graph-first, graph-expansion, and RRF retrieval interface.
+- Examples: `app/retrieval/hybrid_retrieval.py`, `scripts/run_retrieval_spike.py`, `scripts/evaluate_retrieval_modes.py`.
+- Pattern: returns `HybridRetrievalResult` with accepted/rejected `RetrievalCandidate` records, `SubgraphContext`, dense status, graph status, rerank/fusion status, index status, and Qdrant collection.
+
+**KnowledgeGraphStore / SubgraphContext:**
+- Purpose: Deterministic metadata graph over source cards for graph-first lookup and neighbour expansion.
+- Examples: `app/retrieval/graph_store.py`, `tests/test_hybrid_retrieval.py`.
+- Pattern: in-memory SQLite graph built at retrieval startup from source-card documents; no separate graph service is required. `SubgraphContext.as_text()` is compact downstream context, not final evidence for numeric claims.
 
 **GraphState and NodeContract:**
 - Purpose: Workflow state, node roles, budgets, and tool scopes.
@@ -273,6 +308,11 @@
 - Location: `scripts/run_retrieval_spike.py`
 - Triggers: After index manifest exists.
 - Responsibilities: Evaluate hybrid retrieval over golden cases and write `.planning/phases/01-data-architecture-research/retrieval-eval.csv` and `.planning/phases/01-data-architecture-research/retrieval-comparison.md`.
+
+**Retrieval Mode Comparison CLI:**
+- Location: `scripts/evaluate_retrieval_modes.py`
+- Triggers: After index manifest and corpus exist.
+- Responsibilities: Compare `dense_only`, `lexical_only`, `graph_first`, `dense_plus_lexical`, and `hybrid_graph`; write `.planning/phases/02-jury-mvp/retrieval-mode-comparison.csv`, `.json`, and `.md`.
 
 **Extraction Probe CLI:**
 - Location: `scripts/run_extraction_probes.py`
@@ -327,4 +367,4 @@
 
 ---
 
-*Architecture analysis: 2026-05-10*
+*Architecture analysis: 2026-05-11*

@@ -7,11 +7,13 @@ Architecture:
            HAS_RESOURCE, SIMILAR_TO
   - Entity linking: dense retrieval results → graph nodes via card_id
   - Subgraph extraction: 1–2 hop neighbourhood from seed nodes
-  - Graph embeddings: node title+metadata embedded into a separate Qdrant collection
-                      so ANN search can find nodes directly by semantic similarity
+  - Graph-first lookup: deterministic concept/entity matching over source-card metadata
+  - Graph expansion: neighbour traversal from dense-retrieval seed cards
 
 The graph is built deterministically from source-card metadata at startup.
-No golden labels, no hand-coded rules, no heuristic scoring tables.
+No golden labels and no separate graph database are required. Current graph-aware
+retrieval reuses the source-card corpus/Qdrant collection for dense retrieval and
+uses this SQLite graph for deterministic metadata traversal.
 """
 
 from __future__ import annotations
@@ -216,7 +218,7 @@ class KnowledgeGraphStore:
       1. Ingesting source cards → nodes + edges
       2. entity_link(card_ids) → seed GraphNodes
       3. expand_subgraph(seed_node_ids, hops) → SubgraphContext
-      4. Providing canonical text for each node (for offline graph embedding)
+      4. Providing canonical text for each node if later offline graph embedding is added
     """
 
     def __init__(self, documents: list[dict[str, Any]]) -> None:

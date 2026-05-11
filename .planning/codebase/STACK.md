@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-05-10
+**Analysis Date:** 2026-05-11
 
 ## Languages
 
@@ -30,6 +30,7 @@
 - Pydantic v2 (`pydantic>=2.12.0`) - typed source-card, workflow, UI, and dataset artifacts in `app/artifacts/source_cards.py`, `app/artifacts/workflow_artifacts.py`, `app/workflow/graph_contract.py`, and `app/ui/trace_models.py`.
 - Streamlit (`streamlit>=1.45.0`) - first demo UI target in `app/ui/streamlit_app.py`. The current UI is diagnostic Phase 1 infrastructure, not the Phase 2 jury workflow UI.
 - Qdrant client (`qdrant-client>=1.16.0`) - vector-store abstraction in `app/retrieval/embedding_index.py`, `scripts/build_embedding_index.py`, and `scripts/build_partial_embedding_snapshot.py`.
+- LangGraph (`langgraph>=1.1.10`) - Phase 2 workflow runtime in `app/workflow/graph.py`, with service entrypoints in `app/workflow/service.py`.
 - DuckDB (`duckdb>=1.4.0`) - deterministic SQL-first extraction utilities in `app/data/deterministic_tools.py` and probe scripts in `scripts/run_extraction_probes.py`.
 - PyArrow (`pyarrow>=22.0.0`) - optional Parquet export path in `app/data/deterministic_tools.py`; FedStat/World Bank dumps are Parquet-backed.
 - Requests (`requests>=2.32.0`) - HTTP client for Yandex AI Studio, Yandex embeddings, and CKAN calls in `app/llm/yandex_ai_studio.py`, `app/retrieval/embedding_index.py`, `app/data/deterministic_tools.py`, and `scripts/build_source_cards.py`.
@@ -60,6 +61,7 @@
 **Critical:**
 - `pydantic>=2.12.0` - all source-bound contracts depend on `BaseModel` serialization/validation in `app/artifacts/source_cards.py`, `app/artifacts/workflow_artifacts.py`, and `app/workflow/graph_contract.py`.
 - `qdrant-client>=1.16.0` - Phase 2 must keep Qdrant as the vector-store abstraction; do not replace it with an ad hoc local vector search. Current implementation supports local persistent mode via `.local/qdrant` and remote mode via `QDRANT_URL`.
+- `langgraph>=1.1.10` - current Phase 2 graph runtime through `StateGraph` in `app/workflow/graph.py`.
 - `duckdb>=1.4.0` - numeric extraction must route through deterministic SQL/tooling in `app/data/deterministic_tools.py`; LLM-generated numeric claims are not accepted.
 - `requests>=2.32.0` - real HTTP integration layer for Yandex and CKAN.
 - `streamlit>=1.45.0` - jury UI target, currently only diagnostic.
@@ -118,14 +120,14 @@
 
 **Current readiness state:**
 - Source-card/catalog/corpus manifests record 36,321 source cards/chunks in `.planning/phases/01-data-architecture-research/source-cards-manifest.json`, `.planning/phases/01-data-architecture-research/source-catalog-manifest.json`, and `.planning/phases/01-data-architecture-research/embedding-corpus-manifest.json`.
-- The current embedding index manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` is not aligned with the full corpus: it records `status=gated_skip`, `dense_status=gated_skip`, `chunk_count=11`, `vector_count=0`, and missing embedding credentials.
-- The current demo readiness artifact `.planning/phases/01-data-architecture-research/demo-readiness.current.json` records `overall_status=blocked`, `qdrant_status=stale`, `dense_retrieval_ready=false`, and a corpus hash mismatch between the embedding corpus and index manifest.
-- Phase 2 must treat these as infrastructure artifacts, not MVP-ready runtime state.
+- The current embedding index manifest `.planning/phases/01-data-architecture-research/embedding-index-manifest.json` is aligned with the full corpus: it records `status=ready`, `dense_status=ready`, `chunk_count=36321`, `vector_count=36321`, `qdrant_mode=remote`, and `qdrant_url=http://localhost:6333`.
+- The Phase 2 Qdrant server manifest `.planning/phases/02-jury-mvp/qdrant-server-manifest.json` records `status=ready` for collection `phase1_source_cards`.
+- Graph-aware retrieval now has code/tests, but Phase 2 must still treat retrieval readiness as necessary but insufficient: coverage, extraction, final response semantics, and acceptance scoring remain separate gates.
 
 ## Platform Requirements
 
 **Development:**
-- Run from repository root `/Users/a/MAI/matmod` so relative paths in `app/ui/streamlit_app.py`, `app/demo/run_demo.py`, and scripts resolve correctly.
+- Run from repository root `C:\Users\HONOR\Desktop\swe` in the current workspace so relative paths in `app/ui/streamlit_app.py`, `app/demo/run_demo.py`, and scripts resolve correctly.
 - Install dependencies with `python3 -m pip install -r requirements.txt`.
 - Keep `.env` local for Yandex/Qdrant credentials.
 - Keep `.local/` available for generated artifacts and local Qdrant storage.
@@ -133,16 +135,16 @@
 **Production:**
 - Deployment target not detected.
 - Phase 2 jury MVP should continue as a local Streamlit application unless the roadmap changes.
-- Remote Qdrant is supported by env vars in `app/retrieval/embedding_index.py`, but current committed readiness evidence is local/gated/stale.
+- Remote/server Qdrant is supported by env vars in `app/retrieval/embedding_index.py`; current Phase 2 evidence records ready server Qdrant at `http://localhost:6333`.
 
 ## Phase 2 Stack Guidance
 
 - Use `app/llm/yandex_ai_studio.py` for Qwen/Yandex structured-output calls; preserve verified base URL and `Api-Key` auth.
-- Use `app/retrieval/embedding_index.py` and `app/retrieval/hybrid_retrieval.py` for retrieval; keep Qdrant and the prepared corpus contract.
+- Use `app/retrieval/embedding_index.py`, `app/retrieval/hybrid_retrieval.py`, `app/retrieval/graph_store.py`, and `app/retrieval/query_understanding.py` for graph-aware retrieval; keep Qdrant and the prepared corpus contract.
 - Use `app/data/deterministic_tools.py` for numeric extraction/export/visualization artifacts; do not let LLM code invent or read numeric values directly.
-- Use `app/workflow/run_graph.py` and `app/workflow/graph_contract.py` as current workflow seeds, but note they are a narrow Phase 1 graph and not a full LangGraph runtime.
-- LangGraph is a target architecture in `.planning/ARCHITECTURE_STACK.md` and `.planning/phases/02-jury-mvp/02-SEED-CONTEXT.md`, but no `langgraph` dependency is present in `requirements.txt` and no `langgraph` import exists in current application code.
+- Use `app/workflow/service.py`, `app/workflow/graph.py`, `app/workflow/state.py`, and `app/workflow/nodes/*` as the current Phase 2 workflow runtime; `app/workflow/run_graph.py` and `app/workflow/graph_contract.py` remain legacy/smoke compatibility surfaces.
+- LangGraph is now present in `requirements.txt` and imported by `app/workflow/graph.py`.
 
 ---
 
-*Stack analysis: 2026-05-10*
+*Stack analysis: 2026-05-11*

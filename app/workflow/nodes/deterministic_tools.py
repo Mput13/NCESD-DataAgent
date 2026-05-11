@@ -119,16 +119,17 @@ def run_deterministic_tools(
         dataset_artifacts.append(result)
         artifact_ids_produced.append(result.artifact_id)
 
-        # Export dataset with script
-        script = export_dataset_with_script(
-            result,
-            extraction_plan=extraction_plan,
-            output_dir=output_dir,
-            run_id=run_id,
-        )
-        if script:
-            script_artifacts.append(script)
-            artifact_ids_produced.append(script.artifact_id)
+        if (row_count or 0) > 0:
+            # Export dataset with script (skip for empty datasets)
+            script = export_dataset_with_script(
+                result,
+                extraction_plan=extraction_plan,
+                output_dir=output_dir,
+                run_id=run_id,
+            )
+            if script:
+                script_artifacts.append(script)
+                artifact_ids_produced.append(script.artifact_id)
 
     elif isinstance(result, NoDataExplanationArtifact):
         status = "not_found"

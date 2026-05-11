@@ -257,6 +257,111 @@ class TestRunSourceScouts:
         )
         assert called, "Expected CKAN to be called when query contains indicator code"
 
+    def test_preserves_retrieval_paths_subgraph_and_channel_statuses(
+        self, tmp_path: Path
+    ) -> None:
+        from app.workflow.nodes import scouts
+
+        corpus_path = tmp_path / "corpus.jsonl"
+        corpus_path.write_text(
+            json.dumps({
+                "card_id": "fedstat:57319:metadata",
+                "chunk_id": "fedstat-57319-0",
+                "source_family": "fedstat",
+                "embedding_text": (
+                    "title: Валовой внутренний продукт GDP\n"
+                    "source_family: FedStat\n"
+                    "dataset_id: 57319\n"
+                    "geography: Россия\n"
+                ),
+                "provenance_url": "http://fedstat.ru/57319",
+            }, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        manifest_path = tmp_path / "manifest.json"
+        manifest_path.write_text(json.dumps({
+            "status": "gated_skip",
+            "dense_status": "gated_skip",
+            "corpus_artifact_path": str(corpus_path),
+            "collection_name": "phase1_source_cards",
+        }), encoding="utf-8")
+
+        result = scouts.run_source_scouts(
+            "ВВП России",
+            expected_sources=["fedstat"],
+            index_manifest_path=manifest_path,
+        )
+
+        assert result.selected_for_coverage
+        candidate = result.selected_for_coverage[0]
+        assert "lexical" in candidate.retrieval_paths
+        assert "fusion_modes" in candidate.retrieval_provenance
+        assert result.channel_statuses
+        assert result.subgraph_context is None or "nodes" in result.subgraph_context
+
+    def test_dense_gated_with_lexical_candidate_is_partial(self, tmp_path: Path) -> None:
+        from app.workflow.nodes import scouts
+
+        corpus_path = tmp_path / "corpus.jsonl"
+        corpus_path.write_text(
+            json.dumps({
+                "card_id": "fedstat:57319:metadata",
+                "chunk_id": "fedstat-57319-0",
+                "source_family": "fedstat",
+                "embedding_text": "title: ВВП России\nsource_family: FedStat\n",
+            }, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        manifest_path = tmp_path / "manifest.json"
+        manifest_path.write_text(json.dumps({
+            "status": "gated_skip",
+            "dense_status": "gated_skip",
+            "corpus_artifact_path": str(corpus_path),
+            "collection_name": "test",
+        }), encoding="utf-8")
+
+        result = scouts.run_source_scouts(
+            "ВВП России",
+            expected_sources=["fedstat"],
+            index_manifest_path=manifest_path,
+        )
+
+        assert result.selected_for_coverage
+        assert result.retrieval_status == "partial"
+        dense = next(s for s in result.channel_statuses if s.channel == "dense")
+        assert dense.status == "gated"
+
+    def test_ckan_required_adapter_error_visible(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from app.workflow.nodes import scouts
+        from app.data import ckan_adapter
+
+        corpus_path = tmp_path / "corpus.jsonl"
+        corpus_path.write_text("", encoding="utf-8")
+        manifest_path = tmp_path / "manifest.json"
+        manifest_path.write_text(json.dumps({
+            "status": "gated_skip",
+            "dense_status": "gated_skip",
+            "corpus_artifact_path": str(corpus_path),
+            "collection_name": "test",
+        }), encoding="utf-8")
+
+        def boom(query: str, *, rows: int = 5) -> list[dict[str, Any]]:
+            raise RuntimeError("ckan unavailable")
+
+        monkeypatch.setattr(ckan_adapter, "search_ckan_source_cards", boom)
+
+        result = scouts.run_source_scouts(
+            "данные 57319",
+            expected_sources=["ckan"],
+            index_manifest_path=manifest_path,
+        )
+
+        ckan = next(s for s in result.channel_statuses if s.channel == "ckan")
+        assert ckan.status == "error"
+        assert "ckan unavailable" in (ckan.error or "")
+
 
 class TestRunCoveragePreview:
     """run_coverage_preview returns list[CoverageReport] and routes to adapters by source_family."""
@@ -286,6 +391,53 @@ class TestRunCoveragePreview:
             assert isinstance(report, CoverageReport)
             # Every report must include source_specific_risks in evidence
             assert "source_specific_risks" in report.evidence
+
+    def test_consumes_selected_for_coverage_and_records_provenance(self) -> None:
+        from app.workflow.nodes import coverage
+        from app.artifacts.workflow_artifacts import EvidenceBundleArtifact, SourceCandidate
+
+        evidence = EvidenceBundleArtifact(
+            selected_for_coverage=[
+                SourceCandidate(
+                    source_candidate_id="ckan:pkg-1",
+                    source_family="ckan",
+                    card_id="pkg-1",
+                    dataset_id="pkg-1",
+                    title="CKAN Dataset",
+                    formats=["CSV"],
+                    retrieval_paths=["ckan"],
+                    retrieval_provenance={"fusion_modes": ["ckan"]},
+                    adapter_name="extract_ckan_dataset",
+                )
+            ],
+            retrieval_status="ok",
+        )
+
+        reports = coverage.run_coverage_preview(
+            evidence,
+            intent_fields={"periods": ["2020"]},
+            live_llm_required=False,
+        )
+
+        assert reports[0].source_candidate_id == "ckan:pkg-1"
+        assert reports[0].source_family == "ckan"
+        assert reports[0].retrieval_provenance["fusion_modes"] == ["ckan"]
+
+    def test_aggregate_no_covered_slice_when_reports_not_ready(self) -> None:
+        from app.workflow.nodes.coverage import aggregate_coverage_status
+        from app.artifacts.workflow_artifacts import CoverageReport
+
+        reports = [
+            CoverageReport(
+                source_id="fedstat-001",
+                status="ok",
+                extraction_ready=False,
+                extraction_blockers=["missing_period"],
+            ),
+            CoverageReport(source_id="ckan-001", status="gated", gated_reason="llm_coverage_gated"),
+        ]
+
+        assert aggregate_coverage_status(reports, had_sources=True) == "no_covered_slice"
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +529,38 @@ class TestBuildExtractionPlan:
         # Also ensure ALLOWED_OPERATIONS is non-empty and does not include free SQL
         assert "ALLOWED_OPERATIONS" in dir(__import__("app.workflow.nodes.extraction_planner", fromlist=["ALLOWED_OPERATIONS"]))
         assert len(ALLOWED_OPERATIONS) > 0
+
+    def test_refuses_non_ready_reports_and_carries_dispatch_metadata(self) -> None:
+        from app.workflow.nodes.extraction_planner import build_extraction_plan
+        from app.artifacts.workflow_artifacts import IntentFrame, CoverageReport
+
+        intent = IntentFrame(
+            query="ВВП России 2020",
+            category="simple",
+            known_fields={"period": "2020"},
+        )
+        not_ready = CoverageReport(
+            source_id="fedstat-001",
+            source_candidate_id="candidate-fedstat-001",
+            source_family="fedstat",
+            status="ok",
+            extraction_ready=False,
+            extraction_blockers=["period_not_available"],
+        )
+        ready = CoverageReport(
+            source_id="NY.GDP.MKTP.CD",
+            source_candidate_id="candidate-wb-gdp",
+            source_family="world_bank",
+            status="ok",
+            extraction_ready=True,
+            evidence={"row_count": 10},
+        )
+
+        plan = build_extraction_plan(intent, [not_ready, ready], live_llm_required=False)
+
+        assert plan.status == "ok"
+        assert plan.source_id == "NY.GDP.MKTP.CD"
+        assert plan.source_family == "world_bank"
+        assert plan.adapter_name == "extract_world_bank_dataset"
+        assert plan.source_candidate_ids == ["candidate-wb-gdp"]
+        assert plan.coverage_report_ids == ["candidate-wb-gdp"]

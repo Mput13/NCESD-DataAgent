@@ -21,7 +21,6 @@ Routing:
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -205,27 +204,8 @@ def _node_research_designer(state: Phase2State) -> Phase2State:
         component_statuses["research_designer"] = "skipped_no_intent"
         return {**state, "trace_events": trace_events, "component_statuses": component_statuses}
 
-    # Load matrix hint if available
-    matrix_hint: dict[str, Any] | None = None
-    matrix_path = Path(".planning/phases/02-jury-mvp/golden-coverage-matrix.json")
-    if matrix_path.exists() and state.get("_case_id"):
-        try:
-            matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
-            case_id = str(state.get("_case_id", ""))
-            for case in matrix_data.get("cases", []):
-                if case.get("case_id") == case_id:
-                    matrix_hint = {
-                        "source_family": case.get("source_family"),
-                        "source_id": case.get("source_id"),
-                        "filters": case.get("filters"),
-                        "expected_terminal_outcome": case.get("expected_terminal_outcome"),
-                    }
-                    break
-        except Exception:
-            pass
-
     try:
-        design = design_research(intent, live_llm_required=live_llm, matrix_hint=matrix_hint)
+        design = design_research(intent, live_llm_required=live_llm)
         status = "ok"
     except Exception as exc:
         # LLM unavailable — gate this run

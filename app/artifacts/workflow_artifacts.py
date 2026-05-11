@@ -464,6 +464,26 @@ class WorkflowResponse(BaseModel):
         return self
 
 
+class FinalOutcomeDecision(BaseModel):
+    """Internal post-critic routing decision before building WorkflowResponse.
+
+    Separates true 'not_found' (evidence shows absence) from system errors
+    that should not be presented to the user as data absence.
+    """
+
+    terminal_outcome: TerminalOutcome
+    dataset_ids: list[str] = Field(default_factory=list)
+    coverage_report_ids: list[str] = Field(default_factory=list)
+    extraction_plan_id: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    blocking_failures: list[str] = Field(default_factory=list)
+    repair_route: str | None = None
+    is_system_error: bool = False
+    system_error_detail: str | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class TraceEvent(BaseModel):
     """Canonical workflow-owned trace event consumed by graph and UI adapters."""
 

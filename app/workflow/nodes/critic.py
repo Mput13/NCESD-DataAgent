@@ -28,12 +28,21 @@ from app.artifacts.workflow_artifacts import (
 # ---------------------------------------------------------------------------
 
 try:
-    from pydantic import BaseModel
+    from pydantic import BaseModel, field_validator
 
     class _CritiqueSchema(BaseModel):
         verdict: str = "pass"
         warnings: list[str] = []
         repair_plan: list[str] = []
+
+        @field_validator("warnings", "repair_plan", mode="before")
+        @classmethod
+        def wrap_string_in_list(cls, v: Any) -> list[str]:
+            if v is None:
+                return []
+            if isinstance(v, str):
+                return [v] if v else []
+            return list(v)
 
 except ImportError:
     _CritiqueSchema = None  # type: ignore[assignment,misc]

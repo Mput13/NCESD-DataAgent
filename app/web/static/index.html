@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/styles.css?v=12" />
 </head>
 <body>
   <header class="app-header">
@@ -31,21 +31,12 @@
 
     <div class="run-meta">
       <span class="run-id">new run</span>
-      <span class="run-sep">·</span>
-      <span class="run-stage">Pipeline ready</span>
     </div>
 
     <div class="header-actions">
-      <button class="btn-ghost" title="Новый анализ" type="button">
+      <button class="btn-ghost" id="newAnalysisBtn" title="Новый анализ" type="button">
         <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         New analysis
-      </button>
-      <button class="icon-btn" title="Уведомления" aria-label="Notifications" type="button">
-        <svg viewBox="0 0 20 20" width="16" height="16"><path d="M5 8a5 5 0 1 1 10 0v3l1.5 2.5h-13L5 11V8Zm3 7a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="dot"></span>
-      </button>
-      <button class="icon-btn" title="Помощь" aria-label="Help" type="button">
-        <svg viewBox="0 0 20 20" width="16" height="16"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.8 7.5a2.2 2.2 0 1 1 3.7 1.6c-.9.6-1.5 1-1.5 2M10 14h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>
       </button>
       <div class="user-pill"><span class="avatar-sm">EK</span></div>
     </div>
@@ -57,12 +48,10 @@
         <div class="chat-title">
           <span class="dot-status"></span>
           <strong>Экономический DataAgent</strong>
-          <span class="chat-meta">Qdrant · DuckDB · trusted sources · Phase 2</span>
         </div>
         <div class="chat-tools">
-          <button class="chip-btn" type="button">Share</button>
-          <button class="chip-btn" type="button">Export</button>
-          <button class="chip-btn ghost" type="button">...</button>
+          <button class="chip-btn" id="shareBtn" type="button">Share</button>
+          <button class="chip-btn" id="exportBtn" type="button">Export</button>
         </div>
       </div>
 
@@ -72,11 +61,8 @@
 
       <div class="composer">
         <div class="composer-inner">
-          <button class="composer-icon" title="Прикрепить" type="button">
-            <svg viewBox="0 0 20 20" width="16" height="16"><path d="M14 7l-5.5 5.5a2.5 2.5 0 0 1-3.5-3.5L10 4a4 4 0 0 1 5.5 5.5L9 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          </button>
           <textarea id="composerInput" rows="1" placeholder="Задайте экономический вопрос, например: Какой ВВП России в 2024 году?"></textarea>
-          <div class="composer-meta"><span class="kbd">Ctrl</span><span class="kbd">Enter</span></div>
+          <div class="composer-meta"><span class="kbd">Enter</span></div>
           <button class="composer-send" id="sendBtn" aria-label="Отправить" type="button">
             <svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 10l14-6-6 14-2-6-6-2Z" fill="currentColor"/></svg>
           </button>
@@ -99,9 +85,6 @@
           </div>
           <div class="trace-sub" id="artifactsSub">0 artifacts</div>
         </div>
-        <button class="icon-btn" title="Свернуть" aria-label="Collapse" type="button">
-          <svg viewBox="0 0 16 16" width="13" height="13" fill="none"><path d="M11 3l-5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        </button>
       </div>
 
       <div class="art-filters">
@@ -119,19 +102,11 @@
         </div>
       </div>
 
-      <div class="trace-foot">
-        <div class="foot-row"><span>Run</span><strong>live</strong></div>
-        <div class="foot-row"><span>Storage</span><strong>0 KB</strong></div>
-        <button class="trace-cancel" id="exportAll" type="button">
-          <svg viewBox="0 0 16 16" width="12" height="12" fill="none"><path d="M8 2v8m0 0l3-3m-3 3l-3-3M3 13h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Экспортировать все
-        </button>
-      </div>
     </aside>
   </main>
 
-  <script src="/js/data.js"></script>
-  <script src="/js/charts.js"></script>
-  <script src="/js/app.js"></script>
+  <script src="/js/data.js?v=12"></script>
+  <script src="/js/charts.js?v=12"></script>
+  <script src="/js/app.js?v=12"></script>
 </body>
 </html>

@@ -525,10 +525,13 @@ function datasetPreviewCard(dataset) {
     record.unit || "",
     (record.quality_flags || []).join(", "),
   ]);
+  const downloadBtn = dataset.csv_path
+    ? `<a href="/api/download?path=${encodeURIComponent(dataset.csv_path)}" download style="display:inline-block;margin-top:8px;padding:4px 12px;background:#2563eb;color:#fff;border-radius:4px;text-decoration:none;font-size:12px;">⬇ Скачать CSV (${dataset.rows} строк)</a>`
+    : "";
   return card(
     "Строки датасета",
     dataset.artifact_id || dataset.source_id || "",
-    table(["География", "Период", "Значение", "Ед.", "Качество"], rows),
+    table(["География", "Период", "Значение", "Ед.", "Качество"], rows) + downloadBtn,
     "table",
   );
 }

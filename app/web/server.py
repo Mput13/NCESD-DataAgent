@@ -39,9 +39,38 @@ class DataAgentWebHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/health":
             self._write_json({"status": "ok"})
             return
+        if parsed.path == "/api/download":
+            self._handle_download(parsed)
+            return
         if parsed.path == "/":
             self.path = "/index.html"
         super().do_GET()
+
+    def _handle_download(self, parsed: Any) -> None:
+        from urllib.parse import parse_qs
+        qs = parse_qs(parsed.query)
+        file_path = qs.get("path", [None])[0]
+        if not file_path:
+            self._write_json({"error": "missing path"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        p = Path(file_path)
+        # Safety: only allow files inside project directory
+        try:
+            p.resolve().relative_to(Path(".").resolve())
+        except ValueError:
+            self._write_json({"error": "forbidden"}, status=HTTPStatus.FORBIDDEN)
+            return
+        if not p.exists():
+            self._write_json({"error": "not found"}, status=HTTPStatus.NOT_FOUND)
+            return
+        data = p.read_bytes()
+        filename = p.name
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/csv; charset=utf-8" if filename.endswith(".csv") else "application/octet-stream")
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)

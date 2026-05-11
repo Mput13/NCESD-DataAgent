@@ -106,9 +106,18 @@ def run_deterministic_tools(
     status = "ok"
 
     if isinstance(result, DatasetArtifact):
+        row_count = result.rows
+
+        # Mark zero-row datasets explicitly — they look successful but contain no data
+        if (row_count or 0) == 0:
+            result = result.model_copy(update={
+                "status": "gated",
+                "quality_flags": list(result.quality_flags) + ["empty_slice"],
+            })
+            status = "empty_slice"
+
         dataset_artifacts.append(result)
         artifact_ids_produced.append(result.artifact_id)
-        row_count = result.rows
 
         # Export dataset with script
         script = export_dataset_with_script(
@@ -315,9 +324,20 @@ def extract_world_bank_dataset(
         "resource_id": extraction_plan.source_id or "wb_unknown",
     }
     try:
+        # WB adapter expects countries/periods/indicator_id separately, not a filters dict
+        countries: list[str] = _resolve_wb_countries(filters)
+        periods: list[str] = _resolve_wb_periods(filters)
+        indicator_id: str = (
+            filters.get("indicator_id")
+            or filters.get("indicator_name")
+            or extraction_plan.source_id
+            or "unknown"
+        )
         return _extract(
             source_card=source_card,
-            filters=filters,
+            countries=countries,
+            periods=periods,
+            indicator_id=indicator_id,
             output_dir=output_dir,
             artifact_id=artifact_id,
         )
@@ -369,6 +389,87 @@ def extract_ckan_dataset(
             alternatives=[],
             limitations=[f"CKAN extraction failed: {exc}"],
         )
+
+# ---------------------------------------------------------------------------
+# World Bank filter helpers
+# ---------------------------------------------------------------------------
+
+# Group → ISO3 expansion used before passing to WB adapter's _resolve_countries.
+# The adapter resolves "RUS" → "RUS" correctly; full names like "Brazil" → "BRAZIL" (wrong).
+_WB_GROUP_TO_ISO3: dict[str, list[str]] = {
+    "brics": ["BRA", "RUS", "IND", "CHN", "ZAF"],
+    "брикс": ["BRA", "RUS", "IND", "CHN", "ZAF"],
+    "eaeu": ["ARM", "BLR", "KAZ", "KGZ", "RUS"],
+    "еаэс": ["ARM", "BLR", "KAZ", "KGZ", "RUS"],
+}
+
+# Single-country aliases → ISO3
+_WB_COUNTRY_TO_ISO3: dict[str, str] = {
+    "russia": "RUS",
+    "россия": "RUS",
+    "russian federation": "RUS",
+    "china": "CHN",
+    "китай": "CHN",
+    "kazakhstan": "KAZ",
+    "казахстан": "KAZ",
+    "brazil": "BRA",
+    "бразилия": "BRA",
+    "india": "IND",
+    "индия": "IND",
+    "south africa": "ZAF",
+    "южная африка": "ZAF",
+    "germany": "DEU",
+    "германия": "DEU",
+    "usa": "USA",
+    "united states": "USA",
+    "сша": "USA",
+}
+
+
+def _resolve_wb_countries(filters: dict[str, Any]) -> list[str]:
+    """Resolve geography/countries filter values to ISO3 codes for the WB adapter."""
+    raw: list[str] = list(filters.get("countries") or [])
+    geo = filters.get("geography", "")
+    if geo and not raw:
+        raw = [geo]
+
+    resolved: list[str] = []
+    for name in raw:
+        lower = name.strip().lower()
+        if lower in _WB_GROUP_TO_ISO3:
+            for code in _WB_GROUP_TO_ISO3[lower]:
+                if code not in resolved:
+                    resolved.append(code)
+        elif lower in _WB_COUNTRY_TO_ISO3:
+            code = _WB_COUNTRY_TO_ISO3[lower]
+            if code not in resolved:
+                resolved.append(code)
+        else:
+            # Pass through as-is; WB adapter will uppercase it
+            resolved.append(name)
+    return resolved
+
+
+def _resolve_wb_periods(filters: dict[str, Any]) -> list[str]:
+    """Resolve period/periods filter to a list of year strings.
+
+    Handles: list of years, single year string, 'YYYY-YYYY' range.
+    """
+    import re
+
+    raw_list: list[str] = [str(p) for p in (filters.get("periods") or [])]
+    if not raw_list and filters.get("period"):
+        raw_list = [str(filters["period"])]
+
+    result: list[str] = []
+    for raw in raw_list:
+        m = re.fullmatch(r"(\d{4})\s*[-–]\s*(\d{4})", raw.strip())
+        if m:
+            start, end = int(m.group(1)), int(m.group(2))
+            result.extend(str(y) for y in range(start, end + 1))
+        else:
+            result.append(raw)
+    return result
 
 
 # ---------------------------------------------------------------------------

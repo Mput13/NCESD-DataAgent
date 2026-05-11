@@ -91,6 +91,11 @@ class CoverageReport(BaseModel):
     frequency: str | None = None
     evidence: dict[str, Any] = Field(default_factory=dict)
     gated_reason: str | None = None
+    # Slice-level validation fields (Plan B)
+    matched_geographies: list[str] = Field(default_factory=list)
+    matched_periods: list[str] = Field(default_factory=list)
+    requested_slice_rows: int = 0
+    extraction_ready: bool = False
 
     model_config = ConfigDict(extra="forbid")
 

@@ -1160,3 +1160,16 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .trace-pane {
   background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
 }
+
+.art-dl-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+}
+.art-dl-btn:hover { background: #1d4ed8; }

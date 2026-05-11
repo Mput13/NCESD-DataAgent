@@ -692,7 +692,18 @@ function paintArtifacts() {
   }
   artListEl.innerHTML = visible
     .map(
-      (artifact) => `
+      (artifact) => {
+        const csvPath = artifact.dataset?.csv_path;
+        const scriptPath = artifact.script?.script_path;
+        const dlHref = csvPath
+          ? `/api/download?path=${encodeURIComponent(csvPath)}`
+          : scriptPath
+          ? `/api/download?path=${encodeURIComponent(scriptPath)}`
+          : null;
+        const dlBtn = dlHref
+          ? `<a href="${dlHref}" download class="art-dl-btn">⬇ Скачать</a>`
+          : "";
+        return `
         <div class="art-card fade-in">
           <div class="art-card-thumb ${artifact.kind}">
             <span class="badge-pin">${escapeHtml(artifact.kindLabel)}</span>
@@ -701,9 +712,11 @@ function paintArtifacts() {
           <div class="art-card-body">
             <div class="art-card-name">${escapeHtml(artifact.name)}</div>
             <div class="art-card-meta"><span>${escapeHtml(artifact.size)}</span><span class="dot-sep"></span><span>${escapeHtml(artifact.format)}</span></div>
+            ${dlBtn}
           </div>
           <div class="art-card-foot"><span class="art-card-time">${escapeHtml(artifact.time)}</span></div>
-        </div>`,
+        </div>`;
+      }
     )
     .join("");
 }

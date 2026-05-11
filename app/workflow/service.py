@@ -17,14 +17,20 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from app.artifacts.workflow_artifacts import FeedbackArtifact, TraceEvent, WorkflowResponse, utc_now_iso
+from app.artifacts.workflow_artifacts import (
+    FeedbackArtifact,
+    NoDataExplanationArtifact,
+    TraceEvent,
+    WorkflowResponse,
+    utc_now_iso,
+)
 from app.workflow.state import Phase2State, new_run_id
 
 
 class WorkflowRunConfig(BaseModel):
     """Runtime paths and live-call gates for the shared Phase 2 workflow API."""
 
-    goldens_path: Path
+    goldens_path: Path = Path()
     phase1_index_manifest: Path
     phase1_source_catalog_manifest: Path
     artifact_dir: Path
@@ -37,7 +43,6 @@ class WorkflowRunConfig(BaseModel):
     @classmethod
     def default(cls) -> WorkflowRunConfig:
         return cls(
-            goldens_path=Path(".planning/phases/01-data-architecture-research/golden-cases.yaml"),
             phase1_index_manifest=Path(
                 ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
             ),
@@ -88,7 +93,6 @@ def run_user_query_to_pending_finalization(
         "_live_embeddings_required": config.live_embeddings_required,  # type: ignore[typeddict-unknown-key]
         "_artifact_dir": str(config.artifact_dir),  # type: ignore[typeddict-unknown-key]
         "_index_manifest_path": str(config.phase1_index_manifest),  # type: ignore[typeddict-unknown-key]
-        "_case_id": config.case_id,  # type: ignore[typeddict-unknown-key]
     }
 
     # Build and invoke the graph
@@ -188,6 +192,30 @@ def _finalize_state(
     dataset_artifacts = list(state.get("dataset_artifacts") or [])
     intent = state.get("intent")
 
+    if not live_llm:
+        trace_events = list(state.get("trace_events") or [])
+        trace_events.append(
+            TraceEvent(
+                run_id=str(state.get("run_id") or "unknown"),
+                state="finalization",
+                agent="WorkflowService",
+                decision="gated_live_llm_required",
+                warnings=["live_llm_required=False is not a product execution mode"],
+            )
+        )
+        component_statuses = dict(state.get("component_statuses") or {})
+        component_statuses["service"] = "gated_live_llm_required"
+        return WorkflowResponse(
+            run_id=str(state.get("run_id") or "unknown"),
+            final_outcome="needs_clarification",
+            message="Live LLM execution is required for the workflow service.",
+            clarification_questions=[
+                "Система временно недоступна. Повторите запрос позднее."
+            ],
+            trace_events=trace_events,
+            component_statuses=component_statuses,
+        )
+
     # Step 2: Methodology Critic
     try:
         critique = run_methodology_critic(state, live_llm_required=live_llm)
@@ -230,7 +258,6 @@ def _finalize_state(
         )
     except Exception as exc:
         # Fallback to a safe not_found response if narrator fails
-        from app.artifacts.workflow_artifacts import NoDataExplanationArtifact
         from uuid import uuid4
         response = WorkflowResponse(
             run_id=str(state.get("run_id") or "unknown"),
@@ -279,6 +306,8 @@ def _write_pending_clarification_state(
         from app.artifacts.workflow_artifacts import utc_now_iso
         pending_data = {
             "run_id": run_id,
+            "original_query_text": str(state.get("query") or ""),
+            "clarification_turns": [],
             "state": serializable_state,
             "final_outcome": response.final_outcome,
             "clarification_questions": response.clarification_questions,
@@ -300,22 +329,58 @@ def _write_pending_clarification_state(
         pass  # Non-fatal
 
 
+def _clarification_state_error_response(
+    *,
+    run_id: str,
+    reason: str,
+    detail: str,
+    clarification_answer: str,
+    previous_outcome: str | None = None,
+) -> WorkflowResponse:
+    """Return an explicit public response for an invalid clarification resume."""
+    status = f"clarification_state_{reason}"
+    trace = TraceEvent(
+        run_id=run_id,
+        state="clarification",
+        agent="Clarification Manager",
+        input_summary=clarification_answer[:200],
+        decision=status,
+        warnings=[detail],
+        payload={
+            "run_id": run_id,
+            "clarification_answer": clarification_answer[:200],
+            "previous_outcome": previous_outcome,
+        },
+    )
+    evidence = NoDataExplanationArtifact(
+        artifact_id=f"not-found-{status}",
+        checked_sources=[{"run_id": run_id, "artifact": "pending-clarification.json"}],
+        rejected_sources=[{"run_id": run_id, "reason": status}],
+        rejection_reasons=[detail],
+        search_strategy=status,
+        limitations=["Clarification continuation cannot be resumed without a valid pending state."],
+    )
+    return WorkflowResponse(
+        run_id=run_id,
+        final_outcome="needs_clarification",
+        message="Не удалось продолжить уточнение из сохраненного состояния workflow.",
+        clarification_questions=["Повторите исходный запрос, чтобы начать новый запуск."],
+        trace_events=[trace],
+        not_found_evidence=evidence,
+        component_statuses={"clarification": status},
+    )
+
+
 def continue_user_query(
     run_id: str,
     clarification_answer: str,
     *,
     run_config: WorkflowRunConfig | None = None,
 ) -> WorkflowResponse:
-    """Load a pending clarification state and rerun with merged answer.
+    """Load a pending clarification state and continue with the user's answer.
 
-    Loads the pending-clarification.json from the run's artifact directory.
-    Merges clarification_answer into IntentFrame known_fields/missing_fields.
-    Appends a trace event.
-    Reruns from coverage/extraction when possible (without restarting source scouts
-    unless the clarification changes source family or indicator).
-
-    Returns a new complete WorkflowResponse (may change from needs_clarification
-    to passed or not_found).
+    Missing or corrupt pending state is fail-closed: this function never turns a
+    clarification answer into a fresh standalone query.
     """
     config = run_config or WorkflowRunConfig.default()
 
@@ -324,13 +389,22 @@ def continue_user_query(
     pending_file = artifact_dir / "pending-clarification.json"
 
     if not pending_file.exists():
-        # If no pending state found, try to run a fresh query using the clarification as query
-        return run_user_query(clarification_answer, run_config=config)
+        return _clarification_state_error_response(
+            run_id=run_id,
+            reason="missing",
+            detail=f"pending clarification file is missing: {pending_file}",
+            clarification_answer=clarification_answer,
+        )
 
     try:
         pending_data = json.loads(pending_file.read_text(encoding="utf-8"))
-    except Exception:
-        return run_user_query(clarification_answer, run_config=config)
+    except Exception as exc:
+        return _clarification_state_error_response(
+            run_id=run_id,
+            reason="corrupt",
+            detail=f"pending clarification file is corrupt: {exc}",
+            clarification_answer=clarification_answer,
+        )
 
     saved_state = pending_data.get("state") or {}
     previous_outcome = pending_data.get("final_outcome", "needs_clarification")
@@ -361,31 +435,44 @@ def continue_user_query(
     intent_raw = saved_state.get("intent")
     intent = _safe_pydantic(IntentFrame, intent_raw)
 
+    original_query = str(
+        pending_data.get("original_query_text")
+        or saved_state.get("query")
+        or ""
+    )
+
     # Merge clarification answer into intent via LLM re-analysis
     # Per ARCHITECTURE_STACK.md: clarification parsing must go through Intent Analyst,
-    # not keyword matching. Re-run analyze_intent on the combined query.
+    # not keyword matching. Preserve original query and answer as separate fields.
     from app.workflow.state import analyze_intent as _analyze_intent
-    combined_query = (
-        f"{saved_state.get('query', '')} | Уточнение пользователя: {clarification_answer}"
+    reanalysis_prompt = (
+        f"Исходный запрос: {original_query}\n"
+        f"Уточнение пользователя: {clarification_answer}"
     )
     try:
-        intent = _analyze_intent(combined_query, live_llm_required=config.live_llm_required)
-    except Exception:
-        # LLM unavailable — merge clarification manually and continue
-        if intent is not None:
-            merged_known = dict(intent.known_fields or {})
-            merged_known["clarification_answer"] = clarification_answer
-            updated_missing = [f for f in (intent.missing_fields or [])
-                               if f not in merged_known]
-            intent = IntentFrame(
-                query=combined_query,
-                category=intent.category,
-                known_fields=merged_known,
-                missing_fields=updated_missing,
-                needs_clarification=bool(updated_missing),
-                source_preferences=list(intent.source_preferences or []),
-                open_reasoning=list(intent.open_reasoning or []) + ["clarification_merged_no_llm"],
-            )
+        analyzed_intent = _analyze_intent(
+            reanalysis_prompt,
+            live_llm_required=config.live_llm_required,
+        )
+        intent = IntentFrame(
+            query=original_query,
+            category=analyzed_intent.category,
+            known_fields=dict(analyzed_intent.known_fields or {}),
+            missing_fields=list(analyzed_intent.missing_fields or []),
+            needs_clarification=analyzed_intent.needs_clarification,
+            source_preferences=list(analyzed_intent.source_preferences or []),
+            open_reasoning=list(analyzed_intent.open_reasoning or []) + [
+                "clarification_reanalyzed_by_llm"
+            ],
+        )
+    except Exception as exc:
+        return _clarification_state_error_response(
+            run_id=run_id,
+            reason="reanalysis_gated",
+            detail=f"clarification LLM re-analysis failed: {exc}",
+            clarification_answer=clarification_answer,
+            previous_outcome=str(previous_outcome),
+        )
 
     # Reconstruct trace events
     trace_events_raw = saved_state.get("trace_events") or []
@@ -403,11 +490,12 @@ def continue_user_query(
         TraceEvent(
             run_id=new_run_id_val,
             state="clarification",
-            agent="Supervisor",
+            agent="Clarification Manager",
             input_summary=clarification_answer[:200],
             decision="clarification_merged",
             payload={
                 "original_run_id": run_id,
+                "original_query_text": original_query,
                 "clarification_answer": clarification_answer[:200],
                 "previous_outcome": previous_outcome,
             },
@@ -451,7 +539,7 @@ def continue_user_query(
     # Build merged state for re-finalization
     merged_state: Phase2State = {
         "run_id": new_run_id_val,
-        "query": saved_state.get("query", clarification_answer),
+        "query": original_query,
         "intent": intent,
         "research_design": None,
         "evidence": evidence,
@@ -468,7 +556,6 @@ def continue_user_query(
         "_live_embeddings_required": config.live_embeddings_required,  # type: ignore[typeddict-unknown-key]
         "_artifact_dir": str(config.artifact_dir),  # type: ignore[typeddict-unknown-key]
         "_index_manifest_path": str(config.phase1_index_manifest),  # type: ignore[typeddict-unknown-key]
-        "_case_id": None,  # type: ignore[typeddict-unknown-key]
     }
 
     # Check if we can re-finalize with existing data
@@ -481,14 +568,55 @@ def continue_user_query(
         # Re-finalize with merged intent without rerunning extraction
         response = _finalize_state(merged_state, config=config)
     else:
-        # Need to re-run from scratch with merged intent
-        response = run_user_query(
-            f"{saved_state.get('query', '')} | Уточнение: {clarification_answer}",
-            run_config=config,
+        trace_events.append(
+            TraceEvent(
+                run_id=new_run_id_val,
+                state="clarification",
+                agent="Clarification Manager",
+                decision="clarification_resume_unavailable",
+                warnings=["No reusable dataset/coverage state exists for continuation."],
+                payload={
+                    "original_run_id": run_id,
+                    "original_query_text": original_query,
+                    "clarification_answer": clarification_answer[:200],
+                },
+            )
+        )
+        response = WorkflowResponse(
+            run_id=new_run_id_val,
+            final_outcome="needs_clarification",
+            message="Уточнение сохранено, но продолжить этот запуск без валидного промежуточного состояния нельзя.",
+            clarification_questions=["Повторите исходный запрос, чтобы начать новый запуск."],
+            trace_events=trace_events,
+            component_statuses={
+                **dict(merged_state.get("component_statuses") or {}),
+                "clarification": "clarification_resume_unavailable",
+            },
         )
 
     # Persist updated state
     _write_pending_clarification_state(merged_state, response, config=config)
+    try:
+        updated_pending_file = Path(str(config.artifact_dir)) / new_run_id_val / "pending-clarification.json"
+        updated_pending = json.loads(updated_pending_file.read_text(encoding="utf-8"))
+        prior_turns = list(pending_data.get("clarification_turns") or [])
+        prior_turns.append(
+            {
+                "original_run_id": run_id,
+                "continued_run_id": new_run_id_val,
+                "original_query_text": original_query,
+                "clarification_answer": clarification_answer,
+                "previous_outcome": previous_outcome,
+                "created_at": utc_now_iso(),
+            }
+        )
+        updated_pending["clarification_turns"] = prior_turns
+        updated_pending_file.write_text(
+            json.dumps(updated_pending, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
 
     return response
 

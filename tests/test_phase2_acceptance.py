@@ -93,6 +93,75 @@ def test_acceptance_runner_allows_passed_outcome(tmp_path: Path) -> None:
     assert isinstance(reasons, list)
 
 
+def test_acceptance_runner_rejects_not_found_for_expected_passed() -> None:
+    from scripts.run_phase2_acceptance import _score_response
+
+    result = _score_response(
+        {
+            "run_id": "phase2-test",
+            "final_outcome": "not_found",
+            "selected_sources": [],
+            "dataset_artifacts": [],
+            "script_artifacts": [],
+            "trace_events": [],
+            "not_found_evidence": {
+                "artifact_id": "nf",
+                "checked_sources": [{"source_id": "world_bank"}],
+                "rejected_sources": [{"source_id": "world_bank"}],
+                "rejection_reasons": ["missing indicator"],
+                "search_strategy": "test",
+            },
+        },
+        {"case_id": "GC-X", "expected_terminal_outcome": "passed"},
+    )
+
+    assert "outcome_mismatch:expected=passed,got=not_found" in result["unacceptable_reasons"]
+
+
+def test_acceptance_runner_requires_not_found_evidence_fields() -> None:
+    from scripts.run_phase2_acceptance import _score_response
+
+    result = _score_response(
+        {
+            "run_id": "phase2-test",
+            "final_outcome": "not_found",
+            "not_found_evidence": {
+                "artifact_id": "nf",
+                "checked_sources": [],
+                "rejected_sources": [],
+                "rejection_reasons": [],
+                "search_strategy": "empty",
+            },
+        },
+        {"case_id": "GC-X", "expected_terminal_outcome": "not_found"},
+    )
+
+    assert "not_found_missing_checked_sources" in result["unacceptable_reasons"]
+    assert "not_found_missing_rejected_sources" in result["unacceptable_reasons"]
+    assert "not_found_missing_rejection_reasons" in result["unacceptable_reasons"]
+
+
+def test_acceptance_runner_requires_passed_evidence() -> None:
+    from scripts.run_phase2_acceptance import _score_response
+
+    result = _score_response(
+        {
+            "run_id": "phase2-test",
+            "final_outcome": "passed",
+            "selected_sources": [],
+            "dataset_artifacts": [],
+            "script_artifacts": [],
+            "trace_events": [],
+        },
+        {"case_id": "GC-X", "expected_terminal_outcome": "passed"},
+    )
+
+    assert "passed_expected_missing_selected_sources" in result["unacceptable_reasons"]
+    assert "passed_expected_missing_dataset_artifacts" in result["unacceptable_reasons"]
+    assert "passed_expected_missing_script_artifacts" in result["unacceptable_reasons"]
+    assert "passed_expected_missing_trace_events" in result["unacceptable_reasons"]
+
+
 def test_acceptance_runner_detects_test_only_fallbacks(tmp_path: Path) -> None:
     """When allow_test_fallbacks=False, test_only_intent_fallback must be caught."""
     from scripts.run_phase2_acceptance import _detect_test_only_fallbacks

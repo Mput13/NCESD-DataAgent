@@ -85,7 +85,7 @@ def analyze_intent(
     it is not supported.
     """
     if not live_llm_required:
-        raise RuntimeError("Intent analysis requires live Yandex AI Studio / Qwen.")
+        raise RuntimeError("Intent analysis requires a live LLM call via Yandex AI Studio / Qwen.")
     return _analyze_intent_live(query)
 
 
@@ -171,23 +171,14 @@ def design_research(
     intent: IntentFrame,
     *,
     live_llm_required: bool = True,
-    matrix_hint: dict[str, Any] | None = None,
 ) -> ResearchDesignArtifact:
-    """Design a research plan from intent using Qwen structured output.
-
-    matrix_hint: optional dict from golden-coverage-matrix.json providing
-    source_family, source_id, filters, and expected terminal outcome.
-    """
+    """Design a research plan from intent using Qwen structured output."""
     if not live_llm_required:
-        raise RuntimeError("Research design requires live Yandex AI Studio / Qwen.")
-    return _design_research_live(intent, matrix_hint=matrix_hint)
+        raise RuntimeError("Research design requires a live LLM call via Yandex AI Studio / Qwen.")
+    return _design_research_live(intent)
 
 
-def _design_research_live(
-    intent: IntentFrame,
-    *,
-    matrix_hint: dict[str, Any] | None = None,
-) -> ResearchDesignArtifact:
+def _design_research_live(intent: IntentFrame) -> ResearchDesignArtifact:
     """Call Yandex AI Studio Qwen to design the research structure."""
     from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
 
@@ -199,13 +190,6 @@ def _design_research_live(
         )
 
     client = YandexAIStudioClient()
-    hint_text = ""
-    if matrix_hint:
-        hint_text = (
-            f"\nПодсказка из матрицы покрытия: источник={matrix_hint.get('source_family')}, "
-            f"id={matrix_hint.get('source_id')}, фильтры={matrix_hint.get('filters')}."
-        )
-
     system_prompt = (
         "Ты — аналитик-исследователь данных. "
         "Спроектируй структуру исследования на основе намерения пользователя. "
@@ -216,7 +200,7 @@ def _design_research_live(
         f"Категория: {intent.category}\n"
         f"Известные поля: {intent.known_fields}\n"
         f"Предпочтительные источники: {intent.source_preferences}\n"
-        f"{hint_text}\n\n"
+        "\n"
         "Спроектируй исследование:\n"
         "- hypotheses: список гипотез исследования\n"
         "- dimensions: измерения (география, период, индикатор)\n"

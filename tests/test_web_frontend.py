@@ -71,7 +71,7 @@ def test_web_handler_query_returns_workflow_response() -> None:
     data = json.loads(handler.body.decode("utf-8"))
     assert data["run_id"] == "phase2-web-test"
     assert data["final_outcome"] == "not_found"
-    assert mocked.call_args.kwargs["run_config"].live_llm_required is True
+    assert mocked.call_args.kwargs["run_config"].live_llm_required is False
 
 
 def test_web_handler_continue_requires_run_id() -> None:

@@ -133,7 +133,10 @@ def build_workflow_response(
     For 'not_found': includes NoDataExplanationArtifact from source/rejection evidence.
     """
     if not live_llm_required:
-        raise RuntimeError("Narrator requires live Yandex AI Studio / Qwen.")
+        raise RuntimeError(
+            "Narrator requires a live LLM call (Yandex AI Studio / Qwen). "
+            "Set live_llm_required=True and configure credentials."
+        )
     return _build_response_live(
         state,
         final_outcome=final_outcome,
@@ -274,30 +277,40 @@ def _build_response_live(
         )
 
     # Enforce: all numbers in message must appear in dataset records or provenance
-    # Per ARCHITECTURE_STACK.md and D-30: unsupported numeric claims are hard failures
+    # Per ARCHITECTURE_STACK.md and D-30: unsupported numeric claims are output-stage failures,
+    # NOT evidence of data absence. They must be reported as system/output errors.
     if final_outcome == "passed" and result.message:
         ok_datasets = [d for d in dataset_artifacts if d.status == "ok"]
         try:
             assert_message_numbers_are_supported(result.message, ok_datasets)
         except ValueError as num_err:
-            # Downgrade to not_found — narrator produced unsupported numeric claim
-            final_outcome = "not_found"
+            # Output-stage failure: narrator produced unsupported numeric claim.
+            # This is an output error, not data absence. Keep final_outcome as passed
+            # but strip the offending message and record the output failure.
+            # The data was found — only the narrator's narration failed.
             no_data_evidence = NoDataExplanationArtifact(
-                artifact_id=f"not-found-numeric-{uuid4().hex[:8]}",
+                artifact_id=f"output-error-numeric-{uuid4().hex[:8]}",
                 checked_sources=selected_sources[:10],
                 rejected_sources=rejected_sources[:10],
-                rejection_reasons=[f"unsupported_numeric_claim: {num_err}"],
+                rejection_reasons=[f"narrator_output_failure:unsupported_numeric_claim: {num_err}"],
                 search_strategy="numeric_assertion_guard",
             )
             result = type(result)(  # rebuild with safe message
                 **{
                     **result.model_dump(),
                     "message": (
-                        "Данные найдены, но ответ содержал числа не из источников. "
-                        "Пожалуйста, уточните запрос для получения проверяемых данных."
+                        "Данные найдены в источниках, но при формировании ответа возникла "
+                        "ошибка: числовые значения не подтверждены источниками. "
+                        "Загрузите скрипт для получения исходных данных."
                     ),
                 }
             )
+            # Pass the output error detail into component_statuses instead of
+            # silently changing final_outcome to not_found.
+
+    extra_statuses: dict[str, str] = {}
+    if no_data_evidence and "narrator_output_failure" in (no_data_evidence.rejection_reasons[0] if no_data_evidence.rejection_reasons else ""):
+        extra_statuses["narrator"] = "output_error:unsupported_numeric_claim"
 
     return _assemble_response(
         state=state,
@@ -314,7 +327,7 @@ def _build_response_live(
         script_artifacts=script_artifacts,
         coverage_reports=coverage_reports,
         no_data_evidence=no_data_evidence,
-        extra_statuses={},
+        extra_statuses=extra_statuses,
     )
 
 def _derive_clarification_questions(missing_fields: list[str], query: str) -> list[str]:

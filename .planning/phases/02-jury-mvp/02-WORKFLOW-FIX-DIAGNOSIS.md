@@ -420,14 +420,23 @@ Extraction Planner -> ExtractionPlan
 - Replace generic selected source dicts with Pydantic artifacts or typed models.
 - Add contract tests that create each artifact and pass it to the next node without golden fixtures.
 
-## Finding 7 - Live LLM Policy Is Confused
+## Finding 7 - Offline/No-Response LLM Fallbacks Are A Product Bug
 
-**Symptom:** comments say deterministic fallbacks exist, but actual fallbacks often raise. Tests use `live_llm_required=False` and accept `not_found` responses.
+**Symptom:** Phase 2 accumulated many workarounds whose purpose is to keep the workflow "working" when the LLM is unavailable, offline, missing credentials, or not responding. This is the wrong product behavior.
 
-**Why this is bad:** the project needs two different modes, but they are blurred:
+Examples already visible in the codebase:
 
-- jury/live mode: real Yandex/Qwen and real embeddings required;
-- local/test mode: mocks or deterministic stubs allowed, but never counted as jury readiness.
+- `WorkflowRunConfig.live_llm_required=False` lets callers request a non-live path.
+- `app/workflow/run_graph.py` exposes `--no-live-llm` and describes deterministic fallback for tests.
+- `app/workflow/service.py::continue_user_query` merges clarification manually if LLM re-analysis fails.
+- `app/workflow/nodes/coverage.py` returns deterministic reports as-is when LLM assessment fails.
+- `app/workflow/nodes/extraction_planner.py` falls back to rule-based operation/filter selection on LLM error.
+- `app/workflow/nodes/narrator.py` still contains test-only fallback scaffolding and message markers.
+- Tests still normalize the idea that `live_llm_required=False` can return terminal responses in some service paths.
+
+**Why this is bad:** the target product requires real Yandex/Qwen calls for Supervisor, Intent Analyst, Research Designer, Coverage assessment where used, Extraction Planner reasoning, Methodology Critic, and Narrator. If the LLM is unavailable, the system must not silently continue with keyword/rule/manual substitutes and must not produce a jury-ready response.
+
+This is not a useful offline feature. It hides integration failures and encourages agents to build around no-internet/no-response behavior instead of fixing the live path.
 
 **How it should be implemented:**
 
@@ -436,21 +445,28 @@ RuntimeMode:
   LIVE_JURY
     requires Qwen credentials
     requires embedding/Qdrant readiness
-    no test-only fallbacks
-  LOCAL_DEV
-    may use deterministic/mocked LLM adapters
-    response must carry test_only markers
-    cannot produce readiness=ready
+    requires network/API response within timeout
+    no offline or no-response fallback
+    LLM failure -> explicit gated/error artifact, not terminal success
   UNIT_TEST
-    mocks node dependencies
+    may mock YandexAIStudioClient.structured_chat at test boundary only
     verifies contracts and routing
 ```
 
+There should be no product/runtime mode that says "LLM unavailable, keep going with local heuristics". Unit tests can mock the LLM dependency, but runtime code must not contain fake LLM behavior.
+
 **Fix direction:**
 
-- Replace boolean `live_llm_required` / `live_embeddings_required` with an enum runtime mode.
-- Ensure eval runner refuses LOCAL_DEV/UNIT_TEST outputs for jury readiness.
-- Ensure missing credentials are reported as explicit gate, not converted into empty `not_found`.
+- Remove `live_llm_required=False` as a product/runtime path. If retained for tests, keep it outside product service entrypoints or make it raise immediately.
+- Remove `--no-live-llm` from product workflow CLI, or mark it as unit-test-only and ensure it cannot generate acceptance/readiness artifacts.
+- Delete/manual-fail all no-response fallbacks in workflow nodes:
+  - no manual clarification merge when LLM re-analysis fails;
+  - no rule-based extraction planner fallback after Qwen failure;
+  - no silent coverage "LLM failed, continue anyway" path for product mode;
+  - no narrator fallback response.
+- Replace these with explicit `llm_unavailable`, `llm_timeout`, or `llm_error` component status and trace evidence.
+- Acceptance/demo readiness must fail if any LLM node used offline fallback, no-response fallback, or skipped live model execution.
+- Tests should mock the Yandex client directly and assert the runtime called it, not ask product code to run "without LLM".
 
 ## Finding 8 - Trace Exists, But It Is Not Strong Enough As Evidence
 

@@ -140,6 +140,9 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Decisions Log
 
+- **2026-05-11 — Offline/no-response LLM fallbacks are a Phase 2 bug.**
+  Phase 2 must not keep product workflow running by pretending the LLM works without network, credentials, or a response. Runtime LLM failures should become explicit gated/error artifacts (`llm_unavailable`, `llm_timeout`, `llm_error`) and must fail acceptance/readiness, not fall back to keyword, rule-based, manual-merge, or fake narrator behavior. Unit tests may mock `YandexAIStudioClient.structured_chat`, but product code should not contain an offline/no-response LLM substitute path.
+
 - **2026-05-10 — Plan 02-01 constrains final user outcomes.**
   Phase 2 final user outcomes are limited to `passed`, `needs_clarification`, and `not_found`; internal gated/stale/skipped/no_candidate states stay visible only as component-level status.
 

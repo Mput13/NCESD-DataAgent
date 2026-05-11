@@ -66,9 +66,11 @@ def assert_message_numbers_are_supported(
 
     Raises ValueError if a number in message cannot be found in the ledger.
     """
+    # Collapse space-separated digit groups (Russian thousands formatting: "1 376 477,9" → "1376477,9")
+    normalized_message = re.sub(r"(\d{1,3})( \d{3})+", lambda m: m.group(0).replace(" ", ""), message)
     # Extract all numbers from message (integers and decimals)
     number_pattern = re.compile(r"\b\d+(?:[.,]\d+)?\b")
-    message_numbers = set(number_pattern.findall(message))
+    message_numbers = set(number_pattern.findall(normalized_message))
 
     if not message_numbers:
         return  # No numbers to verify

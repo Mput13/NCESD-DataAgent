@@ -50,6 +50,8 @@ VALID_TERMINAL_OUTCOMES: frozenset[str] = frozenset(
 def _check_outcome_acceptability(
     final_outcome: str | None,
     matrix_case: dict[str, Any],
+    *,
+    allow_test_fallbacks: bool = False,
 ) -> list[str]:
     """Return list of unacceptable reasons for a given final_outcome.
 
@@ -69,6 +71,29 @@ def _check_outcome_acceptability(
         reasons.append(f"outcome_unknown:{final_outcome}")
 
     return reasons
+
+
+def _detect_test_only_fallbacks(
+    component_statuses: dict[str, Any],
+    *,
+    trace_events: list[Any],
+) -> list[str]:
+    """Detect legacy test-only fallback statuses in response metadata."""
+    fallbacks: list[str] = []
+    for component, status in component_statuses.items():
+        status_text = str(status)
+        if "test_only" in status_text or "fallback" in status_text:
+            fallbacks.append(f"{component}:{status_text}")
+    for event in trace_events:
+        if hasattr(event, "model_dump"):
+            event = event.model_dump()
+        if not isinstance(event, dict):
+            continue
+        decision = str(event.get("decision") or "")
+        if "test_only" in decision or "fallback" in decision:
+            state = str(event.get("state") or "trace")
+            fallbacks.append(f"{state}:{decision}")
+    return fallbacks
 
 
 def _build_case_result_skeleton(
@@ -91,6 +116,7 @@ def _build_case_result_skeleton(
         "dataset_count": 0,
         "script_count": 0,
         "trace_count": 0,
+        "used_test_only_fallbacks": [],
         "unacceptable_reasons": [],
     }
 
@@ -109,15 +135,9 @@ def _check_matrix_alignment(
     expected_adapter = matrix_case.get("required_adapter")
 
     if expected_outcome and response_outcome not in (None, expected_outcome):
-        # Some cases have multiple valid outcomes; check if close enough
-        # e.g. needs_clarification cases that could also be not_found
-        if not (
-            expected_outcome == "passed"
-            and response_outcome in VALID_TERMINAL_OUTCOMES
-        ):
-            reasons.append(
-                f"outcome_mismatch:expected={expected_outcome},got={response_outcome}"
-            )
+        reasons.append(
+            f"outcome_mismatch:expected={expected_outcome},got={response_outcome}"
+        )
 
     if expected_adapter and response_adapter and response_adapter != expected_adapter:
         # Adapter mismatch is a soft warning; CKAN and fedstat may overlap
@@ -131,6 +151,8 @@ def _check_matrix_alignment(
 def _score_response(
     response: Any,
     matrix_case: dict[str, Any],
+    *,
+    allow_test_fallbacks: bool = False,
 ) -> dict[str, Any]:
     """Score a WorkflowResponse against matrix expectations.
 
@@ -149,10 +171,14 @@ def _score_response(
     dataset_artifacts = resp.get("dataset_artifacts") or []
     script_artifacts = resp.get("script_artifacts") or []
     selected_sources = resp.get("selected_sources") or []
+    component_statuses = resp.get("component_statuses") or {}
+    not_found_evidence = resp.get("not_found_evidence")
+    if hasattr(not_found_evidence, "model_dump"):
+        not_found_evidence = not_found_evidence.model_dump()
 
     # Check outcome acceptability
     unacceptable_reasons = _check_outcome_acceptability(
-        final_outcome, matrix_case
+        final_outcome, matrix_case, allow_test_fallbacks=allow_test_fallbacks
     )
 
     # Check coverage matrix alignment
@@ -163,6 +189,35 @@ def _score_response(
 
     matrix_reasons = _check_matrix_alignment(final_outcome, response_adapter, matrix_case)
     unacceptable_reasons.extend(matrix_reasons)
+
+    expected_outcome = str(matrix_case.get("expected_terminal_outcome") or "")
+    if expected_outcome == "passed":
+        if not selected_sources:
+            unacceptable_reasons.append("passed_expected_missing_selected_sources")
+        if not dataset_artifacts:
+            unacceptable_reasons.append("passed_expected_missing_dataset_artifacts")
+        if not script_artifacts:
+            unacceptable_reasons.append("passed_expected_missing_script_artifacts")
+        if not trace_events:
+            unacceptable_reasons.append("passed_expected_missing_trace_events")
+
+    if final_outcome == "not_found":
+        evidence = not_found_evidence if isinstance(not_found_evidence, dict) else {}
+        if not evidence.get("checked_sources"):
+            unacceptable_reasons.append("not_found_missing_checked_sources")
+        if not evidence.get("rejected_sources"):
+            unacceptable_reasons.append("not_found_missing_rejected_sources")
+        if not evidence.get("rejection_reasons"):
+            unacceptable_reasons.append("not_found_missing_rejection_reasons")
+
+    used_test_only_fallbacks = _detect_test_only_fallbacks(
+        component_statuses,
+        trace_events=trace_events,
+    )
+    if used_test_only_fallbacks and not allow_test_fallbacks:
+        unacceptable_reasons.extend(
+            f"test_only_fallback:{fallback}" for fallback in used_test_only_fallbacks
+        )
 
     return {
         "case_id": matrix_case.get("case_id", ""),
@@ -175,6 +230,7 @@ def _score_response(
         "dataset_count": len(dataset_artifacts),
         "script_count": len(script_artifacts),
         "trace_count": len(trace_events),
+        "used_test_only_fallbacks": used_test_only_fallbacks,
         "unacceptable_reasons": unacceptable_reasons,
     }
 
@@ -290,6 +346,7 @@ def run_acceptance(
         case_result = _score_response(
             response,
             matrix_case,
+            allow_test_fallbacks=False,
         )
         case_results.append(case_result)
 

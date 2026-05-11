@@ -126,8 +126,8 @@ def test_workflow_run_config_default_points_to_phase2_artifacts() -> None:
 
     config = WorkflowRunConfig.default()
 
-    # Use Path comparison to be OS-agnostic (handles both / and \ separators)
-    assert config.goldens_path == Path(".planning/phases/01-data-architecture-research/golden-cases.yaml")
+    # Runtime config keeps this legacy field inert; acceptance scripts supply fixtures explicitly.
+    assert config.goldens_path == Path()
     assert config.phase1_index_manifest == Path(
         ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
     )

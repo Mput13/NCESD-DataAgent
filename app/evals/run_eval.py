@@ -271,8 +271,13 @@ def score_phase2_results(
         script_count = int(case.get("script_count") or 0)
         trace_count = int(case.get("trace_count") or 0)
         existing_unacceptable = list(case.get("unacceptable_reasons") or [])
+        used_test_only_fallbacks = list(case.get("used_test_only_fallbacks") or [])
 
         fail_reasons: list[str] = list(existing_unacceptable)
+        if used_test_only_fallbacks:
+            fail_reasons.extend(
+                f"test_only_fallback:{fallback}" for fallback in used_test_only_fallbacks
+            )
 
         # Rule: passed cases must have dataset, script, and trace evidence
         if final_outcome == "passed":
@@ -309,6 +314,7 @@ def score_phase2_results(
                 "dataset_count": dataset_count,
                 "script_count": script_count,
                 "trace_count": trace_count,
+                "used_test_only_fallbacks": used_test_only_fallbacks,
                 "fail_reasons": fail_reasons,
             }
         )
@@ -320,6 +326,9 @@ def score_phase2_results(
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
 
     unacceptable_count = sum(1 for sc in scored_cases if sc.get("fail_reasons"))
+    test_only_fallback_failures = sum(
+        1 for sc in scored_cases if sc.get("used_test_only_fallbacks")
+    )
     return {
         "total_cases": len(scored_cases),
         "passed": outcome_counts.get("passed", 0),
@@ -327,6 +336,7 @@ def score_phase2_results(
         "not_found": outcome_counts.get("not_found", 0),
         "failed": sum(v for k, v in outcome_counts.items() if k not in ("passed", "needs_clarification", "not_found")),
         "unacceptable": unacceptable_count,
+        "test_only_fallback_failures": test_only_fallback_failures,
         "jury_ready": unacceptable_count == 0 and len(scored_cases) == 20,
         "coverage_matrix_path": str(coverage_matrix_path) if coverage_matrix_path else None,
         "cases": scored_cases,

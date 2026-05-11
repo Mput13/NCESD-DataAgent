@@ -540,6 +540,122 @@ class TestPhase208WorkflowSurface:
         follow_up = continue_user_query(first.run_id, "Russia, 2024", run_config=config)
         assert follow_up.final_outcome == "not_found"
         assert any(event.decision == "clarification_merged" for event in follow_up.trace_events)
+        assert follow_up.trace_events[-1].payload["original_query_text"] == "ambiguous inflation"
+
+    def test_continue_user_query_missing_pending_state_fails_closed(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from app.workflow.service import WorkflowRunConfig, continue_user_query
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": True,
+                "live_embeddings_required": False,
+            }
+        )
+
+        response = continue_user_query("phase2-missing", "Russia, 2024", run_config=config)
+
+        assert response.final_outcome == "needs_clarification"
+        assert response.component_statuses["clarification"] == "clarification_state_missing"
+        assert response.not_found_evidence is not None
+        assert response.not_found_evidence.rejection_reasons
+
+    def test_continue_user_query_corrupt_pending_state_fails_closed(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from app.workflow.service import WorkflowRunConfig, continue_user_query
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": True,
+                "live_embeddings_required": False,
+            }
+        )
+        run_dir = tmp_path / "artifacts" / "phase2-corrupt"
+        run_dir.mkdir(parents=True)
+        (run_dir / "pending-clarification.json").write_text("{not json", encoding="utf-8")
+
+        response = continue_user_query("phase2-corrupt", "Russia, 2024", run_config=config)
+
+        assert response.final_outcome == "needs_clarification"
+        assert response.component_statuses["clarification"] == "clarification_state_corrupt"
+
+    def test_continue_user_query_llm_failure_does_not_manual_merge(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.artifacts.workflow_artifacts import IntentFrame, WorkflowResponse
+        from app.workflow import service
+        from app.workflow.service import WorkflowRunConfig, continue_user_query
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": True,
+                "live_embeddings_required": False,
+            }
+        )
+        state = {
+            "run_id": "phase2-llm-fail",
+            "query": "ambiguous inflation",
+            "intent": IntentFrame(
+                query="ambiguous inflation",
+                category="ambiguous",
+                missing_fields=["geography"],
+                needs_clarification=True,
+            ),
+            "coverage_reports": [],
+            "dataset_artifacts": [],
+            "script_artifacts": [],
+            "trace_events": [],
+            "component_statuses": {},
+        }
+        first = WorkflowResponse(
+            run_id="phase2-llm-fail",
+            final_outcome="needs_clarification",
+            message="Need geography.",
+            clarification_questions=["Which geography?"],
+        )
+        service._write_pending_clarification_state(state, first, config=config)
+
+        def fail_analyze(query: str, *, live_llm_required: bool = True):
+            raise RuntimeError("llm down")
+
+        monkeypatch.setattr("app.workflow.state.analyze_intent", fail_analyze)
+
+        response = continue_user_query("phase2-llm-fail", "Russia", run_config=config)
+
+        assert response.final_outcome == "needs_clarification"
+        assert response.component_statuses["clarification"] == "clarification_state_reanalysis_gated"
+        assert not any(
+            "clarification_merged_no_llm" in event.model_dump_json()
+            for event in response.trace_events
+        )
+
+    def test_run_user_query_no_live_llm_returns_explicit_gated_response(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        from app.workflow.service import WorkflowRunConfig, run_user_query
+
+        config = WorkflowRunConfig.default().model_copy(
+            update={
+                "artifact_dir": tmp_path / "artifacts",
+                "live_llm_required": False,
+                "live_embeddings_required": False,
+            }
+        )
+
+        response = run_user_query("ВВП России", run_config=config)
+
+        assert response.final_outcome == "needs_clarification"
+        assert response.component_statuses["service"] == "gated_live_llm_required"
 
     def test_apply_feedback_persists_run_linked_artifact(self, tmp_path: Path) -> None:
         from app.artifacts.workflow_artifacts import FeedbackArtifact

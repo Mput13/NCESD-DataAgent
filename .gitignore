@@ -155,7 +155,10 @@ cython_debug/
 .vscode/
 
 # Project specific
+.local/
 dumps/
+.DS_Store
+dataagent-phase1-embeddings-bundle.tar.gz
 *.parquet
 *.zip
 *.jsonl

@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-11T18:41:32Z",
+  "phase": "02",
+  "phase_name": "jury-mvp",
+  "phase_dir": ".planning/phases/02-jury-mvp",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "plan-a", "name": "Schema hardening (intent/coverage/critic/narrator)", "status": "done", "commits": ["bfdeb52", "27f5764", "7bc6ea7", "cfc32b5"]},
+    {"id": "plan-b", "name": "Parquet path fallback + slice validation + zero-row gating", "status": "done", "commits": ["270a9d4", "dd31f6d", "e23dad5", "11f2019", "0526445", "a67f0e4"]},
+    {"id": "review", "name": "Code review of Plans A+B vs WORKFLOW-FIX-DIAGNOSIS.md", "status": "done"}
+  ],
+  "remaining_tasks": [
+    {"id": "wr-06-fix", "name": "Fix WB preview_world_bank_coverage countries filter (both branches identical)", "status": "not_started", "priority": "high"},
+    {"id": "smoke-rerun", "name": "Re-run 7 smoke test cases to verify Plans A+B actually unblock them", "status": "not_started", "priority": "high"},
+    {"id": "bl-03-fix", "name": "Skip export_dataset_with_script when rows==0 (cosmetic)", "status": "not_started", "priority": "low"},
+    {"id": "finalization-tests", "name": "Fix 7 pre-existing failures in test_phase2_finalization.py (error string mismatch)", "status": "not_started", "priority": "medium"},
+    {"id": "plan-c", "name": "Plan C: cross-language retrieval improvement (Russian query vs English WB corpus)", "status": "not_started", "priority": "medium"}
+  ],
+  "blockers": [
+    {"description": "WR-06: World Bank countries filter is a no-op — both if/else branches produce identical matched_geos", "type": "technical", "workaround": "None; causes WB multi-country queries to pass extraction_ready=True incorrectly"},
+    {"description": "Cross-language retrieval: dense scores 0.05-0.06 for Russian queries vs English WB corpus", "type": "technical", "workaround": "Plan C addresses this but not yet implemented"}
+  ],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Plans A+B are plumbing patches only — architectural issues (matrix_hint leak, Supervisor silent fallback) intentionally deferred", "rationale": "Scope control for 5-hour session"},
+    {"decision": "Did not fix BL-03/BL-04 from reviewer — verified they are not blocking for smoke tests", "rationale": "Reviewer based findings on pre-fix diagnosis doc; manual code verification showed non-critical"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Fix WR-06 in app/data/world_bank_adapter.py — make if countries: branch actually filter by requested country codes. Then run smoke batch.",
+  "context_notes": "10 commits from Plans A+B. 36/36 new tests pass. Key remaining gap: WB country filter broken. Smoke re-run needed to confirm actual improvement."
+}

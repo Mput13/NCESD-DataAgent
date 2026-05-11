@@ -1,0 +1,604 @@
+{
+  "cases": [
+    {
+      "case_id": "GC-001",
+      "category": "simple",
+      "evidence_artifacts": [
+        "retrieval-eval.csv",
+        "run-graph-smoke.json"
+      ],
+      "expected_sources": [
+        "FedStat",
+        "World Bank"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+      "score": {
+        "coverage_evidence": 1,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 1,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 1
+      },
+      "status": "gated",
+      "total_score": 5
+    },
+    {
+      "case_id": "GC-002",
+      "category": "simple",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "FedStat"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 1,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 3
+    },
+    {
+      "case_id": "GC-003",
+      "category": "comparative",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "World Bank"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 1,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 1
+    },
+    {
+      "case_id": "GC-004",
+      "category": "comparative",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "World Bank",
+        "FedStat"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-005",
+      "category": "research",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "World Bank"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-006",
+      "category": "research",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-007",
+      "category": "derived_metric",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-008",
+      "category": "derived_metric",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "World Bank"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-009",
+      "category": "ambiguous",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "World Bank",
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 2
+    },
+    {
+      "case_id": "GC-010",
+      "category": "ambiguous",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-011",
+      "category": "no_data",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "World Bank",
+        "CKAN"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 1,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 1,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 4
+    },
+    {
+      "case_id": "GC-012",
+      "category": "no_data",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "World Bank",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-013",
+      "category": "simple",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "CKAN",
+        "FedStat"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 2
+    },
+    {
+      "case_id": "GC-014",
+      "category": "research",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-015",
+      "category": "comparative",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "World Bank"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-016",
+      "category": "simple",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-017",
+      "category": "research",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "World Bank",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-018",
+      "category": "no_data",
+      "evidence_artifacts": [],
+      "expected_sources": [
+        "FedStat",
+        "CKAN"
+      ],
+      "fail_reasons": [
+        "no retrieval-eval row for case"
+      ],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials"
+      ],
+      "retrieval_candidate": null,
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 0,
+        "top_candidate_relevance": 0,
+        "trace_completeness": 0
+      },
+      "status": "failed",
+      "total_score": 0
+    },
+    {
+      "case_id": "GC-019",
+      "category": "research",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "FedStat",
+        "World Bank",
+        "CKAN"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 2
+    },
+    {
+      "case_id": "GC-020",
+      "category": "simple",
+      "evidence_artifacts": [
+        "retrieval-eval.csv"
+      ],
+      "expected_sources": [
+        "FedStat",
+        "World Bank",
+        "CKAN"
+      ],
+      "fail_reasons": [],
+      "gated_reasons": [
+        "deterministic extraction probes are skipped_with_reason",
+        "qdrant/dense retrieval gated by embedding credentials",
+        "retrieval row records dense_status=gated_skip"
+      ],
+      "retrieval_candidate": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+      "score": {
+        "coverage_evidence": 0,
+        "extraction_evidence": 0,
+        "no_data_honesty": 0,
+        "qdrant_dense_status": 0,
+        "rejection_reasons": 0,
+        "source_family_relevance": 1,
+        "top_candidate_relevance": 1,
+        "trace_completeness": 0
+      },
+      "status": "gated",
+      "total_score": 2
+    }
+  ],
+  "dense_status": "gated_skip",
+  "extraction_probe_status": "skipped_with_reason",
+  "failed": 12,
+  "gated": 8,
+  "inputs": {
+    "embedding_index_manifest": ".planning/phases/01-data-architecture-research/embedding-index-manifest.json",
+    "extraction_probes": ".planning/phases/01-data-architecture-research/extraction-probes.json",
+    "golden_cases": ".planning/phases/01-data-architecture-research/golden-cases.yaml",
+    "retrieval_eval": ".planning/phases/01-data-architecture-research/retrieval-eval.csv"
+  },
+  "passed": 0,
+  "qdrant_status": "gated_skip",
+  "total_cases": 20
+}

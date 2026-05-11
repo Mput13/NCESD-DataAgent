@@ -1,0 +1,370 @@
+{
+  "case_id": "GC-001",
+  "coverage_status": "gated",
+  "dataset_artifact": {
+    "artifact_id": "phase1-2d79891183e2:dataset",
+    "columns": [],
+    "csv_path": null,
+    "manifest_path": null,
+    "parquet_path": null,
+    "provenance": [
+      {
+        "source_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet"
+      }
+    ],
+    "quality_flags": [
+      "no_numeric_values_without_deterministic_extraction"
+    ],
+    "records": [],
+    "rows": null,
+    "source_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet",
+    "status": "gated"
+  },
+  "extraction_status": "gated",
+  "final_answer": {
+    "artifact_id": "phase1-2d79891183e2:final-answer",
+    "clarification_question": "Уточните недостающие параметры запроса.",
+    "dataset_artifact_id": "phase1-2d79891183e2:dataset",
+    "no_data_reason": null,
+    "source_ids": [
+      "fedstat:62470:fedstatru/data/parquet/62470.parquet"
+    ],
+    "status": "ok",
+    "summary": "Phase 1 graph emitted source-bound trace artifacts; numeric narration is withheld until deterministic extraction returns data."
+  },
+  "intent": {
+    "category": "simple",
+    "known_fields": {
+      "expected_route": "direct_lookup_with_methodology_choice",
+      "expected_sources": [
+        "FedStat",
+        "World Bank"
+      ]
+    },
+    "missing_fields": [
+      "source/methodology choice or missing query bounds"
+    ],
+    "needs_clarification": true,
+    "open_reasoning": [
+      "Source selection must be backed by retrieval and coverage evidence."
+    ],
+    "query": "Какой ВВП России в 2024 году?",
+    "source_preferences": [
+      "FedStat",
+      "World Bank"
+    ]
+  },
+  "no_data_reason": null,
+  "qdrant_status": "partial_ready",
+  "rejected_sources": [],
+  "route": "Ambiguous lookup",
+  "run_id": "phase1-2d79891183e2",
+  "selected_sources": [
+    {
+      "card_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet",
+      "chunk_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet:source-card-v1:495969071cc52b5a",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "году",
+        "продукт"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/62470",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "Удельный вес бюджетных расходов на фундаментальные исследования в валовом внутреннем продукте"
+    },
+    {
+      "card_id": "fedstat:40578:fedstatru/data/parquet/40578.parquet",
+      "chunk_id": "fedstat:40578:fedstatru/data/parquet/40578.parquet:source-card-v1:85d3120840c2e634",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "продукт",
+        "россии"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/40578",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "ВВП России по паритету покупательной способности"
+    },
+    {
+      "card_id": "fedstat:40579:fedstatru/data/parquet/40579.parquet",
+      "chunk_id": "fedstat:40579:fedstatru/data/parquet/40579.parquet:source-card-v1:26f696816383f97f",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "продукт",
+        "россии"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/40579",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "ВВП России на душу населения по паритету покупательной способности"
+    },
+    {
+      "card_id": "fedstat:57395:fedstatru/data/parquet/57395.parquet",
+      "chunk_id": "fedstat:57395:fedstatru/data/parquet/57395.parquet:source-card-v1:116fd3b3c86ebf3a",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "продукт",
+        "россии"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/57395",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "Валовой внутренний продукт в рыночных ценах на душу населения в соответствии с методологией СНС 2008"
+    },
+    {
+      "card_id": "fedstat:40706:fedstatru/data/parquet/40706.parquet",
+      "chunk_id": "fedstat:40706:fedstatru/data/parquet/40706.parquet:source-card-v1:b989f7e60b375e0c",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "продукт",
+        "россии"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/40706",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "Доля России в мировом ВВП"
+    }
+  ],
+  "source_rejections": [],
+  "status": "ok",
+  "trace_events": [
+    {
+      "agent": "Supervisor",
+      "decision": "start_triage",
+      "duration_ms": 0,
+      "input_summary": "Какой ВВП России в 2024 году?",
+      "output_artifact": null,
+      "payload": {},
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:33Z",
+      "state": "received",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "Supervisor",
+      "decision": "Ambiguous lookup",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "IntentFrame",
+      "payload": {
+        "category": "simple"
+      },
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:33Z",
+      "state": "triage",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "FedStat Scout, World Bank Scout, CKAN Scout",
+      "decision": "retrieval_complete",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "EvidenceBundleArtifact",
+      "payload": {
+        "qdrant_status": "partial_ready",
+        "rejected_sources": [],
+        "selected_sources": [
+          {
+            "card_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet",
+            "chunk_id": "fedstat:62470:fedstatru/data/parquet/62470.parquet:source-card-v1:495969071cc52b5a",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "году",
+              "продукт"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/62470",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "Удельный вес бюджетных расходов на фундаментальные исследования в валовом внутреннем продукте"
+          },
+          {
+            "card_id": "fedstat:40578:fedstatru/data/parquet/40578.parquet",
+            "chunk_id": "fedstat:40578:fedstatru/data/parquet/40578.parquet:source-card-v1:85d3120840c2e634",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "продукт",
+              "россии"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/40578",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "ВВП России по паритету покупательной способности"
+          },
+          {
+            "card_id": "fedstat:40579:fedstatru/data/parquet/40579.parquet",
+            "chunk_id": "fedstat:40579:fedstatru/data/parquet/40579.parquet:source-card-v1:26f696816383f97f",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "продукт",
+              "россии"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/40579",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "ВВП России на душу населения по паритету покупательной способности"
+          },
+          {
+            "card_id": "fedstat:57395:fedstatru/data/parquet/57395.parquet",
+            "chunk_id": "fedstat:57395:fedstatru/data/parquet/57395.parquet:source-card-v1:116fd3b3c86ebf3a",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "продукт",
+              "россии"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/57395",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "Валовой внутренний продукт в рыночных ценах на душу населения в соответствии с методологией СНС 2008"
+          },
+          {
+            "card_id": "fedstat:40706:fedstatru/data/parquet/40706.parquet",
+            "chunk_id": "fedstat:40706:fedstatru/data/parquet/40706.parquet:source-card-v1:b989f7e60b375e0c",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "продукт",
+              "россии"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/40706",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "Доля России в мировом ВВП"
+          }
+        ]
+      },
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:39Z",
+      "state": "parallel_scouts",
+      "tool_calls": [
+        "HybridRetriever",
+        "Qdrant status check"
+      ],
+      "warnings": []
+    },
+    {
+      "agent": "Coverage & Schema, Extraction Planner, Deterministic Tools",
+      "decision": "gated",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "phase1-2d79891183e2:extraction-plan",
+      "payload": {
+        "coverage_status": "gated",
+        "extraction_status": "gated"
+      },
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:39Z",
+      "state": "coverage_and_extraction",
+      "tool_calls": [
+        "coverage_preview",
+        "run_duckdb_query"
+      ],
+      "warnings": []
+    },
+    {
+      "agent": "Methodology Critic, Narrator, Visualization",
+      "decision": "ok",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "phase1-2d79891183e2:final-answer",
+      "payload": {},
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:39Z",
+      "state": "critic_and_narrator",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "Supervisor",
+      "decision": "Phase 1 narrow runnable graph checkpoint passed",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": null,
+      "payload": {
+        "budget": {
+          "candidate_limit": 3,
+          "critic_passes": 0,
+          "name": "Ambiguous lookup",
+          "scout_fanout": 1,
+          "tool_call_limit": 3
+        }
+      },
+      "run_id": "phase1-2d79891183e2",
+      "started_at": "2026-05-10T09:27:39Z",
+      "state": "checkpoint",
+      "tool_calls": [],
+      "warnings": []
+    }
+  ]
+}

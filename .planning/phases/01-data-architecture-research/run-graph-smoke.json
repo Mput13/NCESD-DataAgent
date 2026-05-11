@@ -1,0 +1,338 @@
+{
+  "case_id": "GC-001",
+  "coverage_status": "gated",
+  "dataset_artifact": {
+    "artifact_id": "phase1-a815e7e37e8c:dataset",
+    "columns": [],
+    "csv_path": null,
+    "manifest_path": null,
+    "parquet_path": null,
+    "provenance": [
+      {
+        "source_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet"
+      }
+    ],
+    "quality_flags": [
+      "no_numeric_values_without_deterministic_extraction"
+    ],
+    "rows": null,
+    "source_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+    "status": "gated"
+  },
+  "extraction_status": "gated",
+  "final_answer": {
+    "artifact_id": "phase1-a815e7e37e8c:final-answer",
+    "clarification_question": "Уточните недостающие параметры запроса.",
+    "dataset_artifact_id": "phase1-a815e7e37e8c:dataset",
+    "no_data_reason": null,
+    "source_ids": [
+      "fedstat:62439:fedstatru/data/parquet/62439.parquet"
+    ],
+    "status": "ok",
+    "summary": "Phase 1 graph emitted source-bound trace artifacts; numeric narration is withheld until deterministic extraction returns data."
+  },
+  "intent": {
+    "category": "simple",
+    "known_fields": {
+      "expected_route": "direct_lookup_with_methodology_choice",
+      "expected_sources": [
+        "FedStat",
+        "World Bank"
+      ]
+    },
+    "missing_fields": [
+      "source/methodology choice or missing query bounds"
+    ],
+    "needs_clarification": true,
+    "open_reasoning": [
+      "Source selection must be backed by retrieval and coverage evidence."
+    ],
+    "query": "Какой ВВП России в 2024 году?",
+    "source_preferences": [
+      "FedStat",
+      "World Bank"
+    ]
+  },
+  "no_data_reason": null,
+  "qdrant_status": "gated_skip",
+  "rejected_sources": [
+    {
+      "card_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "chunk_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source-card-v1:78df137f316b332a",
+      "evidence_keywords": [
+        "2024",
+        "gdp",
+        "в",
+        "валовой",
+        "ввп",
+        "внутренний",
+        "продукт"
+      ],
+      "provenance_url": null,
+      "rejection_reasons": [
+        "source_family_mismatch"
+      ],
+      "relevance_score": 1.0,
+      "retrieval_mode": "lexical_bm25",
+      "source_family": "ckan",
+      "title": "Валовой внутренний продукт в рыночных ценах в соответствии с методологией СНС 2008 (ЕМИСС)"
+    }
+  ],
+  "route": "Ambiguous lookup",
+  "run_id": "phase1-a815e7e37e8c",
+  "selected_sources": [
+    {
+      "card_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+      "chunk_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet:source-card-v1:b2b929f661f18e13",
+      "evidence_keywords": [
+        "2024",
+        "в",
+        "году"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/62439",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "2.11.53 Численность детей-инвалидов на конец отчетного периода"
+    },
+    {
+      "card_id": "fedstat:62909:fedstatru/data/parquet/62909.parquet",
+      "chunk_id": "fedstat:62909:fedstatru/data/parquet/62909.parquet:source-card-v1:b3c49ee65d9e2cb2",
+      "evidence_keywords": [
+        "2024",
+        "в",
+        "россии"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/62909",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "2.14.Е.1. Достигнутый уровень технологической независимости в сфере продовольственной безопасности"
+    },
+    {
+      "card_id": "fedstat:63102:fedstatru/data/parquet/63102.parquet",
+      "chunk_id": "fedstat:63102:fedstatru/data/parquet/63102.parquet:source-card-v1:b0031b682f998f5d",
+      "evidence_keywords": [
+        "2024",
+        "в"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/63102",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "Цифровая зрелость\" государственного и муниципального управления, ключевых отраслей экономики и социальной сферы, в том числе здравоохранения и образования"
+    },
+    {
+      "card_id": "fedstat:61819:fedstatru/data/parquet/61819.parquet",
+      "chunk_id": "fedstat:61819:fedstatru/data/parquet/61819.parquet:source-card-v1:cb45d43b5fa81501",
+      "evidence_keywords": [
+        "2024",
+        "в"
+      ],
+      "provenance_url": "https://www.fedstat.ru/indicator/61819",
+      "rejection_reasons": [],
+      "relevance_score": 1.0,
+      "retrieval_mode": "hybrid_lexical_dense_gated",
+      "source_family": "fedstat",
+      "title": "Количество разработанных проектов новых реакторных и технологических систем в области создания экспериментально-стендовой базы  двухкомпонентной атомной энергетики (U2)"
+    }
+  ],
+  "source_rejections": [
+    {
+      "alternative_used": null,
+      "candidate_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+      "rejection_reason": "source_family_mismatch",
+      "severity": "medium",
+      "source_family": "ckan",
+      "title": "Валовой внутренний продукт в рыночных ценах в соответствии с методологией СНС 2008 (ЕМИСС)"
+    }
+  ],
+  "status": "ok",
+  "trace_events": [
+    {
+      "agent": "Supervisor",
+      "decision": "start_triage",
+      "duration_ms": 0,
+      "input_summary": "Какой ВВП России в 2024 году?",
+      "output_artifact": null,
+      "payload": {},
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "received",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "Supervisor",
+      "decision": "Ambiguous lookup",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "IntentFrame",
+      "payload": {
+        "category": "simple"
+      },
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "triage",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "FedStat Scout, World Bank Scout, CKAN Scout",
+      "decision": "retrieval_complete",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "EvidenceBundleArtifact",
+      "payload": {
+        "qdrant_status": "gated_skip",
+        "rejected_sources": [
+          {
+            "card_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d",
+            "chunk_id": "ckan:emiss_57319:177f6a51-a4a7-41d2-8357-cf8ad1c94d9d:source-card-v1:78df137f316b332a",
+            "evidence_keywords": [
+              "2024",
+              "gdp",
+              "в",
+              "валовой",
+              "ввп",
+              "внутренний",
+              "продукт"
+            ],
+            "provenance_url": null,
+            "rejection_reasons": [
+              "source_family_mismatch"
+            ],
+            "relevance_score": 1.0,
+            "retrieval_mode": "lexical_bm25",
+            "source_family": "ckan",
+            "title": "Валовой внутренний продукт в рыночных ценах в соответствии с методологией СНС 2008 (ЕМИСС)"
+          }
+        ],
+        "selected_sources": [
+          {
+            "card_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet",
+            "chunk_id": "fedstat:62439:fedstatru/data/parquet/62439.parquet:source-card-v1:b2b929f661f18e13",
+            "evidence_keywords": [
+              "2024",
+              "в",
+              "году"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/62439",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "2.11.53 Численность детей-инвалидов на конец отчетного периода"
+          },
+          {
+            "card_id": "fedstat:62909:fedstatru/data/parquet/62909.parquet",
+            "chunk_id": "fedstat:62909:fedstatru/data/parquet/62909.parquet:source-card-v1:b3c49ee65d9e2cb2",
+            "evidence_keywords": [
+              "2024",
+              "в",
+              "россии"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/62909",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "2.14.Е.1. Достигнутый уровень технологической независимости в сфере продовольственной безопасности"
+          },
+          {
+            "card_id": "fedstat:63102:fedstatru/data/parquet/63102.parquet",
+            "chunk_id": "fedstat:63102:fedstatru/data/parquet/63102.parquet:source-card-v1:b0031b682f998f5d",
+            "evidence_keywords": [
+              "2024",
+              "в"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/63102",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "Цифровая зрелость\" государственного и муниципального управления, ключевых отраслей экономики и социальной сферы, в том числе здравоохранения и образования"
+          },
+          {
+            "card_id": "fedstat:61819:fedstatru/data/parquet/61819.parquet",
+            "chunk_id": "fedstat:61819:fedstatru/data/parquet/61819.parquet:source-card-v1:cb45d43b5fa81501",
+            "evidence_keywords": [
+              "2024",
+              "в"
+            ],
+            "provenance_url": "https://www.fedstat.ru/indicator/61819",
+            "rejection_reasons": [],
+            "relevance_score": 1.0,
+            "retrieval_mode": "hybrid_lexical_dense_gated",
+            "source_family": "fedstat",
+            "title": "Количество разработанных проектов новых реакторных и технологических систем в области создания экспериментально-стендовой базы  двухкомпонентной атомной энергетики (U2)"
+          }
+        ]
+      },
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "parallel_scouts",
+      "tool_calls": [
+        "HybridRetriever",
+        "Qdrant status check"
+      ],
+      "warnings": []
+    },
+    {
+      "agent": "Coverage & Schema, Extraction Planner, Deterministic Tools",
+      "decision": "gated",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "phase1-a815e7e37e8c:extraction-plan",
+      "payload": {
+        "coverage_status": "gated",
+        "extraction_status": "gated"
+      },
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "coverage_and_extraction",
+      "tool_calls": [
+        "coverage_preview",
+        "run_duckdb_query"
+      ],
+      "warnings": []
+    },
+    {
+      "agent": "Methodology Critic, Narrator, Visualization",
+      "decision": "ok",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": "phase1-a815e7e37e8c:final-answer",
+      "payload": {},
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "critic_and_narrator",
+      "tool_calls": [],
+      "warnings": []
+    },
+    {
+      "agent": "Supervisor",
+      "decision": "Phase 1 narrow runnable graph checkpoint passed",
+      "duration_ms": 0,
+      "input_summary": null,
+      "output_artifact": null,
+      "payload": {
+        "budget": {
+          "candidate_limit": 3,
+          "critic_passes": 0,
+          "name": "Ambiguous lookup",
+          "scout_fanout": 1,
+          "tool_call_limit": 3
+        }
+      },
+      "run_id": "phase1-a815e7e37e8c",
+      "started_at": "2026-05-10T01:11:38Z",
+      "state": "checkpoint",
+      "tool_calls": [],
+      "warnings": []
+    }
+  ]
+}

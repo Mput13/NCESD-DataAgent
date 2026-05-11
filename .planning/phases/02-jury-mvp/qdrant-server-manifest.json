@@ -1,0 +1,10 @@
+{
+  "collection": "phase1_source_cards",
+  "corpus_hash": "2eee2f17d877773569acdf695bd6f9b728dc0d088d4a0f487e46b7dff126da38",
+  "promotion_action": "skipped_existing_collection",
+  "qdrant_url": "http://localhost:6333",
+  "reproduce_command": "python3 scripts/promote_qdrant_server.py --start-server --manifest-output .planning/phases/02-jury-mvp/qdrant-server-manifest.json",
+  "status": "ready",
+  "vector_count": 36321,
+  "verified_at": "2026-05-10T11:55:50Z"
+}

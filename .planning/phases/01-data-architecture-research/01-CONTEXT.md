@@ -6,13 +6,17 @@
 <domain>
 ## Phase Boundary
 
-Phase 1 is the only active phase in the current milestone. It delivers an implementation-oriented architecture package for DataAgent: requirements map, test cases, deterministic source inventory, source/retrieval/extraction code slices, model/orchestration validation, Streamlit trace/UI contract, and a final implementation decision package.
+Phase 1 is the only active phase in the current milestone. It delivers an implementation-oriented architecture package for DataAgent: requirements map, test cases, deterministic source inventory, a durable prepared-data and embedding-index product, source/retrieval/extraction code slices, model/orchestration validation, Streamlit trace/UI contract, and a final implementation decision package.
 
 The historical slug `01-data-architecture-research` remains canonical for continuity, but `research` does not mean prose-only work. Phase 1 may produce code, scripts, tests, and UI contracts. What it must not do is silently treat unverified spikes as complete: every implementation slice needs plan-bound verification and a `01-xx-SUMMARY.md`.
 
 The phase is anchored in `.planning/ARCHITECTURE_STACK.md`. That document is treated as the target stack, not merely a loose research note.
 
 Phase 1 may implement a narrow vertical slice first, but it must be architecturally scalable toward the full `.planning/ARCHITECTURE_STACK.md` vision. The implementation should avoid one-off demo shortcuts that would block later expansion into real source adapters, multiple retrieval providers, richer LangGraph orchestration, deterministic tool libraries, trace replay, and a fuller Streamlit UI.
+
+The narrow slice still must be runnable. Phase 1 must not stop at prose contracts, skeleton modules, or UI shells that cannot execute the product loop. A valid Phase 1 result needs a runnable narrow LangGraph flow and runnable Streamlit demo path over the prepared retrieval/extraction contracts, verified on representative golden cases or explicitly blocked by recorded credential/data gates.
+
+The prepared source-card corpus and embedding/search index are Phase 1 deliverables, not disposable research output. By the end of Phase 1 these data artifacts should be ready for demo use; reprocessing or re-embedding all sources in a later phase should happen only for an explicit blocker, schema migration, or corrupted/outdated artifact. Because embedding may be long-running, Phase 1 planning should start the embedding/index build as soon as the source-card corpus and provider contract are ready, then prepare orchestration, extraction, UI, and demo integration while that job runs.
 
 </domain>
 
@@ -36,6 +40,13 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 - **D-06:** Implement/research retrieval fully according to `.planning/ARCHITECTURE_STACK.md`: lexical BM25/FTS plus dense embeddings and reranking where feasible.
 - **D-07:** Metadata indexing should use compact source cards and evidence bundles rather than loading raw CKAN/API/table responses into LLM context.
 - **D-08:** Retrieval must support exact code/title matches, Russian and English lexical search, semantic matches, proxy candidates, methodology matches, and rejection reasons.
+- **D-08A:** Phase 1 must define a stable embedding document/chunk format before dense retrieval implementation: source id/card id, chunk id, source family, language, content hash, metadata version, provenance, coverage, units, dimensions, source URL/resource URL, and the exact text fields sent to the embedding model.
+- **D-08B:** The primary embedding target is Yandex AI Studio embeddings with document/query split: `YANDEX_EMBEDDING_DOC_MODEL=emb://<folder_id>/text-search-doc/latest` for source-card/chunk documents and `YANDEX_EMBEDDING_QUERY_MODEL=emb://<folder_id>/text-search-query/latest` for user queries. The expected vector size is `YANDEX_EMBEDDING_DIMENSIONS=256`. If credentials are absent, execution must record a credential-aware gated skip while preserving the same corpus/index contract.
+- **D-08C:** Phase 1 should materialize a local source-card corpus and a Qdrant embedding/search collection as a durable data product. Later phases should consume the manifest and Qdrant collection, not reprocess all sources by default.
+- **D-08D:** Embedding inputs are metadata/source-card chunks only. They must not include raw numeric series, generated factual answers, or unsupported numeric claims from an LLM.
+- **D-08E:** Long-running embedding/indexing work should run as early as possible after corpus readiness; independent orchestration, UI, extraction, and demo work should continue in parallel while it runs.
+- **D-08F:** Phase 1 source metadata must be materialized into a local SQLite or DuckDB catalog that stores source cards, schemas, coverage hints, embedding chunk ids, and rejection-ready metadata. Flat files may be exported for review, but the agent should query a catalog interface.
+- **D-08G:** Phase 1 uses Qdrant as the vector store, not a temporary custom local vector index. For speed and low ops overhead, execution may use Qdrant local persistent mode via `qdrant-client` (`QDRANT_MODE=local`, `QDRANT_PATH=.local/qdrant`) or a server URL if provided, but both paths must use the Qdrant client/collection abstraction. Later production deployment should be a configuration change, not a retrieval rewrite. Missing embedding credentials may gate vector population, but must not replace Qdrant with an ad hoc in-memory or flat-file vector search path.
 
 ### Deterministic Extraction
 - **D-09:** Implement/research data extraction fully according to `.planning/ARCHITECTURE_STACK.md`: DuckDB SQL-first with PyArrow/source adapters for normalization and Polars where useful.
@@ -47,6 +58,8 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 - **D-13:** Implement/research the orchestration fully according to `.planning/ARCHITECTURE_STACK.md`: LangGraph hierarchical supervisor with typed artifacts.
 - **D-14:** The minimum target graph for research/planning is Lead DataAgent/Supervisor, Intent/Triage, Research Designer, FedStat Scout, World Bank Scout, CKAN Scout, Coverage & Schema, Extraction Planner, deterministic tools, Methodology Critic, Narrator, and Visualization where relevant.
 - **D-15:** Simple direct lookups should be able to skip unnecessary agents, but complex research queries should use parallel source scouts and critic loops.
+- **D-15A:** Graph contracts must include per-node budgets and tool scopes so the hierarchical multi-agent system stays bounded: direct lookup uses few tool calls, complex/research/no-data routes fan out to scouts and critic only when justified.
+- **D-15B:** Phase 1 must implement a runnable narrow LangGraph flow, not only a skeleton or architecture note. It may support a limited set of routes, but it must move real typed artifacts through triage, retrieval, coverage/extraction planning, deterministic tools or gated evidence, critic/narrator, and trace emission.
 
 ### LLM Choice
 - **D-16:** Use Qwen 3.6 via Yandex AI Studio as the target model per architecture stack.
@@ -61,15 +74,20 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 ### Phase 1 Output Shape
 - **D-22:** Phase 1 output should include implementation artifacts, research notes, executable spikes, deterministic verification, and trade-off tables.
 - **D-23:** Spikes are evidence for implementation decisions; they are not accepted as complete until the relevant plan's verification commands pass and a summary artifact is written.
+- **D-23A:** Prepared data artifacts are first-class phase outputs: source-card corpus, embedding/index manifest, build log, provider/model metadata, artifact paths, and rebuild instructions.
+- **D-23B:** Typed workflow artifacts must include `DatasetArtifact`, `VisualizationSpec`, `FinalAnswer`, `MethodologyNote`, `FeedbackArtifact`, and source rejection records in addition to intent, research design, coverage, extraction plan, critique, and trace events.
+- **D-23C:** Deterministic tools must expose safe operations for coverage preview, DuckDB queries, dataset artifact export, CSV/Parquet/manifest output, and visualization rendering from `DatasetArtifact`; LLMs choose tool plans, not raw numeric values.
+- **D-23D:** The Streamlit deliverable must be runnable, not only a shell. For the current milestone it is a diagnostic interface, not a visual-polish target: it must execute the demo path, show trace/artifacts/source rejection/index readiness, and capture feedback/fix requests for at least representative golden cases, but styling and output beauty are explicitly secondary to correct data relevance and deterministic extraction.
 
 ### Success Criterion Priority
-- **D-24:** The main implementation criterion is maximum demonstration value from multi-agent trace and UI transparency.
+- **D-24:** The main implementation criterion for the current replanning pass is correct data relevance and deterministic extraction: the system should pick relevant FedStat, World Bank, and CKAN sources for the user's query, prove coverage, and extract numbers through code. Multi-agent trace and UI transparency remain important because they make this evidence inspectable, but they must not displace source selection, Qdrant-backed retrieval, coverage, and extraction quality.
+- **D-24A:** UI work in Phase 1 should stay minimal and diagnostic until data relevance, Qdrant retrieval, source rejection, coverage preview, and deterministic extraction are working. Do not spend execution budget on visual polish, decorative layout, or beautiful final prose before the data pipeline is correct.
 - **D-25:** Reliability remains non-negotiable: every numeric value must be source-bound and reproducible, but among reliable options the preferred path is the one with the strongest visible agent workflow and trace.
 - **D-26:** Scalability matters: Phase 1 should leave the codebase easier, not harder, to grow into the full target architecture.
 
 ### the agent's Discretion
 - The planner may choose exact spike ordering, file/module boundaries, schemas, and test harness structure.
-- The planner may decide whether to implement dense embeddings locally or through Yandex AI Studio first, as long as the full architecture target is respected.
+- The planner may choose Qdrant local persistent mode or a configured Qdrant server URL, but must keep the Yandex document/query embedding contract, Qdrant collection contract, and durable manifest requirements intact. Qdrant usage is mandatory for the vector-store abstraction in Phase 1; fallback logic may gate dense results when embeddings are unavailable, but it must still report Qdrant readiness explicitly.
 - The planner may choose specific charting/eval libraries within the stack constraints.
 
 </decisions>
@@ -124,7 +142,9 @@ Phase 1 may implement a narrow vertical slice first, but it must be architectura
 - The user rejected the three-person workstream split; execute as a single-track GSD phase.
 - The user selected CKAN as an equal first-class source, not a secondary API.
 - The user wants the broader 15-20 task test-case set prepared in Phase 1.
-- The user selected multi-agent trace and transparent UI wow-effect as the dominant implementation criterion, while preserving source-bound reliability.
+- The user expects Phase 1 to finish with prepared data and a ready embedding/search index. Reprocessing later is an exception, not the normal continuation path.
+- The user wants long-running embedding to start early; while it runs, agents should prepare the workflow, extraction, UI, and demo integration that can consume the completed index.
+- The user clarified that UI beauty and polished output are not the current focus. The dominant implementation priority is now correct data relevance and deterministic data extraction, with Qdrant used for the vector-store path. Trace/UI remain useful as diagnostic surfaces that expose why sources were selected or rejected.
 - The user accepts that not every full-stack capability will be complete in Phase 1, as long as the result is a working scalable seed that can grow into `.planning/ARCHITECTURE_STACK.md`.
 
 </specifics>

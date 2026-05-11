@@ -1,0 +1,18 @@
+{
+  "collection_name": "phase1_source_cards_partial",
+  "corpus_artifact_path": ".local/dataagent/phase1/embedding-corpus.jsonl",
+  "coverage_pct": 15.83,
+  "created_at": "2026-05-10T06:59:58Z",
+  "dense_status": "partial_ready",
+  "embedding_cache_path": ".local/dataagent/phase1/embedding-cache.jsonl",
+  "manifest_path": ".planning/phases/01-data-architecture-research/partial-embedding-index-manifest.json",
+  "qdrant_mode": "local",
+  "qdrant_path": ".local/qdrant-partial-dev",
+  "source_families_ready": [
+    "fedstat"
+  ],
+  "status": "partial_ready",
+  "total_corpus_count": 36321,
+  "vector_count": 5748,
+  "vector_store": "qdrant"
+}

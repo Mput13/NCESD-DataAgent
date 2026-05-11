@@ -239,6 +239,8 @@ def _world_bank_coverage(
         periods = intent_fields.get("periods") or intent_fields.get("period") or []
         if isinstance(periods, str):
             periods = [periods]
+        # Drop natural-language period strings (e.g. "последние доступные годы") — only keep year-like values
+        periods = [str(p) for p in periods if str(p).strip().isdigit() and len(str(p).strip()) == 4]
         indicator_id = str(
             intent_fields.get("indicator_id")
             or source_card.get("dataset_id")

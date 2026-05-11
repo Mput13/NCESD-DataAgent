@@ -105,10 +105,9 @@ def preview_world_bank_coverage(
 
     # Compute slice-level coverage
     if countries:
-        # _filter_rows already restricted to requested country_codes, so
-        # available_geographies contains only matched countries
-        matched_geos = list(available_geographies)
-        slice_rows = total_row_count
+        requested_set = set(country_codes)
+        matched_geos = [g for g in available_geographies if g in requested_set] if requested_set else []
+        slice_rows = sum(1 for row in filtered if str(row.get("country_id") or "") in requested_set) if requested_set else 0
     else:
         matched_geos = list(available_geographies)
         slice_rows = total_row_count

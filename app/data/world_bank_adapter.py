@@ -101,6 +101,20 @@ def preview_world_bank_coverage(
     available_periods = sorted({str(row["date"]) for row in filtered if row.get("value") is not None})
     available_geographies = sorted({str(row["country_id"]) for row in filtered if row.get("value") is not None})
     missing_values = sum(1 for row in filtered if row.get("value") is None)
+    total_row_count = len(filtered)
+
+    # Compute slice-level coverage
+    if countries:
+        # _filter_rows already restricted to requested country_codes, so
+        # available_geographies contains only matched countries
+        matched_geos = list(available_geographies)
+        slice_rows = total_row_count
+    else:
+        matched_geos = list(available_geographies)
+        slice_rows = total_row_count
+
+    matched_periods = list(available_periods)
+    extraction_ready = slice_rows > 0
 
     return CoverageReport(
         source_id=str(source_card.get("dataset_id") or indicator_id),
@@ -117,10 +131,14 @@ def preview_world_bank_coverage(
         frequency=_optional_text(source_card.get("frequency")) or "annual",
         evidence={
             "missing_values": missing_values,
-            "row_count": len(filtered),
+            "row_count": total_row_count,
             "requested_countries": country_codes,
             "source_path": str(_parquet_path(source_card)),
         },
+        matched_geographies=matched_geos,
+        matched_periods=matched_periods,
+        requested_slice_rows=slice_rows,
+        extraction_ready=extraction_ready,
     )
 
 

@@ -468,8 +468,9 @@ def _resolve_wb_periods(filters: dict[str, Any]) -> list[str]:
         if m:
             start, end = int(m.group(1)), int(m.group(2))
             result.extend(str(y) for y in range(start, end + 1))
-        else:
-            result.append(raw)
+        elif re.fullmatch(r"\d{4}", raw.strip()):
+            result.append(raw.strip())
+        # Drop natural-language strings like "последние доступные годы"
     return result
 
 

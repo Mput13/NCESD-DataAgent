@@ -517,7 +517,7 @@ function datasetSummaryCard(datasets) {
 
 function datasetPreviewCard(dataset) {
   const records = (dataset.records || []).slice(0, 5);
-  if (!records.length) return "";
+  if (!records.length && !dataset.csv_path) return "";
   const rows = records.map((record) => [
     record.geo_name || record.geo_id || "",
     record.period || "",

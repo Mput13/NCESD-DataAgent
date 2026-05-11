@@ -108,7 +108,7 @@ def run_methodology_critic(
     - bounded checked/rejected sources with no usable coverage -> not_found
     """
     if not live_llm_required:
-        raise RuntimeError("Methodology Critic requires live Yandex AI Studio / Qwen.")
+        raise RuntimeError("live LLM call required — live_llm_required=False is not allowed for Methodology Critic")
     return _run_critic_live(state)
 
 

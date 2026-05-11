@@ -148,18 +148,7 @@ def build_workflow_response(
     For 'not_found': includes NoDataExplanationArtifact from source/rejection evidence.
     """
     if not live_llm_required:
-        if final_outcome == "not_found":
-            # For not_found, LLM is not required — build diagnostic response directly
-            return _build_not_found_response(
-                state=state,
-                critique=critique,
-                visualization=visualization,
-                dataset_artifacts=list(state.get("dataset_artifacts") or []),
-                script_artifacts=list(state.get("script_artifacts") or []),
-                coverage_reports=list(state.get("coverage_reports") or []),
-                extra_statuses={},
-            )
-        raise RuntimeError("Narrator requires live Yandex AI Studio / Qwen.")
+        raise RuntimeError("live LLM call required — live_llm_required=False is not allowed for Narrator")
     return _build_response_live(
         state,
         final_outcome=final_outcome,

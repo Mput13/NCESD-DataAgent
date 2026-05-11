@@ -209,7 +209,6 @@ class TestNarratorDiagnosticArtifacts:
         }
 
     def test_not_found_response_includes_diagnostic_dataset(self):
-        from unittest.mock import patch, MagicMock
         from app.workflow.nodes.narrator import build_workflow_response
         from app.artifacts.workflow_artifacts import CritiqueReport
         from uuid import uuid4
@@ -222,25 +221,13 @@ class TestNarratorDiagnosticArtifacts:
             repair_plan=[],
         )
 
-        with patch("app.workflow.nodes.narrator.qwen_credential_gate") as mock_gate, \
-             patch("app.workflow.nodes.narrator.YandexAIStudioClient") as mock_client:
-            mock_gate.return_value = {"status": "ready"}
-            mock_llm = mock_client.return_value
-            mock_llm.structured_chat.return_value = MagicMock(
-                message="Данные не найдены.",
-                answer_blocks=[],
-                citations=[],
-                limitations=[],
-                clarification_questions=[],
-            )
-
-            response = build_workflow_response(
-                state,
-                final_outcome="not_found",
-                critique=critique,
-                visualization=None,
-                live_llm_required=False,
-            )
+        response = build_workflow_response(
+            state,
+            final_outcome="not_found",
+            critique=critique,
+            visualization=None,
+            live_llm_required=False,
+        )
 
         # Diagnostic artifacts must be present
         assert len(response.dataset_artifacts) > 0, (
@@ -250,7 +237,6 @@ class TestNarratorDiagnosticArtifacts:
         assert any("diagnostic" in d.quality_flags for d in response.dataset_artifacts)
 
     def test_not_found_response_includes_diagnostic_script(self):
-        from unittest.mock import patch, MagicMock
         from app.workflow.nodes.narrator import build_workflow_response
         from app.artifacts.workflow_artifacts import CritiqueReport
         from uuid import uuid4
@@ -263,24 +249,13 @@ class TestNarratorDiagnosticArtifacts:
             repair_plan=[],
         )
 
-        with patch("app.workflow.nodes.narrator.qwen_credential_gate") as mock_gate, \
-             patch("app.workflow.nodes.narrator.YandexAIStudioClient") as mock_client:
-            mock_gate.return_value = {"status": "ready"}
-            mock_client.return_value.structured_chat.return_value = MagicMock(
-                message="Данные не найдены.",
-                answer_blocks=[],
-                citations=[],
-                limitations=[],
-                clarification_questions=[],
-            )
-
-            response = build_workflow_response(
-                state,
-                final_outcome="not_found",
-                critique=critique,
-                visualization=None,
-                live_llm_required=False,
-            )
+        response = build_workflow_response(
+            state,
+            final_outcome="not_found",
+            critique=critique,
+            visualization=None,
+            live_llm_required=False,
+        )
 
         assert len(response.script_artifacts) > 0, (
             "not_found response must include diagnostic script_artifacts"

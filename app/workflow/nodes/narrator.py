@@ -33,6 +33,21 @@ from app.artifacts.workflow_artifacts import (
 )
 
 
+def _tag_diagnostic(
+    artifacts: list[DatasetArtifact],
+    final_outcome: str,
+) -> list[DatasetArtifact]:
+    """Add 'diagnostic' quality flag to artifacts when outcome is not passed."""
+    if final_outcome == "passed":
+        return artifacts
+    return [
+        a.model_copy(update={"quality_flags": list(a.quality_flags) + ["diagnostic"]})
+        if "diagnostic" not in a.quality_flags
+        else a
+        for a in artifacts
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Number support assertion
 # ---------------------------------------------------------------------------
@@ -133,6 +148,17 @@ def build_workflow_response(
     For 'not_found': includes NoDataExplanationArtifact from source/rejection evidence.
     """
     if not live_llm_required:
+        if final_outcome == "not_found":
+            # For not_found, LLM is not required — build diagnostic response directly
+            return _build_not_found_response(
+                state=state,
+                critique=critique,
+                visualization=visualization,
+                dataset_artifacts=list(state.get("dataset_artifacts") or []),
+                script_artifacts=list(state.get("script_artifacts") or []),
+                coverage_reports=list(state.get("coverage_reports") or []),
+                extra_statuses={},
+            )
         raise RuntimeError("Narrator requires live Yandex AI Studio / Qwen.")
     return _build_response_live(
         state,
@@ -372,8 +398,8 @@ def _build_not_found_response(
         limitations=critique.warnings or [],
         how_found="",
         clarification_questions=[],
-        dataset_artifacts=[],
-        script_artifacts=[],
+        dataset_artifacts=dataset_artifacts,
+        script_artifacts=script_artifacts,
         coverage_reports=coverage_reports,
         no_data_evidence=no_data_evidence,
         extra_statuses=extra_statuses,
@@ -503,8 +529,8 @@ def _assemble_response(
         selected_sources=selected_sources,
         rejected_sources=rejected_sources,
         coverage=cov_list,
-        dataset_artifacts=dataset_artifacts if final_outcome == "passed" else [],
-        script_artifacts=script_artifacts if final_outcome == "passed" else [],
+        dataset_artifacts=_tag_diagnostic(dataset_artifacts, final_outcome),
+        script_artifacts=script_artifacts,
         visualization=visualization if final_outcome == "passed" else None,
         trace_events=trace_events,
         limitations=limitations,

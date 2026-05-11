@@ -132,8 +132,8 @@ class TestCoverageAssessmentSchema:
             )
         ]
 
-        with patch("app.workflow.nodes.coverage.qwen_credential_gate") as mock_gate, \
-             patch("app.workflow.nodes.coverage.YandexAIStudioClient") as mock_client:
+        with patch("app.llm.yandex_ai_studio.qwen_credential_gate") as mock_gate, \
+             patch("app.llm.yandex_ai_studio.YandexAIStudioClient") as mock_client:
             mock_gate.return_value = {"status": "ready"}
             mock_client.return_value.structured_chat.return_value = mock_result
 

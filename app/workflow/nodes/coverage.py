@@ -51,7 +51,7 @@ def _llm_assess_coverage(
     - methodology risks
     """
     try:
-        from pydantic import BaseModel
+        from pydantic import BaseModel, field_validator
         from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
 
         gate = qwen_credential_gate()
@@ -61,11 +61,20 @@ def _llm_assess_coverage(
         class _CoverageAssessment(BaseModel):
             source_id: str = ""
             can_proceed: bool = True
-            best_slice: str = ""
+            best_slice: str | None = None
             alternative_slices: list[str] = []
             quality_risks: list[str] = []
             ask_user: bool = False
             ask_user_reason: str = ""
+
+            @field_validator("alternative_slices", "quality_risks", mode="before")
+            @classmethod
+            def _coerce_to_list(cls, v: Any) -> list[str]:
+                if v is None:
+                    return []
+                if isinstance(v, str):
+                    return [v] if v else []
+                return list(v)
 
         class _CoverageAssessmentList(BaseModel):
             assessments: list[_CoverageAssessment] = []

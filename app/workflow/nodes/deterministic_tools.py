@@ -201,7 +201,18 @@ _FAMILY_TO_TOOL: dict[str, str] = {
 
 
 def _resolve_source_family(plan: ExtractionPlan) -> str:
-    """Determine source_family from the extraction plan's source_id or operations."""
+    """Determine source_family from typed plan fields, with legacy guessing fallback."""
+    if plan.source_family:
+        return _normalize_source_family(plan.source_family)
+    if plan.adapter_name:
+        adapter = plan.adapter_name.lower()
+        if "fedstat" in adapter:
+            return "fedstat"
+        if "world_bank" in adapter or "worldbank" in adapter:
+            return "world_bank"
+        if "ckan" in adapter:
+            return "ckan"
+
     if plan.source_id:
         sid = plan.source_id.lower()
         if "fedstat" in sid or "emiss" in sid or "емисс" in sid:
@@ -227,6 +238,13 @@ def _resolve_source_family(plan: ExtractionPlan) -> str:
         return "ckan"
 
     return "unknown"
+
+
+def _normalize_source_family(source_family: str) -> str:
+    family = str(source_family).strip().lower().replace(" ", "_")
+    if family == "worldbank":
+        return "world_bank"
+    return family
 
 
 def _dispatch_extraction(

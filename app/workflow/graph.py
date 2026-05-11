@@ -275,13 +275,21 @@ def _node_source_scouts(state: Phase2State) -> Phase2State:
 
     if index_manifest_path.exists():
         try:
-            from app.workflow.nodes.scouts import run_source_scouts
+            from app.workflow.nodes.scouts import RetrievalPolicy, SourceScoutInput, run_source_scouts
             evidence = run_source_scouts(
-                query,
-                expected_sources=expected_sources,
-                index_manifest_path=index_manifest_path,
+                SourceScoutInput(
+                    query=query,
+                    normalized_query=str(state.get("normalized_query") or "") or None,
+                    intent=intent,
+                    research_design=state.get("research_design"),
+                    retrieval_policy=RetrievalPolicy(
+                        expected_sources=expected_sources,
+                        ckan_required="ckan" in {source.strip().lower() for source in expected_sources},
+                    ),
+                    index_manifest_path=index_manifest_path,
+                )
             )
-            status = "ok" if evidence.selected_sources else "no_candidate"
+            status = evidence.retrieval_status if evidence.selected_sources else "no_candidate"
         except Exception as exc:
             evidence = EvidenceBundleArtifact(
                 retrieval_status="gated",
@@ -311,6 +319,9 @@ def _node_source_scouts(state: Phase2State) -> Phase2State:
             payload={
                 "selected_count": len(evidence.selected_sources),
                 "rejected_count": len(evidence.rejected_sources),
+                "channel_statuses": [
+                    item.model_dump(exclude_none=True) for item in evidence.channel_statuses
+                ],
                 "qdrant_status": evidence.qdrant_status,
                 "status": status,
             },
@@ -337,17 +348,21 @@ def _node_coverage_schema(state: Phase2State) -> Phase2State:
     intent_fields: dict[str, Any] = dict(intent.known_fields if intent else {})
     coverage_reports = list(state.get("coverage_reports") or [])
 
-    if not evidence.selected_sources:
+    if not evidence.selected_for_coverage:
         status = "skipped_no_sources"
     else:
         live_llm = bool(state.get("_live_llm_required") or _llm_is_ready())
         try:
-            from app.workflow.nodes.coverage import run_coverage_preview
+            from app.workflow.nodes.coverage import aggregate_coverage_status, run_coverage_preview
             new_reports = run_coverage_preview(
-                evidence, intent_fields=intent_fields, live_llm_required=live_llm
+                evidence,
+                intent_fields=intent_fields,
+                intent=intent,
+                research_design=state.get("research_design"),
+                live_llm_required=live_llm,
             )
             coverage_reports.extend(new_reports)
-            status = "ok"
+            status = aggregate_coverage_status(new_reports, had_sources=True)
         except Exception as exc:
             status = "gated"
             trace_events.append(
@@ -370,6 +385,10 @@ def _node_coverage_schema(state: Phase2State) -> Phase2State:
             decision=status,
             payload={
                 "report_count": len(coverage_reports),
+                "ready_report_count": len([
+                    report for report in coverage_reports
+                    if getattr(report, "extraction_ready", False)
+                ]),
                 "status": status,
             },
         )

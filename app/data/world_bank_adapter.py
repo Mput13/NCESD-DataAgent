@@ -99,7 +99,7 @@ def preview_world_bank_coverage(
         indicator_id=indicator_id,
     )
     available_periods = sorted({str(row["date"]) for row in filtered if row.get("value") is not None})
-    available_geographies = sorted({str(row["country_id"]) for row in filtered if row.get("value") is not None})
+    available_geographies = sorted({str(row.get("countryiso3code") or row["country_id"]) for row in filtered if row.get("value") is not None})
     missing_values = sum(1 for row in filtered if row.get("value") is None)
     total_row_count = len(filtered)
 
@@ -280,7 +280,8 @@ def _filter_rows(
     result = []
     for row in rows:
         row_indicator = str(row.get("indicator_id") or "")
-        country_id = str(row.get("country_id") or row.get("countryiso3code") or "")
+        # Prefer ISO3 code (countryiso3code) over the 2-letter country_id stored in WB parquet
+        country_id = str(row.get("countryiso3code") or row.get("country_id") or "")
         period = str(row.get("date") or row.get("year") or "")
         if indicator_id and row_indicator and row_indicator != indicator_id:
             continue

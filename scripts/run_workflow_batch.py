@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.observability.workflow_audit import WorkflowAuditSession
 from app.workflow.service import WorkflowRunConfig, continue_user_query, run_user_query
 
 
@@ -128,6 +129,7 @@ def _summarize_response(
         if initial_response
         else None,
         "run_artifact_dir": str(workflow_artifact_dir / run_id) if run_id else None,
+        "audit_dir": str(item_dir / "audit"),
     }
 
 
@@ -194,7 +196,9 @@ def run_batch(
         )
 
         try:
-            response = run_user_query(item.query, run_config=config)
+            audit_dir = item_dir / "audit"
+            with WorkflowAuditSession(audit_dir, item_id=item.item_id, query=item.query):
+                response = run_user_query(item.query, run_config=config)
             response_dict = _response_to_dict(response)
             initial_response = None
             _dump_json(item_dir / "response.json", response_dict)
@@ -202,7 +206,12 @@ def run_batch(
             if response.final_outcome == "needs_clarification" and item.follow_up:
                 initial_response = response_dict
                 _dump_json(item_dir / "initial-response.json", initial_response)
-                response = continue_user_query(response.run_id, item.follow_up, run_config=config)
+                with WorkflowAuditSession(
+                    audit_dir / "clarification",
+                    item_id=f"{item.item_id}:clarification",
+                    query=item.follow_up,
+                ):
+                    response = continue_user_query(response.run_id, item.follow_up, run_config=config)
                 response_dict = _response_to_dict(response)
                 _dump_json(item_dir / "response.json", response_dict)
 
@@ -241,6 +250,7 @@ def run_batch(
                     "response_path": None,
                     "initial_response_path": None,
                     "run_artifact_dir": None,
+                    "audit_dir": str(item_dir / "audit"),
                 }
             )
 

@@ -47,7 +47,43 @@ base
 
 ## Prepare Integration Review Branch
 
-Run on the other machine:
+Fast path, if you trust the already prepared integration branch:
+
+```bash
+git fetch origin --prune
+git checkout -B codex/workflow-output-integrated-review origin/codex/workflow-fix-integration-ready
+git branch codex/workflow-fix-before-output-review
+git merge --no-ff origin/codex/workflow-output-integrity
+```
+
+`origin/codex/workflow-fix-integration-ready` already contains:
+
+```text
+origin/codex/phase-2-jury-mvp-planning
++ origin/codex/workflow-runtime-boundary
++ origin/codex/workflow-source-coverage-contract
+```
+
+It was verified locally with:
+
+```bash
+PYTHONPATH=. pytest \
+  tests/test_phase2_acceptance.py \
+  tests/test_phase2_workflow_service.py \
+  tests/test_workflow_graph.py \
+  tests/test_phase2_workflow_nodes.py \
+  tests/test_phase2_contracts.py \
+  tests/test_web_frontend.py \
+  -q
+```
+
+Result:
+
+```text
+90 passed, 1 warning
+```
+
+Manual path, if you want to reproduce the integration from base:
 
 ```bash
 git fetch origin --prune

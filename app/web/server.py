@@ -67,11 +67,12 @@ class DataAgentWebHandler(SimpleHTTPRequestHandler):
         return data
 
     def _run_config(self, payload: dict[str, Any]) -> WorkflowRunConfig:
+        local_mode = bool(payload.get("local_mode", False))
         default = WorkflowRunConfig.default()
         return default.model_copy(
             update={
-                "live_llm_required": True,
-                "live_embeddings_required": True,
+                "live_llm_required": not local_mode,
+                "live_embeddings_required": not local_mode,
             }
         )
 

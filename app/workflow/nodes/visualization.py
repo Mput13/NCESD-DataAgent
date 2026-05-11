@@ -9,6 +9,7 @@ Chart type selection rules:
 - Otherwise: table
 
 Visualization is never generated from LLM text (D-28).
+Visualization errors must NEVER change a valid final decision (passed/not_found/needs_clarification).
 """
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ def build_visualization(
     - otherwise -> table
 
     Never parses numbers from narrator text.
+    On error: returns status='error' spec — never raises or changes final decision.
     """
     artifact_id = f"visualization-{uuid4().hex[:8]}"
 
@@ -75,6 +77,45 @@ def build_visualization(
         status="ok",
         encoding=encoding,
     )
+
+
+def build_visualization_for_all_datasets(
+    datasets: list[DatasetArtifact],
+    *,
+    query_category: str,
+) -> list[VisualizationSpec]:
+    """Build VisualizationSpec for every selected dataset.
+
+    Returns one spec per dataset. Each spec has explicit status: ok, skipped_with_reason.
+    Errors in individual datasets produce status='skipped_with_reason' with skip_reason,
+    and never propagate to the caller as exceptions.
+
+    The caller's final_outcome decision is NEVER modified by this function.
+    """
+    if not datasets:
+        return [
+            VisualizationSpec(
+                artifact_id=f"visualization-{uuid4().hex[:8]}",
+                chart_type="table",
+                status="skipped_with_reason",
+                skip_reason="no_datasets_provided",
+            )
+        ]
+
+    specs: list[VisualizationSpec] = []
+    for dataset in datasets:
+        try:
+            spec = build_visualization(dataset, query_category=query_category)
+        except Exception as exc:
+            spec = VisualizationSpec(
+                artifact_id=f"visualization-error-{uuid4().hex[:8]}",
+                chart_type="table",
+                dataset_artifact_id=dataset.artifact_id,
+                status="skipped_with_reason",
+                skip_reason=f"visualization_build_error:{exc}",
+            )
+        specs.append(spec)
+    return specs
 
 
 def _infer_chart_type(

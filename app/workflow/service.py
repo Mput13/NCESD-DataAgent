@@ -180,9 +180,10 @@ def _finalize_state(
     config: WorkflowRunConfig,
 ) -> WorkflowResponse:
     """Run critic -> visualization -> narrator on a finalization_pending state."""
-    from app.workflow.nodes.critic import derive_final_outcome, run_methodology_critic
-    from app.workflow.nodes.visualization import build_visualization
+    from app.workflow.nodes.critic import build_final_decision, run_methodology_critic
+    from app.workflow.nodes.visualization import build_visualization_for_all_datasets
     from app.workflow.nodes.narrator import build_workflow_response
+    from uuid import uuid4
 
     live_llm = bool(state.get("_live_llm_required", config.live_llm_required))
     dataset_artifacts = list(state.get("dataset_artifacts") or [])
@@ -193,7 +194,6 @@ def _finalize_state(
         critique = run_methodology_critic(state, live_llm_required=live_llm)
     except Exception as exc:
         from app.artifacts.workflow_artifacts import CritiqueReport
-        from uuid import uuid4
         critique = CritiqueReport(
             artifact_id=f"critique-{uuid4().hex[:8]}",
             verdict="needs_repair",
@@ -204,22 +204,27 @@ def _finalize_state(
     # clarification request even when retrieval/extraction have no data.
     if intent is not None and getattr(intent, "needs_clarification", False):
         final_outcome = "needs_clarification"
+        decision = None
     else:
-        final_outcome = derive_final_outcome(state, critique)
+        decision = build_final_decision(state, critique)
+        final_outcome = decision.terminal_outcome
 
-    # Step 3: Visualization
+    # Step 3: Visualization — process ALL selected datasets, errors must not change decision
     ok_datasets = [d for d in dataset_artifacts if d.status == "ok" and (d.rows or 0) > 0]
     query_category = getattr(intent, "category", "simple") if intent else "simple"
 
+    visualization = None
     if ok_datasets and final_outcome == "passed":
         try:
-            visualization = build_visualization(ok_datasets[0], query_category=query_category)
-        except Exception:
-            visualization = None
-    else:
-        visualization = None
+            vis_specs = build_visualization_for_all_datasets(ok_datasets, query_category=query_category)
+            # Use the first ok spec for the response; all are recorded in component_statuses
+            ok_specs = [v for v in vis_specs if v.status == "ok"]
+            visualization = ok_specs[0] if ok_specs else vis_specs[0] if vis_specs else None
+        except Exception as vis_exc:
+            # Visualization failure must NEVER change the final decision
+            state.setdefault("component_statuses", {})["visualization"] = f"error:{vis_exc}"  # type: ignore[index]
 
-    # Step 4: Narrator
+    # Step 4: Narrator — failures are output-stage errors, not data absence
     try:
         response = build_workflow_response(
             state,
@@ -229,21 +234,31 @@ def _finalize_state(
             live_llm_required=live_llm,
         )
     except Exception as exc:
-        # Fallback to a safe not_found response if narrator fails
+        # Narrator failure: this is an output-stage system error.
+        # Do NOT silently convert to not_found — surface it explicitly.
         from app.artifacts.workflow_artifacts import NoDataExplanationArtifact
-        from uuid import uuid4
+        # Build a response that preserves the correct outcome where possible.
+        # If we had a valid final_outcome from the decision, we must not hide it.
+        # For a narrator crash, we cannot compose the answer — fall back to not_found
+        # but annotate it as a system error, not data absence.
         response = WorkflowResponse(
             run_id=str(state.get("run_id") or "unknown"),
             final_outcome="not_found",
-            message=f"Ошибка при построении ответа: {exc}",
+            message=(
+                f"Данные получены, но при формировании ответа произошла ошибка: {exc}. "
+                "Это системная ошибка, а не отсутствие данных. Повторите запрос."
+            ),
             not_found_evidence=NoDataExplanationArtifact(
-                artifact_id=f"not-found-{uuid4().hex[:8]}",
+                artifact_id=f"system-error-{uuid4().hex[:8]}",
                 checked_sources=[],
                 rejected_sources=[],
-                rejection_reasons=[f"narrator_error:{exc}"],
+                rejection_reasons=[f"narrator_output_failure:{exc}"],
                 search_strategy="error_fallback",
             ),
-            component_statuses={"narrator": f"error:{exc}"},
+            component_statuses={
+                "narrator": f"system_error:{exc}",
+                "final_outcome_intended": final_outcome,
+            },
         )
 
     return response

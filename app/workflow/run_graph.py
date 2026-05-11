@@ -87,8 +87,6 @@ def run_golden_case(
     goldens_path: Path,
     case_index: int,
     json_output: Path,
-    live_llm: bool,
-    live_embeddings: bool,
     artifact_dir: Path,
 ) -> dict[str, Any]:
     """Load a golden case and run it through the Phase 2 workflow."""
@@ -100,8 +98,8 @@ def run_golden_case(
         update={
             "goldens_path": goldens_path,
             "artifact_dir": artifact_dir,
-            "live_llm_required": live_llm,
-            "live_embeddings_required": live_embeddings,
+            "live_llm_required": True,
+            "live_embeddings_required": True,
             "case_id": case_id,
         }
     )
@@ -121,16 +119,14 @@ def run_query(
     *,
     query: str,
     json_output: Path,
-    live_llm: bool,
-    live_embeddings: bool,
     artifact_dir: Path,
 ) -> dict[str, Any]:
     """Run a single user query through the Phase 2 workflow."""
     config = WorkflowRunConfig.default().model_copy(
         update={
             "artifact_dir": artifact_dir,
-            "live_llm_required": live_llm,
-            "live_embeddings_required": live_embeddings,
+            "live_llm_required": True,
+            "live_embeddings_required": True,
         }
     )
 
@@ -187,31 +183,12 @@ def main() -> None:
         help="Directory for run artifacts.",
     )
 
-    # LLM/embeddings gating
-    parser.add_argument(
-        "--no-live-llm",
-        action="store_true",
-        default=False,
-        help="Disable live LLM calls (use deterministic fallback for tests).",
-    )
-    parser.add_argument(
-        "--no-live-embeddings",
-        action="store_true",
-        default=False,
-        help="Disable live embedding calls (use index manifest only).",
-    )
-
     args = parser.parse_args()
-
-    live_llm = not args.no_live_llm
-    live_embeddings = not args.no_live_embeddings
 
     if args.query is not None:
         result = run_query(
             query=args.query,
             json_output=args.json_output,
-            live_llm=live_llm,
-            live_embeddings=live_embeddings,
             artifact_dir=args.artifact_dir,
         )
     else:
@@ -221,8 +198,6 @@ def main() -> None:
             goldens_path=args.goldens,
             case_index=args.case_index,
             json_output=args.json_output,
-            live_llm=live_llm,
-            live_embeddings=live_embeddings,
             artifact_dir=args.artifact_dir,
         )
 

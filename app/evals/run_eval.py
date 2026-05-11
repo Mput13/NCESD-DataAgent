@@ -244,15 +244,13 @@ def score_phase2_results(
 ) -> dict[str, Any]:
     """Score Phase 2 acceptance results and produce a structured eval report.
 
-    Aggregates counts: passed, needs_clarification, not_found, failed,
-    unacceptable, and test_only_fallback_failures.
+    Aggregates counts: passed, needs_clarification, not_found, failed, and unacceptable.
 
     For each case:
     - Fails if final_outcome=="passed" and dataset_count < 1 or script_count < 1 or trace_count < 5
     - Fails if outcome/source/adapter mismatches with coverage matrix
     - Fails if needs_clarification has no clarification question (via unacceptable_reasons)
     - Fails if not_found has no rejection evidence
-    - Fails jury readiness when used_test_only_fallbacks is non-empty
     """
     results_data = json.loads(results_path.read_text(encoding="utf-8"))
     coverage_matrix: dict[str, Any] = {}
@@ -272,11 +270,9 @@ def score_phase2_results(
         dataset_count = int(case.get("dataset_count") or 0)
         script_count = int(case.get("script_count") or 0)
         trace_count = int(case.get("trace_count") or 0)
-        used_test_only_fallbacks = list(case.get("used_test_only_fallbacks") or [])
         existing_unacceptable = list(case.get("unacceptable_reasons") or [])
 
         fail_reasons: list[str] = list(existing_unacceptable)
-        jury_blocked = bool(used_test_only_fallbacks)
 
         # Rule: passed cases must have dataset, script, and trace evidence
         if final_outcome == "passed":
@@ -301,9 +297,9 @@ def score_phase2_results(
 
         # Unsupported numeric claim check (propagated from acceptance runner)
         if any("unsupported_numeric_claim" in str(r) for r in fail_reasons):
-            jury_blocked = True
+            fail_reasons.append("unsupported_numeric_claim")
 
-        status = "failed" if fail_reasons else "test_only_fallback_failure" if jury_blocked else "ok"
+        status = "failed" if fail_reasons else "ok"
 
         scored_cases.append(
             {
@@ -313,9 +309,7 @@ def score_phase2_results(
                 "dataset_count": dataset_count,
                 "script_count": script_count,
                 "trace_count": trace_count,
-                "used_test_only_fallbacks": used_test_only_fallbacks,
                 "fail_reasons": fail_reasons,
-                "jury_blocked": jury_blocked,
             }
         )
 
@@ -326,8 +320,6 @@ def score_phase2_results(
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
 
     unacceptable_count = sum(1 for sc in scored_cases if sc.get("fail_reasons"))
-    test_only_failure_count = sum(1 for sc in scored_cases if sc.get("jury_blocked"))
-
     return {
         "total_cases": len(scored_cases),
         "passed": outcome_counts.get("passed", 0),
@@ -335,8 +327,7 @@ def score_phase2_results(
         "not_found": outcome_counts.get("not_found", 0),
         "failed": sum(v for k, v in outcome_counts.items() if k not in ("passed", "needs_clarification", "not_found")),
         "unacceptable": unacceptable_count,
-        "test_only_fallback_failures": test_only_failure_count,
-        "jury_ready": unacceptable_count == 0 and test_only_failure_count == 0 and len(scored_cases) == 20,
+        "jury_ready": unacceptable_count == 0 and len(scored_cases) == 20,
         "coverage_matrix_path": str(coverage_matrix_path) if coverage_matrix_path else None,
         "cases": scored_cases,
     }
@@ -359,7 +350,6 @@ def _render_phase2_markdown(result: dict[str, Any]) -> str:
 - Not found: {result['not_found']}
 - Failed: {result['failed']}
 - Unacceptable: {result['unacceptable']}
-- Test-only fallback failures: {result['test_only_fallback_failures']}
 - Jury ready: {result['jury_ready']}
 
 ## Cases

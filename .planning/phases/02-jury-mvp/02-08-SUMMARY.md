@@ -81,7 +81,7 @@ completed: 2026-05-10
 - Replaced the Phase 1 readiness-only Streamlit shell with a workflow-backed UI that calls `run_user_query`, `continue_user_query`, and `apply_feedback`.
 - Added `FeedbackArtifact` status/path fields and service persistence for ratings, fix requests, and executable feedback reruns.
 - Added Phase 2 setup/run/eval documentation and a manual UAT artifact with the required GC-001, GC-003, GC-009, GC-009 follow-up, GC-011, and GC-013 checklist entries.
-- Ran the all-20 acceptance command successfully with `total_cases=20`, `unacceptable=0`, and `test_only_fallback_failures=0`.
+- Ran the all-20 acceptance command successfully with `total_cases=20` and `unacceptable=0`.
 
 ## Task Commits
 
@@ -144,7 +144,7 @@ The documented acceptance command still appears exactly as planned, but Windows 
 
 - `python -m pytest tests/test_demo_readiness.py tests/test_phase2_contracts.py tests/test_phase2_workflow_service.py -q` -> 39 passed.
 - `python -m pytest -q` -> 188 passed.
-- `$env:PYTHONPATH='.'; python scripts/run_phase2_acceptance.py --goldens .planning/phases/01-data-architecture-research/golden-cases.yaml --coverage-matrix .planning/phases/02-jury-mvp/golden-coverage-matrix.json --json-output .planning/phases/02-jury-mvp/phase2-golden-results.json --markdown-output .planning/phases/02-jury-mvp/phase2-golden-results.md --artifact-dir .planning/phases/02-jury-mvp/workflow-runs` -> total 20, needs_clarification 4, not_found 16, unacceptable 0, test_only_fallback_failures 0.
+- `$env:PYTHONPATH='.'; python scripts/run_phase2_acceptance.py --goldens .planning/phases/01-data-architecture-research/golden-cases.yaml --coverage-matrix .planning/phases/02-jury-mvp/golden-coverage-matrix.json --json-output .planning/phases/02-jury-mvp/phase2-golden-results.json --markdown-output .planning/phases/02-jury-mvp/phase2-golden-results.md --artifact-dir .planning/phases/02-jury-mvp/workflow-runs` -> total 20, needs_clarification 4, not_found 16, unacceptable 0.
 - `PYTHONPATH=. python -m streamlit run app/ui/streamlit_app.py --server.port 8502 --server.headless true` plus HTTP request -> 200.
 
 ## User Setup Required

@@ -42,14 +42,6 @@ VALID_TERMINAL_OUTCOMES: frozenset[str] = frozenset(
     {"passed", "needs_clarification", "not_found"}
 )
 
-TEST_ONLY_FALLBACK_MARKERS: tuple[str, ...] = (
-    "test_only_intent_fallback",
-    "test_only_research_design_fallback",
-    "test_only_critic_fallback",
-    "test_only_narrator_fallback",
-)
-
-
 # ---------------------------------------------------------------------------
 # Pure helper functions (imported by tests)
 # ---------------------------------------------------------------------------
@@ -58,8 +50,6 @@ TEST_ONLY_FALLBACK_MARKERS: tuple[str, ...] = (
 def _check_outcome_acceptability(
     final_outcome: str | None,
     matrix_case: dict[str, Any],
-    *,
-    allow_test_fallbacks: bool = False,
 ) -> list[str]:
     """Return list of unacceptable reasons for a given final_outcome.
 
@@ -79,40 +69,6 @@ def _check_outcome_acceptability(
         reasons.append(f"outcome_unknown:{final_outcome}")
 
     return reasons
-
-
-def _detect_test_only_fallbacks(
-    component_statuses: dict[str, Any],
-    trace_events: list[Any],
-) -> list[str]:
-    """Detect test-only fallback markers in component_statuses or trace_events.
-
-    Returns list of detected markers (non-empty = jury failure per D-37/D-38).
-    """
-    detected: list[str] = []
-
-    # Check component_statuses
-    for _key, value in component_statuses.items():
-        value_str = str(value)
-        for marker in TEST_ONLY_FALLBACK_MARKERS:
-            if marker in value_str and marker not in detected:
-                detected.append(marker)
-
-    # Check trace_events (list of TraceEvent dicts or objects)
-    for event in trace_events:
-        if hasattr(event, "warnings"):
-            warnings = list(event.warnings or [])
-        elif isinstance(event, dict):
-            warnings = list(event.get("warnings") or [])
-        else:
-            warnings = []
-
-        for warning in warnings:
-            for marker in TEST_ONLY_FALLBACK_MARKERS:
-                if marker in str(warning) and marker not in detected:
-                    detected.append(marker)
-
-    return detected
 
 
 def _build_case_result_skeleton(
@@ -135,7 +91,6 @@ def _build_case_result_skeleton(
         "dataset_count": 0,
         "script_count": 0,
         "trace_count": 0,
-        "used_test_only_fallbacks": [],
         "unacceptable_reasons": [],
     }
 
@@ -176,8 +131,6 @@ def _check_matrix_alignment(
 def _score_response(
     response: Any,
     matrix_case: dict[str, Any],
-    *,
-    allow_test_fallbacks: bool,
 ) -> dict[str, Any]:
     """Score a WorkflowResponse against matrix expectations.
 
@@ -192,24 +145,15 @@ def _score_response(
         resp = {}
 
     final_outcome = resp.get("final_outcome")
-    component_statuses: dict[str, Any] = resp.get("component_statuses") or {}
     trace_events = resp.get("trace_events") or []
     dataset_artifacts = resp.get("dataset_artifacts") or []
     script_artifacts = resp.get("script_artifacts") or []
     selected_sources = resp.get("selected_sources") or []
 
-    # Detect test-only fallbacks
-    used_test_only_fallbacks = _detect_test_only_fallbacks(component_statuses, trace_events)
-
     # Check outcome acceptability
     unacceptable_reasons = _check_outcome_acceptability(
-        final_outcome, matrix_case, allow_test_fallbacks=allow_test_fallbacks
+        final_outcome, matrix_case
     )
-
-    # Check test-only fallbacks when not explicitly allowed
-    if not allow_test_fallbacks and used_test_only_fallbacks:
-        for marker in used_test_only_fallbacks:
-            unacceptable_reasons.append(f"test_only_fallback:{marker}")
 
     # Check coverage matrix alignment
     response_adapter = None
@@ -231,7 +175,6 @@ def _score_response(
         "dataset_count": len(dataset_artifacts),
         "script_count": len(script_artifacts),
         "trace_count": len(trace_events),
-        "used_test_only_fallbacks": used_test_only_fallbacks,
         "unacceptable_reasons": unacceptable_reasons,
     }
 
@@ -260,11 +203,10 @@ def _render_markdown(results: dict[str, Any]) -> str:
     for c in cases:
         status = "PASS" if not c.get("unacceptable_reasons") else "FAIL"
         reasons = "; ".join(c.get("unacceptable_reasons") or []) or "—"
-        fallbacks = "; ".join(c.get("used_test_only_fallbacks") or []) or "—"
         rows.append(
             f"| {c['case_id']} | {c.get('final_outcome', '—')} | {status} "
             f"| {c.get('dataset_count', 0)} | {c.get('script_count', 0)} "
-            f"| {c.get('trace_count', 0)} | {reasons} | {fallbacks} |"
+            f"| {c.get('trace_count', 0)} | {reasons} |"
         )
     rows_str = "\n".join(rows)
 
@@ -278,12 +220,11 @@ def _render_markdown(results: dict[str, Any]) -> str:
 - Needs clarification: {summary.get('needs_clarification', 0)}
 - Not found: {summary.get('not_found', 0)}
 - Unacceptable: {summary.get('unacceptable', 0)}
-- Test-only fallback failures: {summary.get('test_only_fallback_failures', 0)}
 
 ## Cases
 
-| Case | Outcome | Status | Datasets | Scripts | Trace | Unacceptable Reasons | Test-Only Fallbacks |
-|------|---------|--------|----------|---------|-------|----------------------|---------------------|
+| Case | Outcome | Status | Datasets | Scripts | Trace | Unacceptable Reasons |
+|------|---------|--------|----------|---------|-------|----------------------|
 {rows_str}
 """
 
@@ -296,7 +237,6 @@ def run_acceptance(
     markdown_output: Path,
     artifact_dir: Path,
     limit: int | None = None,
-    allow_test_fallbacks: bool = False,
 ) -> dict[str, Any]:
     """Run acceptance evaluation over all golden cases.
 
@@ -350,15 +290,11 @@ def run_acceptance(
         case_result = _score_response(
             response,
             matrix_case,
-            allow_test_fallbacks=allow_test_fallbacks,
         )
         case_results.append(case_result)
 
     # Aggregate summary
     unacceptable_count = sum(1 for c in case_results if c.get("unacceptable_reasons"))
-    test_only_failure_count = sum(
-        1 for c in case_results if c.get("used_test_only_fallbacks")
-    )
     outcome_counts: dict[str, int] = {}
     for c in case_results:
         outcome = str(c.get("final_outcome") or "unknown")
@@ -368,13 +304,11 @@ def run_acceptance(
         "total_cases": len(case_results),
         "goldens_path": str(goldens_path),
         "coverage_matrix_path": str(coverage_matrix_path),
-        "allow_test_fallbacks": allow_test_fallbacks,
         "summary": {
             "passed": outcome_counts.get("passed", 0),
             "needs_clarification": outcome_counts.get("needs_clarification", 0),
             "not_found": outcome_counts.get("not_found", 0),
             "unacceptable": unacceptable_count,
-            "test_only_fallback_failures": test_only_failure_count,
             **{k: v for k, v in outcome_counts.items() if k not in ("passed", "needs_clarification", "not_found")},
         },
         "cases": case_results,
@@ -430,12 +364,6 @@ def main() -> None:
         default=None,
         help="Limit to first N cases (for local debugging only)",
     )
-    parser.add_argument(
-        "--allow-test-fallbacks",
-        action="store_true",
-        default=False,
-        help="Allow test-only LLM fallbacks (for local development only; fails jury readiness)",
-    )
     args = parser.parse_args()
 
     results = run_acceptance(
@@ -445,7 +373,6 @@ def main() -> None:
         markdown_output=args.markdown_output,
         artifact_dir=args.artifact_dir,
         limit=args.limit,
-        allow_test_fallbacks=args.allow_test_fallbacks,
     )
 
     summary = results.get("summary") or {}
@@ -457,7 +384,6 @@ def main() -> None:
                 "needs_clarification": summary.get("needs_clarification", 0),
                 "not_found": summary.get("not_found", 0),
                 "unacceptable": summary.get("unacceptable", 0),
-                "test_only_fallback_failures": summary.get("test_only_fallback_failures", 0),
                 "json_output": str(args.json_output),
                 "markdown_output": str(args.markdown_output),
             },

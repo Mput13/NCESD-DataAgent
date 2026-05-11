@@ -67,10 +67,9 @@ Replace the Phase 1 smoke graph with a real Phase 2 LangGraph-backed workflow th
 
 - `Phase2State(TypedDict, total=False)` with 13 typed fields: `run_id`, `query`, `intent`, `research_design`, `evidence`, `coverage_reports`, `extraction_plan`, `dataset_artifacts`, `script_artifacts`, `final_outcome`, `finalization_pending`, `trace_events`, `component_statuses`
 - `new_run_id()` returns `phase2-{uuid12}` prefix
-- `analyze_intent(query, *, live_llm_required)`: target path calls `YandexAIStudioClient.structured_chat` with `_IntentAnalysisSchema`; fallback marks `test_only_intent_fallback` in `open_reasoning`
-- `design_research(intent, *, live_llm_required, matrix_hint)`: target path calls Qwen with `_ResearchDesignSchema`; fallback marks `test_only_research_design_fallback` in `assumptions`
+- `analyze_intent(query, *, live_llm_required)`: calls `YandexAIStudioClient.structured_chat` with `_IntentAnalysisSchema`; live Qwen is required.
+- `design_research(intent, *, live_llm_required, matrix_hint)`: calls Qwen with `_ResearchDesignSchema`; live Qwen is required.
 - Both paths use `qwen_credential_gate()` to detect missing credentials; never return fake live success (D-37/D-38)
-- Component statuses mark `test_only` paths so plan 02-07 jury readiness can exclude them
 
 ### Task 2: LangGraph Graph and Deterministic Tools (`app/workflow/graph.py`, `app/workflow/nodes/deterministic_tools.py`, `app/workflow/service.py`)
 
@@ -96,7 +95,7 @@ Replace the Phase 1 smoke graph with a real Phase 2 LangGraph-backed workflow th
 ### Task 3: CLI (`app/workflow/run_graph.py`)
 
 - Supports `--query "..."` and `--case-index N` (mutually exclusive)
-- `--no-live-llm` and `--no-live-embeddings` flags for test/offline execution
+- CLI execution requires live Yandex/Qwen and the configured embedding/Qdrant path.
 - Delegates to `run_user_query_to_pending_finalization` from `service.py`
 - Writes serialized `Phase2State` JSON with `status="finalization_pending"`
 - Preserves `python -m app.workflow.run_graph` module invocation
@@ -146,7 +145,7 @@ None. No new network endpoints added; CKAN/FedStat/WB calls go through existing 
 
 ## Self-Check: PASSED
 
-- `app/workflow/state.py` exists and contains `Phase2State`, `phase2-`, `script_artifacts`, `test_only_intent_fallback`, `test_only_research_design_fallback`
+- `app/workflow/state.py` exists and contains `Phase2State`, `phase2-`, and `script_artifacts`
 - `app/workflow/graph.py` exists and contains `StateGraph`, `finalization_pending`
 - `app/workflow/nodes/deterministic_tools.py` exists and contains `def run_deterministic_tools`, `extract_fedstat_dataset`, `extract_world_bank_dataset`, `extract_ckan_dataset`, `export_dataset_with_script`
 - `app/workflow/service.py` contains `def run_user_query_to_pending_finalization` and `NotImplementedError("Phase 2 final WorkflowResponse implementation is provided by plan 02-06")`

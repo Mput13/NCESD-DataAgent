@@ -323,18 +323,15 @@ def assess_phase2_readiness(
     - phase2_eval.total_cases == 20
     - phase2_eval.failed == 0
     - phase2_eval.unacceptable == 0
-    - phase2_eval.test_only_fallback_failures == 0
     - coverage_matrix.total_cases == 20
     - coverage_matrix.unresolved_data_gaps is empty
 
     Returns a dict with phase2_workflow_eval_status, phase2_coverage_matrix_status,
-    phase2_total_cases, phase2_unacceptable_count, phase2_test_only_fallback_failures,
-    and overall_status.
+    phase2_total_cases, phase2_unacceptable_count, and overall_status.
     """
     total_cases = int(phase2_eval.get("total_cases") or 0)
     failed = int(phase2_eval.get("failed") or 0)
     unacceptable = int(phase2_eval.get("unacceptable") or 0)
-    test_only_fallback_failures = int(phase2_eval.get("test_only_fallback_failures") or 0)
 
     matrix_total = int(coverage_matrix.get("total_cases") or 0)
     unresolved_gaps = list(coverage_matrix.get("unresolved_data_gaps") or [])
@@ -347,8 +344,6 @@ def assess_phase2_readiness(
         eval_blockers.append(f"failed={failed}")
     if unacceptable > 0:
         eval_blockers.append(f"unacceptable={unacceptable}")
-    if test_only_fallback_failures > 0:
-        eval_blockers.append(f"test_only_fallback_failures={test_only_fallback_failures}")
 
     phase2_workflow_eval_status = "ready" if not eval_blockers else "blocked"
 
@@ -369,7 +364,6 @@ def assess_phase2_readiness(
         "phase2_coverage_matrix_status": phase2_coverage_matrix_status,
         "phase2_total_cases": total_cases,
         "phase2_unacceptable_count": unacceptable,
-        "phase2_test_only_fallback_failures": test_only_fallback_failures,
         "phase2_eval_blockers": eval_blockers,
         "phase2_matrix_blockers": matrix_blockers,
         "all_blockers": all_blockers,
@@ -433,4 +427,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

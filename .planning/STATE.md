@@ -90,7 +90,7 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
   `.planning/phases/02-jury-mvp/02-CONTEXT.md` records the user decision that Phase 2 must implement the full functionality described in `.planning/ARCHITECTURE_STACK.md`. The architecture stack is the minimum jury-prototype baseline, not a future wishlist or a reduced MVP. Planning must target all 20 golden cases and the full source-bound workflow: user query through Supervisor, Intent Analyst, Research Designer/direct path, FedStat/WB/CKAN scouts, Coverage & Schema, Extraction Planner, Deterministic Tools, Methodology Critic, Visualization, Narrator, answer, dataset, script, sources, and trace.
 
 - **2026-05-10 — Phase 2 discussion decisions expanded.**
-  User delegated implementation wave ordering to the planner with preference for parallel work and fast delivery. Target path must use real Yandex/Qwen LLM calls and real embedding calls where specified by the architecture stack; mocks or deterministic fallbacks may be test-only and cannot count as jury readiness. Minimum success includes full pipeline traversal and an answer. Manual testing and user feedback after implementation are required in addition to automatic tests. Do not build a polished frontend now; implement a chat-like frontend response format, with Streamlit retained as a quick testing surface.
+  User delegated implementation wave ordering to the planner with preference for parallel work and fast delivery. Target path must use real Yandex/Qwen LLM calls and real embedding calls where specified by the architecture stack; request processing without live LLM is not a supported runtime mode. Minimum success includes full pipeline traversal and an answer. Manual testing and user feedback after implementation are required in addition to automatic tests.
 
 - **2026-05-10 — Qdrant server mode chosen for Phase 2 runtime.**
   Local embedded Qdrant (`QdrantClient(path=".local/qdrant")`) is acceptable for small tests and isolated development only. Phase 2 should use Docker/server Qdrant through `QDRANT_URL` so parallel scouts, evals, workflow smoke runs, and Streamlit can safely query one shared collection without embedded storage locks. The 36,321-point corpus is above the local-mode 20,000-point warning threshold, so jury readiness should not depend on embedded local mode.
@@ -102,7 +102,7 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
   Third `gsd-plan-checker` pass on branch `codex/phase-2-jury-mvp-planning` returned `VERIFICATION PASSED` for all 10 plans. No blockers remain before `$gsd-execute-phase 2`. Requirements groups `NLU-01..04`, `SRCH-01..04`, `DATA-01..05`, `ART-01..06`, `RBST-01..04`, `UI-01..04`, and `ENG-01..04` are covered by plan frontmatter/tasks, and Revision 2 fixes for deterministic tool dispatch, `ScriptArtifact` propagation, Qdrant server mode, executable feedback/fix paths, and all-20 acceptance gates were confirmed present.
 
 - **2026-05-10 — Phase 2 execution plan set completed.**
-  `02-08-SUMMARY.md` completed the final execution plan: Streamlit now calls `run_user_query`, `continue_user_query`, and `apply_feedback`; feedback/fix-request artifacts persist by `run_id`; README/manual UAT docs exist; `python -m pytest -q` passed 188 tests; all-20 acceptance produced `total_cases=20`, `unacceptable=0`, and `test_only_fallback_failures=0`. Manual Streamlit UAT still needs human approval before claiming full phase completion.
+  `02-08-SUMMARY.md` completed the final execution plan: `run_user_query`, `continue_user_query`, and `apply_feedback` are the service entrypoints; feedback/fix-request artifacts persist by `run_id`; README/manual UAT docs exist; `python -m pytest -q` passed 188 tests; all-20 acceptance produced `total_cases=20` and `unacceptable=0`. Live Yandex/Qwen is required for runtime query processing.
 
 - **2026-05-09 — Phase 1 context gathered.**
   Captured implementation decisions in `.planning/phases/01-data-architecture-research/01-CONTEXT.md`, based on `.planning/ARCHITECTURE_STACK.md`.
@@ -142,6 +142,9 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 - **2026-05-11 — Offline/no-response LLM fallbacks are a Phase 2 bug.**
   Phase 2 must not keep product workflow running by pretending the LLM works without network, credentials, or a response. Runtime LLM failures should become explicit gated/error artifacts (`llm_unavailable`, `llm_timeout`, `llm_error`) and must fail acceptance/readiness, not fall back to keyword, rule-based, manual-merge, or fake narrator behavior. Unit tests may mock `YandexAIStudioClient.structured_chat`, but product code should not contain an offline/no-response LLM substitute path.
+
+- **2026-05-11 — Live LLM owns request understanding and reasoning.**
+  Do not add code paths that try to replace LLM work with handwritten request-understanding, research-design, critic, or narrator logic. Deterministic code is for source-bound retrieval, extraction, validation, and numeric/provenance checks; user-query interpretation and final reasoning must go through live Yandex/Qwen.
 
 - **2026-05-10 — Plan 02-01 constrains final user outcomes.**
   Phase 2 final user outcomes are limited to `passed`, `needs_clarification`, and `not_found`; internal gated/stale/skipped/no_candidate states stay visible only as component-level status.

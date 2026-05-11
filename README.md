@@ -1,6 +1,6 @@
 # DataAgent
 
-Source-bound economic data assistant for the jury MVP. The system routes a user query through intent analysis, source scouting, coverage checks, deterministic extraction, methodology critique, visualization, narration, and a Streamlit test UI.
+Source-bound economic data assistant for the jury MVP. The system routes a user query through live Qwen intent analysis, source scouting, coverage checks, deterministic extraction, methodology critique, visualization, and narration.
 
 ## Setup
 
@@ -18,15 +18,7 @@ docker compose -f docker-compose.qdrant.yml up -d qdrant
 python3 scripts/promote_qdrant_server.py --start-server --manifest-output .planning/phases/02-jury-mvp/qdrant-server-manifest.json
 ```
 
-Phase 2 jury readiness expects server Qdrant through `QDRANT_URL`, not embedded local mode, so Streamlit, evals, and workflow runs can share the same collection.
-
-## Run Streamlit Jury UI
-
-```bash
-PYTHONPATH=. python3 -m streamlit run app/ui/streamlit_app.py --server.port 8501
-```
-
-The UI calls `app.workflow.service.run_user_query`, `continue_user_query`, and `apply_feedback`. It renders the shared `WorkflowResponse` contract: answer, citations, selected/rejected sources, coverage, extraction plan, dataset/script downloads, visualization, trace, limitations, clarification questions, not-found evidence, and feedback actions.
+Phase 2 jury readiness expects server Qdrant through `QDRANT_URL`, not embedded local mode, so evals and workflow runs can share the same collection.
 
 ## Run One Workflow Query Without UI
 
@@ -34,7 +26,7 @@ The UI calls `app.workflow.service.run_user_query`, `continue_user_query`, and `
 PYTHONPATH=. python3 scripts/run_workflow_query.py "Какой ВВП России в 2024 году?"
 ```
 
-The command calls the same `app.workflow.service.run_user_query` entrypoint as Streamlit and writes the full `WorkflowResponse` JSON under `.planning/phases/02-jury-mvp/manual-runs/<run_id>/response.json`.
+The command calls `app.workflow.service.run_user_query` and writes the full `WorkflowResponse` JSON under `.planning/phases/02-jury-mvp/manual-runs/<run_id>/response.json`. Live Yandex AI Studio / Qwen credentials are required.
 
 For clarification flows:
 

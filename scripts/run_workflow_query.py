@@ -65,24 +65,14 @@ def main() -> int:
         type=Path,
         help="Where to write the final WorkflowResponse JSON. Defaults to artifact-dir/<run_id>/response.json.",
     )
-    parser.add_argument(
-        "--no-live-llm-required",
-        action="store_true",
-        help="Allow configured test/local fallback behavior when live LLM credentials are unavailable.",
-    )
-    parser.add_argument(
-        "--no-live-embeddings-required",
-        action="store_true",
-        help="Allow configured test/local fallback behavior when live embeddings are unavailable.",
-    )
     args = parser.parse_args()
 
     config = WorkflowRunConfig.default().model_copy(
         update={
             "artifact_dir": args.artifact_dir,
             "case_id": args.case_id,
-            "live_llm_required": not args.no_live_llm_required,
-            "live_embeddings_required": not args.no_live_embeddings_required,
+            "live_llm_required": True,
+            "live_embeddings_required": True,
         }
     )
 

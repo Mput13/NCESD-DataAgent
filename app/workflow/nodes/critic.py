@@ -9,7 +9,6 @@ Implements final-outcome guardrails:
 - Bounded checked/rejected sources with no usable coverage -> not_found
 
 Qwen/Yandex structured output is the only execution path for Methodology Critic (D-37).
-In tests, mock YandexAIStudioClient.structured_chat — do not rely on deterministic fallbacks.
 """
 from __future__ import annotations
 
@@ -90,7 +89,6 @@ def run_methodology_critic(
     """Run the Methodology Critic and return a CritiqueReport.
 
     Calls YandexAIStudioClient.structured_chat (Qwen) for critique.
-    When live_llm_required=False, raises RuntimeError — use mock in tests.
 
     Enforces concrete checks after the LLM critique:
     - passed outcome requires: coverage statuses all ok, at least one dataset artifact
@@ -100,10 +98,9 @@ def run_methodology_critic(
     - ambiguous missing critical fields -> needs_user_clarification
     - bounded checked/rejected sources with no usable coverage -> not_found
     """
-    if live_llm_required:
-        return _run_critic_live(state)
-    else:
-        return _run_critic_fallback(state)
+    if not live_llm_required:
+        raise RuntimeError("Methodology Critic requires live Yandex AI Studio / Qwen.")
+    return _run_critic_live(state)
 
 
 def derive_final_outcome(
@@ -262,17 +259,4 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
         verdict=verdict,  # type: ignore[arg-type]
         warnings=list(result.warnings),
         repair_plan=list(result.repair_plan),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Deterministic fallback — test_only
-# ---------------------------------------------------------------------------
-
-
-def _run_critic_fallback(*_: object) -> CritiqueReport:
-    raise RuntimeError(
-        "Methodology Critic requires a live LLM call (Yandex AI Studio / Qwen). "
-        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
-        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
     )

@@ -56,7 +56,7 @@ def new_run_id() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Intent analysis — Qwen target path + deterministic test fallback
+# Intent analysis — Qwen target path
 # ---------------------------------------------------------------------------
 
 
@@ -78,18 +78,15 @@ def analyze_intent(
     *,
     live_llm_required: bool = True,
 ) -> IntentFrame:
-    """Analyze user intent using Qwen structured output (target path).
+    """Analyze user intent using Qwen structured output.
 
-    When live_llm_required=False, falls back to deterministic classification.
-    Fallback is marked test_only_intent_fallback in open_reasoning so plan
-    02-07 jury-readiness checks can exclude non-live paths.
-
-    Never returns a fake live-Qwen success when credentials are missing.
+    Query processing requires live Yandex AI Studio / Qwen. The
+    live_llm_required argument is retained for API compatibility, but disabling
+    it is not supported.
     """
-    if live_llm_required:
-        return _analyze_intent_live(query)
-    else:
-        return _analyze_intent_fallback(query)
+    if not live_llm_required:
+        raise RuntimeError("Intent analysis requires live Yandex AI Studio / Qwen.")
+    return _analyze_intent_live(query)
 
 
 def _analyze_intent_live(query: str) -> IntentFrame:
@@ -155,16 +152,8 @@ def _analyze_intent_live(query: str) -> IntentFrame:
     )
 
 
-def _analyze_intent_fallback(*_: object) -> IntentFrame:
-    raise RuntimeError(
-        "Intent analysis requires a live LLM call (Yandex AI Studio / Qwen). "
-        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
-        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
-    )
-
-
 # ---------------------------------------------------------------------------
-# Research design — Qwen structured output target path + test fallback
+# Research design — Qwen structured output target path
 # ---------------------------------------------------------------------------
 
 
@@ -184,18 +173,14 @@ def design_research(
     live_llm_required: bool = True,
     matrix_hint: dict[str, Any] | None = None,
 ) -> ResearchDesignArtifact:
-    """Design a research plan from intent using Qwen structured output (target path).
-
-    When live_llm_required=False, falls back to a deterministic design.
-    Fallback is marked test_only_research_design_fallback in assumptions.
+    """Design a research plan from intent using Qwen structured output.
 
     matrix_hint: optional dict from golden-coverage-matrix.json providing
     source_family, source_id, filters, and expected terminal outcome.
     """
-    if live_llm_required:
-        return _design_research_live(intent, matrix_hint=matrix_hint)
-    else:
-        return _design_research_fallback(intent, matrix_hint=matrix_hint)
+    if not live_llm_required:
+        raise RuntimeError("Research design requires live Yandex AI Studio / Qwen.")
+    return _design_research_live(intent, matrix_hint=matrix_hint)
 
 
 def _design_research_live(
@@ -260,12 +245,4 @@ def _design_research_live(
         indicators=result.indicators,
         grouping_policy=result.grouping_policy,
         assumptions=result.assumptions,
-    )
-
-
-def _design_research_fallback(*_: object, **__: object) -> ResearchDesignArtifact:
-    raise RuntimeError(
-        "Research design requires a live LLM call (Yandex AI Studio / Qwen). "
-        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
-        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
     )

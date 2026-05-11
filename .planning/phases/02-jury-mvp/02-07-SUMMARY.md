@@ -43,9 +43,8 @@ key_files:
 decisions:
   - "Acceptance runner uses run_user_query from app.workflow.service as the shared entrypoint — same path used by UI, evals, and CLI"
   - "UNACCEPTABLE_OUTCOMES frozenset: gated, stale, skipped_with_reason, no_candidate, ok, ok-with-gated-internals"
-  - "Test-only fallback detection scans both component_statuses values and trace_events warnings"
   - "score_phase2_results added to run_eval.py — evaluates passed cases for dataset>=1, script>=1, trace>=5"
-  - "assess_phase2_readiness in run_demo.py gates overall_status=ready on total_cases==20, failed==0, unacceptable==0, test_only_fallback_failures==0"
+  - "assess_phase2_readiness in run_demo.py gates overall_status=ready on total_cases==20, failed==0, unacceptable==0"
   - "scripts/__init__.py added to make scripts/ importable as a package in tests"
 metrics:
   duration: ~20min
@@ -65,22 +64,21 @@ All-20 golden-case acceptance runner, eval scoring extension, and demo readiness
 
 Created `scripts/run_phase2_acceptance.py` with:
 
-- CLI args: `--goldens`, `--coverage-matrix`, `--json-output`, `--markdown-output`, `--artifact-dir`, `--limit`, `--allow-test-fallbacks`
+- CLI args: `--goldens`, `--coverage-matrix`, `--json-output`, `--markdown-output`, `--artifact-dir`, `--limit`
 - Iterates all 20 golden cases by default (`--limit` for local debugging only)
 - Calls `run_user_query` from `app.workflow.service` with `WorkflowRunConfig.default().model_copy(update={...})`
 - Validates each case against `golden-coverage-matrix.json`
 - Rejects `gated`, `stale`, `skipped_with_reason`, `no_candidate`, `ok`, `ok-with-gated-internals` as unacceptable
-- Detects `test_only_intent_fallback`, `test_only_research_design_fallback`, `test_only_critic_fallback`, `test_only_narrator_fallback` in component_statuses and trace_events
 - Writes `phase2-golden-results.json` and `.md` in normal usage
 - Exits non-zero when any unacceptable outcome found (for CI gating)
-- Exposes `_check_outcome_acceptability`, `_detect_test_only_fallbacks`, `_build_case_result_skeleton` as pure helpers for unit testing
+- Exposes `_check_outcome_acceptability` and `_build_case_result_skeleton` as pure helpers for unit testing
 
 ### Task 2: Extend eval scoring for WorkflowResponse outcomes (TDD)
 
 Extended `app/evals/run_eval.py` with:
 
 - `score_phase2_results(results_path: Path, *, coverage_matrix_path: Path | None = None) -> dict[str, Any]`
-- Aggregates: `passed`, `needs_clarification`, `not_found`, `failed`, `unacceptable`, `test_only_fallback_failures`, `jury_ready`
+- Aggregates: `passed`, `needs_clarification`, `not_found`, `failed`, `unacceptable`, `jury_ready`
 - Per-case failure rules:
   - `final_outcome=="passed"` and `dataset_count < 1` → `passed_missing_dataset`
   - `final_outcome=="passed"` and `script_count < 1` → `passed_missing_script`
@@ -97,10 +95,9 @@ Extended `app/demo/run_demo.py` with:
   - `phase2_eval.total_cases == 20`
   - `phase2_eval.failed == 0`
   - `phase2_eval.unacceptable == 0`
-  - `phase2_eval.test_only_fallback_failures == 0`
   - `coverage_matrix.total_cases == 20`
   - `coverage_matrix.unresolved_data_gaps == []`
-- Returns: `phase2_workflow_eval_status`, `phase2_coverage_matrix_status`, `phase2_total_cases`, `phase2_unacceptable_count`, `phase2_test_only_fallback_failures`
+- Returns: `phase2_workflow_eval_status`, `phase2_coverage_matrix_status`, `phase2_total_cases`, `phase2_unacceptable_count`
 
 ## Commits
 

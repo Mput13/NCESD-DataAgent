@@ -80,7 +80,7 @@ Plan 02-06 implements the finalization enforcement layer that turns internal wor
 
 ### Task 1: Methodology Critic (`app/workflow/nodes/critic.py`)
 
-`run_methodology_critic(state, *, live_llm_required)` calls `YandexAIStudioClient.structured_chat` in the target path. When `live_llm_required=False`, uses a deterministic fallback marked `test_only_critic_fallback`.
+`run_methodology_critic(state, *, live_llm_required)` calls `YandexAIStudioClient.structured_chat`. Live Qwen is required for runtime execution.
 
 **Concrete post-critique guardrails** (applied after LLM verdict):
 - Coverage all `ok` required for `passed`
@@ -107,7 +107,7 @@ Plan 02-06 implements the finalization enforcement layer that turns internal wor
 
 `build_workflow_response(state, *, final_outcome, critique, visualization, live_llm_required)`:
 - Target path calls `YandexAIStudioClient.structured_chat` with compact source-bound context
-- Fallback marked `test_only_narrator_fallback`
+- Live Qwen is required for runtime execution.
 - Answer blocks by outcome: `summary`/`methodology`/`limitations`/`how_found` for `passed`; clarification questions for `needs_clarification`; `NoDataExplanationArtifact` for `not_found`
 
 `assert_message_numbers_are_supported(message, datasets)`:
@@ -153,8 +153,7 @@ Plan 02-06 implements the finalization enforcement layer that turns internal wor
 **Qwen live path in critic.py and narrator.py:**
 - `run_methodology_critic(state, live_llm_required=True)` calls real Yandex API (not stubbed)
 - `build_workflow_response(state, ..., live_llm_required=True)` calls real Yandex API (not stubbed)
-- Both are tested with monkeypatched LLM client
-- Plan 02-07 must verify that `test_only_critic_fallback` and `test_only_narrator_fallback` markers are absent in the jury-ready path
+- Runtime execution requires configured Yandex/Qwen credentials.
 
 ## Threat Flags
 

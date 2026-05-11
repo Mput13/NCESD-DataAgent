@@ -4,9 +4,7 @@ Implements source-bound response construction:
 - build_workflow_response: creates WorkflowResponse from Phase2State and finalization artifacts
 - assert_message_numbers_are_supported: verifies no unsupported numerics in message
 
-Qwen/Yandex structured output is the target path for Narrator (D-37).
-Deterministic fallback is explicitly marked test_only_narrator_fallback.
-Plan 02-07 must exclude this marker from jury readiness checks.
+Qwen/Yandex structured output is the only execution path for Narrator (D-37).
 
 Key invariants:
 - Any number in WorkflowResponse.message must appear in DatasetArtifact records or provenance
@@ -127,18 +125,21 @@ def build_workflow_response(
 ) -> WorkflowResponse:
     """Build a complete WorkflowResponse from Phase2State and finalization artifacts.
 
-    Target path calls YandexAIStudioClient.structured_chat for Narrator (D-37).
-    When live_llm_required=False, uses deterministic fallback marked test_only_narrator_fallback.
+    Calls YandexAIStudioClient.structured_chat for Narrator (D-37).
 
     For 'passed': validates at least one ok dataset and one downloadable script,
     constructs answer blocks: summary, methodology, limitations, how_found.
     For 'needs_clarification': includes concrete questions from IntentFrame.missing_fields.
     For 'not_found': includes NoDataExplanationArtifact from source/rejection evidence.
     """
-    if live_llm_required:
-        return _build_response_live(state, final_outcome=final_outcome, critique=critique, visualization=visualization)
-    else:
-        return _build_response_fallback(state, final_outcome=final_outcome, critique=critique, visualization=visualization)
+    if not live_llm_required:
+        raise RuntimeError("Narrator requires live Yandex AI Studio / Qwen.")
+    return _build_response_live(
+        state,
+        final_outcome=final_outcome,
+        critique=critique,
+        visualization=visualization,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -316,20 +317,6 @@ def _build_response_live(
         extra_statuses={},
     )
 
-
-# ---------------------------------------------------------------------------
-# Deterministic fallback — test_only
-# ---------------------------------------------------------------------------
-
-
-def _build_response_fallback(*_: object, **__: object) -> WorkflowResponse:
-    raise RuntimeError(
-        "Narrator requires a live LLM call (Yandex AI Studio / Qwen). "
-        "Set live_llm_required=True and configure YANDEX_API_KEY + YANDEX_FOLDER_ID. "
-        "In tests, mock YandexAIStudioClient.structured_chat instead of using this path."
-    )
-
-
 def _derive_clarification_questions(missing_fields: list[str], query: str) -> list[str]:
     field_to_question = {
         "geography": "Для какой страны или региона нужны данные?",
@@ -370,7 +357,6 @@ def _build_not_found_response(
 
     query = str(state.get("query") or "")
     message = (
-        f"[test_only_narrator_fallback] "
         f"По запросу '{query}' данные не найдены в проверенных источниках. "
         f"Проверено источников: {len(selected)}. Причина: {reason}."
     )

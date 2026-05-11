@@ -19,6 +19,15 @@ from app.workflow.service import (
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
+def _serialize_trace(event: Any) -> dict[str, Any]:
+    """Serialize a TraceEvent to a plain dict for JSON/SSE."""
+    if hasattr(event, "model_dump"):
+        return event.model_dump(mode="json")
+    if isinstance(event, dict):
+        return event
+    return {"raw": str(event)}
+
+
 class DataAgentWebHandler(SimpleHTTPRequestHandler):
     server_version = "DataAgentWeb/0.1"
 
@@ -36,6 +45,17 @@ class DataAgentWebHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        # /api/stream handles its own headers and exceptions — must not go through
+        # the generic try/except below which would try to write a JSON error body
+        # on top of an already-opened SSE stream.
+        if parsed.path == "/api/stream":
+            try:
+                payload = self._read_json()
+            except Exception as exc:
+                self._write_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+                return
+            self._handle_stream(payload)
+            return
         try:
             payload = self._read_json()
             if parsed.path == "/api/query":
@@ -75,6 +95,107 @@ class DataAgentWebHandler(SimpleHTTPRequestHandler):
                 "live_embeddings_required": not local_mode,
             }
         )
+
+    def _handle_stream(self, payload: dict[str, Any]) -> None:
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            self._write_json({"error": "query is required"}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream; charset=utf-8")
+        self.send_header("cache-control", "no-cache")
+        self.send_header("x-accel-buffering", "no")
+        self.end_headers()
+
+        def _sse(event: str, data: dict[str, Any]) -> None:
+            line = f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+            try:
+                self.wfile.write(line.encode("utf-8"))
+                self.wfile.flush()
+            except Exception:
+                pass
+
+        # --- Agent descriptions shown to the user while thinking ---
+        _AGENT_DESCRIPTIONS: dict[str, str] = {
+            "supervisor": "Супервизор анализирует запрос и выбирает маршрут исследования...",
+            "intent_analyst": "Анализатор намерений разбирает запрос: показатель, период, география...",
+            "research_designer": "Дизайнер исследования строит гипотезы и выбирает измерения...",
+            "source_scouts": "Разведчики источников ищут данные в FedStat, World Bank, CKAN...",
+            "coverage_schema": "Проверка покрытия: есть ли нужные периоды, единицы, схема...",
+            "extraction_planner": "Планировщик извлечения строит план запросов к данным...",
+            "deterministic_tools": "Детерминированные инструменты извлекают реальные данные...",
+            "finalization_pending": "Завершение: критик и нарратор формируют итоговый ответ...",
+        }
+
+        try:
+            config = self._run_config(payload)
+
+            from app.workflow.service import _finalize_state
+            from app.workflow.state import new_run_id
+            from app.workflow.graph import build_phase2_graph
+
+            run_id = new_run_id()
+            initial_state = {
+                "run_id": run_id,
+                "query": query,
+                "intent": None,
+                "research_design": None,
+                "evidence": None,
+                "coverage_reports": [],
+                "extraction_plan": None,
+                "dataset_artifacts": [],
+                "script_artifacts": [],
+                "final_outcome": None,
+                "finalization_pending": False,
+                "pending_reason": None,
+                "trace_events": [],
+                "component_statuses": {},
+                "_live_llm_required": config.live_llm_required,
+                "_live_embeddings_required": config.live_embeddings_required,
+                "_artifact_dir": str(config.artifact_dir),
+                "_index_manifest_path": str(config.phase1_index_manifest),
+            }
+
+            graph = build_phase2_graph()
+            # Accumulate full state across chunks (stream returns deltas per node)
+            accumulated_state: dict[str, Any] = dict(initial_state)
+            seen_trace_count = 0
+
+            for chunk in graph.stream(initial_state):
+                for node_name, node_delta in chunk.items():
+                    # Merge delta into accumulated state
+                    if isinstance(node_delta, dict):
+                        accumulated_state = {**accumulated_state, **node_delta}
+
+                    trace_events = list(accumulated_state.get("trace_events") or [])
+                    new_events = trace_events[seen_trace_count:]
+                    seen_trace_count = len(trace_events)
+
+                    description = _AGENT_DESCRIPTIONS.get(node_name, f"{node_name}...")
+                    _sse("step", {
+                        "node": node_name,
+                        "description": description,
+                        "run_id": run_id,
+                        "new_trace_events": [
+                            _serialize_trace(e) for e in new_events
+                        ],
+                    })
+
+            # Finalization: critic + visualization + narrator
+            _sse("step", {
+                "node": "finalization",
+                "description": "Критик проверяет качество данных, нарратор пишет ответ...",
+                "run_id": run_id,
+                "new_trace_events": [],
+            })
+
+            response = _finalize_state(accumulated_state, config=config)
+
+            _sse("done", response.model_dump(mode="json"))
+
+        except Exception as exc:
+            _sse("error", {"message": str(exc)})
 
     def _handle_query(self, payload: dict[str, Any]) -> None:
         query = str(payload.get("query") or "").strip()

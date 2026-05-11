@@ -11,10 +11,12 @@ const artSubEl = $("#artifactsSub");
 let latestWorkflow = null;
 let artifacts = [];
 let artifactFilter = "all";
+let activeAbortController = null;
 
 seedConversation();
 bindComposer();
 bindFilters();
+bindHeaderActions();
 
 function seedConversation() {
   thread.appendChild(
@@ -33,12 +35,12 @@ function bindComposer() {
     composer.style.height = `${Math.min(composer.scrollHeight, 200)}px`;
   });
   composer.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
   });
-  sendBtn.addEventListener("click", sendMessage);
+  sendBtn.onclick = sendMessage;
   $$(".sugg").forEach((button) => {
     button.addEventListener("click", () => {
       composer.value = button.textContent.replace(/^[^\p{L}\p{N}]+/u, "");
@@ -46,6 +48,36 @@ function bindComposer() {
       composer.dispatchEvent(new Event("input"));
     });
   });
+}
+
+function bindHeaderActions() {
+  const newBtn = $("#newAnalysisBtn");
+  if (newBtn) newBtn.addEventListener("click", () => location.reload());
+
+  const shareBtn = $("#shareBtn");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(location.href).then(() => {
+        shareBtn.textContent = "Скопировано!";
+        setTimeout(() => (shareBtn.textContent = "Share"), 1500);
+      }).catch(() => {
+        prompt("Ссылка для копирования:", location.href);
+      });
+    });
+  }
+
+  const exportBtn = $("#exportBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const msgs = $$(".msg").map((el) => el.innerText).join("\n\n---\n\n");
+      const blob = new Blob([msgs], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `dataagent-export-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  }
 }
 
 function bindFilters() {
@@ -67,40 +99,136 @@ async function sendMessage() {
   composer.value = "";
   composer.style.height = "auto";
 
-  const typing = buildTypingMessage();
-  thread.appendChild(typing);
+  activeAbortController = new AbortController();
   setBusy(true);
   scrollToBottom();
 
+  const isContinuation = latestWorkflow?.pendingClarification;
+
+  // Clarification uses old blocking path; fresh queries use SSE stream
+  if (isContinuation) {
+    const typing = buildTypingMessage();
+    thread.appendChild(typing);
+    try {
+      const response = await postJson(
+        "/api/continue",
+        { run_id: latestWorkflow.runId, answer: text, local_mode: false },
+        activeAbortController.signal,
+      );
+      typing.remove();
+      renderWorkflowResponse(response);
+    } catch (error) {
+      typing.remove();
+      _handleSendError(error);
+    } finally {
+      activeAbortController = null;
+      setBusy(false);
+      scrollToBottom();
+    }
+    return;
+  }
+
+  // SSE streaming path
+  const thinkingEl = buildThinkingMessage();
+  thread.appendChild(thinkingEl);
+  scrollToBottom();
+
   try {
-    const isContinuation = latestWorkflow?.pendingClarification;
-    const response = await postJson(isContinuation ? "/api/continue" : "/api/query", {
-      ...(isContinuation
-        ? { run_id: latestWorkflow.runId, answer: text }
-        : { query: text }),
-      local_mode: false,
-    });
-    typing.remove();
-    renderWorkflowResponse(response);
+    await streamQuery(text, thinkingEl, activeAbortController.signal);
   } catch (error) {
-    typing.remove();
-    thread.appendChild(
-      buildAssistantMessage({
-        role: "Error",
-        message: `Ошибка запроса: ${error.message || error}`,
-      }),
-    );
+    thinkingEl.remove();
+    _handleSendError(error);
   } finally {
+    activeAbortController = null;
     setBusy(false);
     scrollToBottom();
   }
 }
 
-async function postJson(url, payload) {
+function _handleSendError(error) {
+  if (error.name === "AbortError") {
+    thread.appendChild(buildAssistantMessage({ role: "", message: "Запрос остановлен." }));
+  } else {
+    thread.appendChild(buildAssistantMessage({ role: "Error", message: `Ошибка: ${error.message || error}` }));
+  }
+}
+
+function stopMessage() {
+  if (activeAbortController) activeAbortController.abort();
+}
+
+// ---- SSE streaming ----
+
+async function streamQuery(query, thinkingEl, signal) {
+  const res = await fetch("/api/stream", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query, local_mode: false }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(txt || `HTTP ${res.status}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  // Accumulated trace events for the final trace card
+  const allTraceEvents = [];
+
+  let gotDone = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    // Parse SSE frames (may contain multiple)
+    const frames = buf.split("\n\n");
+    buf = frames.pop(); // last partial frame stays in buffer
+
+    for (const frame of frames) {
+      if (!frame.trim()) continue;
+      let eventType = "message";
+      let dataLine = "";
+      for (const line of frame.split("\n")) {
+        if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+        if (line.startsWith("data: "))  dataLine  = line.slice(6);
+      }
+      if (!dataLine) continue;
+      let payload;
+      try { payload = JSON.parse(dataLine); } catch { continue; }
+
+      if (eventType === "step") {
+        (payload.new_trace_events || []).forEach((e) => allTraceEvents.push(e));
+        updateThinkingMessage(thinkingEl, payload, allTraceEvents);
+        scrollToBottom();
+      } else if (eventType === "done") {
+        gotDone = true;
+        thinkingEl.remove();
+        renderWorkflowResponse(payload, allTraceEvents);
+        return;
+      } else if (eventType === "error") {
+        throw new Error(payload.message || "stream error");
+      }
+    }
+  }
+
+  // Stream ended without a done event
+  if (!gotDone) {
+    throw new Error("Соединение прервано до получения ответа.");
+  }
+}
+
+async function postJson(url, payload, signal) {
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   });
   const raw = await response.text();
   const data = raw ? parseJson(raw) : {};
@@ -118,44 +246,208 @@ function parseJson(raw) {
   }
 }
 
-function renderWorkflowResponse(response) {
+// Agent step labels shown in streaming thinking bubble
+const AGENT_LABELS = {
+  supervisor:           "Супервизор",
+  intent_analyst:       "Анализатор намерений",
+  research_designer:    "Дизайнер исследования",
+  source_scouts:        "Разведчики источников",
+  coverage_schema:      "Покрытие и схема",
+  extraction_planner:   "Планировщик извлечения",
+  deterministic_tools:  "Детерминированные инструменты",
+  finalization_pending: "Завершение",
+  finalization:         "Критик + Нарратор",
+};
+
+function buildThinkingMessage() {
+  const el = document.createElement("div");
+  el.className = "msg ai fade-in";
+  el.innerHTML = `
+    ${aiAvatar()}
+    <div class="msg-body">
+      <div class="msg-meta"><b>DataAgent</b><span class="role-tag">Думает</span></div>
+      <div class="thinking-stream" id="thinkingStream">
+        <div class="thinking-step active" id="thinkingCurrent">
+          <span class="thinking-dot"></span>
+          <span class="thinking-text">Запрос получен, начинаю анализ...</span>
+        </div>
+        <div class="thinking-steps-done" id="thinkingDone"></div>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+function updateThinkingMessage(el, stepPayload, allTraceEvents) {
+  const currentEl = el.querySelector("#thinkingCurrent .thinking-text");
+  const doneEl = el.querySelector("#thinkingDone");
+  if (!currentEl || !doneEl) return;
+
+  const node = stepPayload.node || "";
+  const label = AGENT_LABELS[node] || node;
+  const description = stepPayload.description || label;
+
+  // Move previous current to done list
+  const prevText = currentEl.textContent;
+  if (prevText && prevText !== "Запрос получен, начинаю анализ...") {
+    const doneItem = document.createElement("div");
+    doneItem.className = "thinking-step done";
+    doneItem.innerHTML = `<span class="thinking-check">✓</span><span class="thinking-text">${escapeHtml(prevText)}</span>`;
+    doneEl.insertBefore(doneItem, doneEl.firstChild);
+  }
+
+  // Show new current step
+  currentEl.textContent = description;
+
+  // Append any new trace events as sub-details
+  const newEvents = stepPayload.new_trace_events || [];
+  newEvents.forEach((evt) => {
+    const decision = evt.decision || "";
+    // Filter out internal/technical decisions from user view
+    if (!decision || decision === "ok" || decision === "finalization_pending") return;
+    const item = document.createElement("div");
+    item.className = "thinking-detail fade-in";
+    item.textContent = _humanizeDecision(label, decision, evt);
+    doneEl.insertBefore(item, doneEl.firstChild);
+  });
+}
+
+function _humanizeDecision(agentLabel, decision, evt) {
+  const map = {
+    "research":             "→ выбран маршрут: полное исследование",
+    "direct":               "→ выбран маршрут: прямой поиск",
+    "no_data":              "→ запрос на данные вне области охвата",
+    "gated":                "→ LLM недоступен, используется запасной путь",
+    "triage_llm_failed_using_research_default": "→ таймаут LLM, маршрут по умолчанию",
+    "not_found":            "→ данные не найдены в источниках",
+    "needs_user_clarification": "→ требуется уточнение от пользователя",
+    "skipped":              "→ шаг пропущен",
+    "clarification_merged": "→ уточнение пользователя учтено",
+  };
+  if (map[decision]) return `${agentLabel}: ${map[decision]}`;
+  // Format artifact IDs friendlier
+  if (decision.startsWith("extraction-plan-")) return `${agentLabel}: → план извлечения создан`;
+  return `${agentLabel}: ${decision}`;
+}
+
+function renderWorkflowResponse(response, streamedTraceEvents) {
   latestWorkflow = {
     runId: response.run_id,
     pendingClarification: response.final_outcome === "needs_clarification",
   };
   $(".run-id").textContent = response.run_id || "run";
-  $(".run-stage").textContent = response.final_outcome || "ready";
-  thread.appendChild(buildAssistantMessage(workflowViewModel(response)));
+  // Prefer streamed trace events (already shown live); fall back to response events
+  const traceEvents = (streamedTraceEvents && streamedTraceEvents.length)
+    ? streamedTraceEvents
+    : (response.trace_events || []);
+  const vm = workflowViewModel({ ...response, trace_events: traceEvents });
+  vm.outcome = response.final_outcome || "";
+  thread.appendChild(buildAssistantMessage(vm));
   syncArtifacts(response);
   scrollToBottom();
 }
 
 function workflowViewModel(response) {
-  const blocks = [];
+  const traceBlocks = [];
+  const contentBlocks = [];
+  const outcome = response.final_outcome;
   const questions = response.clarification_questions || [];
   const datasets = response.dataset_artifacts || [];
   const selectedSources = response.selected_sources || [];
 
-  if (questions.length) {
-    blocks.push(card("Нужно уточнение", "Ответьте следующим сообщением", list(questions)));
+  // Trace always comes first (above the answer)
+  if (response.trace_events?.length) {
+    traceBlocks.push(traceCard(response.trace_events));
   }
-  if (response.answer_blocks?.length) {
-    blocks.push(answerBlocksCard(response.answer_blocks));
-  }
-  if (datasets.length) {
-    blocks.push(datasetSummaryCard(datasets));
-    blocks.push(...datasets.map(datasetPreviewCard).filter(Boolean));
-  }
-  if (selectedSources.length) {
-    blocks.push(sourcesStrip(selectedSources.slice(0, 6)));
+
+  if (outcome === "needs_clarification") {
+    if (questions.length) {
+      contentBlocks.push(card("Нужно уточнение", "Ответьте следующим сообщением", list(questions)));
+    }
+  } else if (outcome === "not_found") {
+    if (selectedSources.length) {
+      contentBlocks.push(sourcesStrip(selectedSources.slice(0, 6)));
+    }
+  } else if (outcome === "passed") {
+    if (response.answer_blocks?.length) {
+      contentBlocks.push(answerBlocksCard(response.answer_blocks));
+    }
+    if (datasets.length) {
+      contentBlocks.push(datasetSummaryCard(datasets));
+      contentBlocks.push(...datasets.map(datasetPreviewCard).filter(Boolean));
+    }
+    if (selectedSources.length) {
+      contentBlocks.push(sourcesStrip(selectedSources.slice(0, 6)));
+    }
+  } else {
+    if (response.answer_blocks?.length) {
+      contentBlocks.push(answerBlocksCard(response.answer_blocks));
+    }
   }
 
   return {
-    role: response.final_outcome || "Result",
-    meta: response.run_id || "",
+    role: outcomeLabel(outcome),
+    meta: "",
     message: response.message || "Готово.",
-    blocks: blocks.join(""),
+    trace: traceBlocks.join(""),
+    blocks: contentBlocks.join(""),
   };
+}
+
+function outcomeLabel(outcome) {
+  return { passed: "Ответ", needs_clarification: "Уточнение" }[outcome] || "";
+}
+
+function traceCard(events) {
+  const id = `trace-${Math.random().toString(36).slice(2)}`;
+  const rows = events.map((event) => {
+    const step = escapeHtml(event.state || "");
+    const agent = escapeHtml(event.agent || "");
+    const decision = escapeHtml(event.decision || "—");
+    const summary = escapeHtml(event.input_summary || event.output_artifact || "");
+    const warnings = (event.warnings || [])
+      .filter((w) => !isInternalWarning(w))
+      .map((w) => `<br><span class="trace-warn">⚠ ${escapeHtml(w)}</span>`)
+      .join("");
+    return `<tr>
+      <td><span class="trace-step">${step}</span></td>
+      <td>${agent}</td>
+      <td><span class="trace-decision">${decision}</span></td>
+      <td class="trace-summary">${summary}${warnings}</td>
+    </tr>`;
+  });
+
+  const tableHtml = `
+    <div class="table-wrap">
+      <table class="data-table trace-table">
+        <thead><tr><th>Шаг</th><th>Агент</th><th>Решение</th><th>Детали</th></tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    </div>`;
+
+  return `
+    <div class="trace-card" id="${id}">
+      <div class="trace-card-head">
+        <span>Путь размышлений · ${events.length} шагов</span>
+        <button class="chip-btn ghost trace-hide-btn" type="button" onclick="
+          var c=document.getElementById('${id}');
+          var t=c.querySelector('.trace-card-body');
+          var b=c.querySelector('.trace-hide-btn');
+          if(t.style.display==='none'){t.style.display='';b.textContent='Скрыть';}
+          else{t.style.display='none';b.textContent='Показать';}
+        ">Скрыть</button>
+      </div>
+      <div class="trace-card-body">${tableHtml}</div>
+    </div>`;
+}
+
+function isInternalWarning(w) {
+  if (!w) return false;
+  const lower = String(w).toLowerCase();
+  return lower.includes("fedstat_parquet_not_found")
+    || lower.includes("local fedstat parquet not found")
+    || lower.includes("gated")
+    || lower.includes("fedstat parquet");
 }
 
 function buildUserMessage(text) {
@@ -171,7 +463,7 @@ function buildUserMessage(text) {
   return el;
 }
 
-function buildAssistantMessage({ role, meta = "", message, blocks = "" }) {
+function buildAssistantMessage({ role, meta = "", message, trace = "", blocks = "", outcome = "" }) {
   const el = document.createElement("div");
   el.className = "msg ai fade-in";
   el.innerHTML = `
@@ -179,15 +471,11 @@ function buildAssistantMessage({ role, meta = "", message, blocks = "" }) {
     <div class="msg-body">
       <div class="msg-meta">
         <b>DataAgent</b>
-        <span class="role-tag">${escapeHtml(role)}</span>
-        ${meta ? `<span>·</span><span>${escapeHtml(meta)}</span>` : ""}
+        ${role ? `<span class="role-tag" data-outcome="${escapeHtml(outcome)}">${escapeHtml(role)}</span>` : ""}
       </div>
+      ${trace}
       <div class="msg-text">${escapeHtml(message)}</div>
       ${blocks}
-      <div class="action-bar">
-        <button class="act-btn" type="button">Полезно <span class="count">0</span></button>
-        <button class="act-btn" type="button">Нужна правка</button>
-      </div>
     </div>
   `;
   return el;
@@ -277,16 +565,14 @@ function sourcesStrip(sources) {
   return `
     <div class="sources-strip">
       <span class="sources-label">Источники</span>
-      ${sources
-        .map(
-          (source, index) => `
-            <a href="${escapeHtml(source.provenance_url || source.url || "#")}" class="source-pill" target="_blank" rel="noreferrer">
-              <span class="src-num">${index + 1}</span>
-              <span>${escapeHtml(source.title || source.name || source.source_id || source.id || "source")}</span>
-              <span class="src-host">${escapeHtml(source.source_family || hostOf(source.provenance_url || source.url || ""))}</span>
-            </a>`,
-        )
-        .join("")}
+      <div class="sources-pills">
+        ${sources.map((source, index) => `
+          <a href="${escapeHtml(source.provenance_url || source.url || "#")}" class="source-pill" target="_blank" rel="noreferrer">
+            <span class="src-num">${index + 1}</span>
+            <span>${escapeHtml(source.title || source.name || source.source_id || source.id || "source")}</span>
+            <span class="src-host">${escapeHtml(source.source_family || hostOf(source.provenance_url || source.url || ""))}</span>
+          </a>`).join("")}
+      </div>
     </div>`;
 }
 
@@ -329,17 +615,63 @@ function table(headers, rows) {
 
 function syncArtifacts(response) {
   artifacts = [];
+
+  // Chart artifact from visualization spec
+  const vis = response.visualization;
+  if (vis && vis.status === "ok" && vis.chart_type && vis.chart_type !== "table") {
+    const chartTypeLabels = { line: "График", grouped_line: "График (сравнение)", bar: "Диаграмма" };
+    const chartLabel = chartTypeLabels[vis.chart_type] || "График";
+    const records = _visRecords(vis);
+    artifacts.push({
+      kind: "chart",
+      kindLabel: chartLabel,
+      name: _visTitle(response.dataset_artifacts, vis),
+      size: `${records.length} точек`,
+      format: vis.chart_type,
+      time: "сейчас",
+      thumb: _buildMiniChart(records),
+      records,
+      vis,
+    });
+  }
+
+  // Table artifacts from dataset_artifacts
   (response.dataset_artifacts || []).forEach((dataset) => {
+    if (!dataset.records?.length && !dataset.rows) return;
+    const records = (dataset.records || []).slice(0, 20);
+    const sourceName = dataset.source_id || dataset.artifact_id || "dataset";
+    const indicatorName = records[0]?.indicator_name || "";
+    const name = indicatorName
+      ? `${indicatorName.slice(0, 40)}`
+      : sourceName.replace(/^dataset-/, "Данные ");
     artifacts.push({
       kind: "table",
-      kindLabel: "DATA",
-      name: dataset.artifact_id || dataset.csv_path || "dataset",
-      size: `${dataset.rows ?? 0} rows`,
-      format: dataset.csv_path ? "csv" : dataset.parquet_path ? "parquet" : "records",
-      time: "now",
-      thumb: `<div class="thumb-table"><div class="row head"><span>Dataset</span><span>Rows</span><span>Status</span></div><div class="row"><span>artifact</span><span>${dataset.rows ?? 0}</span><span>${escapeHtml(dataset.status || "")}</span></div></div>`,
+      kindLabel: "Таблица",
+      name,
+      size: `${dataset.rows ?? records.length} строк`,
+      format: dataset.csv_path ? "CSV" : dataset.parquet_path ? "Parquet" : "JSON",
+      time: "сейчас",
+      thumb: _buildMiniTable(records),
+      dataset,
     });
   });
+
+  // Document artifact — answer blocks summary
+  if (response.answer_blocks?.length) {
+    const summary = response.answer_blocks.find((b) => b.type === "summary");
+    if (summary?.text) {
+      artifacts.push({
+        kind: "doc",
+        kindLabel: "Документ",
+        name: "Сводка ответа",
+        size: `${response.answer_blocks.length} блок(ов)`,
+        format: "Текст",
+        time: "сейчас",
+        thumb: `<div class="thumb-doc">${escapeHtml(summary.text.slice(0, 120))}...</div>`,
+      });
+    }
+  }
+
   paintArtifacts();
 }
 
@@ -373,11 +705,63 @@ function paintArtifacts() {
     .join("");
 }
 
+function _visRecords(vis) {
+  try {
+    const datasets = vis.encoding?.spec?.datasets || {};
+    const key = Object.keys(datasets)[0];
+    return key ? datasets[key] : [];
+  } catch { return []; }
+}
+
+function _visTitle(datasets, vis) {
+  const ds = (datasets || []).find((d) => d.artifact_id === vis.dataset_artifact_id);
+  const records = _visRecords(vis);
+  const name = records[0]?.indicator_name || ds?.source_id || "Данные";
+  return name.slice(0, 50);
+}
+
+function _buildMiniChart(records) {
+  const vals = records.map((r) => Number(r.value)).filter((v) => !isNaN(v) && v !== null);
+  if (!vals.length) return `<div class="thumb-chart-empty">нет данных</div>`;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const h = 48, w = 120;
+  const pts = vals.slice(0, 20).map((v, i) => {
+    const x = (i / Math.max(vals.length - 1, 1)) * w;
+    const y = h - ((v - min) / range) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="display:block">
+    <polyline points="${pts}" fill="none" stroke="#2684FF" stroke-width="2" stroke-linejoin="round"/>
+    <polyline points="0,${h} ${pts} ${w},${h}" fill="rgba(38,132,255,.12)" stroke="none"/>
+  </svg>`;
+}
+
+function _buildMiniTable(records) {
+  if (!records.length) return "";
+  const cols = ["geo_name", "period", "value", "unit"].filter((k) => records[0]?.[k] !== undefined);
+  const colLabels = { geo_name: "Регион", period: "Период", value: "Значение", unit: "Ед." };
+  const head = cols.map((c) => escapeHtml(colLabels[c] || c)).join("</span><span>");
+  const rows = records.slice(0, 4).map((r) =>
+    `<div class="mt-row">${cols.map((c) => `<span>${escapeHtml(String(r[c] ?? ""))}</span>`).join("")}</div>`
+  ).join("");
+  return `<div class="mini-table">
+    <div class="mt-row mt-head"><span>${head}</span></div>
+    ${rows}
+  </div>`;
+}
+
 function setBusy(isBusy) {
-  sendBtn.disabled = isBusy;
   composer.disabled = isBusy;
-  const stage = $(".run-stage");
-  if (stage) stage.textContent = isBusy ? "Pipeline running" : "Pipeline ready";
+  if (isBusy) {
+    sendBtn.innerHTML = `<svg viewBox="0 0 20 20" width="14" height="14"><rect x="5" y="5" width="10" height="10" rx="2" fill="currentColor"/></svg>`;
+    sendBtn.classList.add("stop-mode");
+    sendBtn.onclick = (e) => { e.preventDefault(); stopMessage(); };
+  } else {
+    sendBtn.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 10l14-6-6 14-2-6-6-2Z" fill="currentColor"/></svg>`;
+    sendBtn.classList.remove("stop-mode");
+    sendBtn.onclick = sendMessage;
+  }
 }
 
 function hostOf(rawUrl) {

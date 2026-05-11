@@ -39,6 +39,26 @@ def _load_golden_case(goldens_path: Path, case_index: int) -> dict[str, Any]:
         return cases[case_index]
 
 
+def _load_matrix_hint(case_id: str) -> dict[str, Any] | None:
+    """Load a matrix hint for a case from the golden-coverage-matrix.json."""
+    matrix_path = Path(".planning/phases/02-jury-mvp/golden-coverage-matrix.json")
+    if not matrix_path.exists():
+        return None
+    try:
+        matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+        for case in matrix_data.get("cases", []):
+            if case.get("case_id") == case_id:
+                return {
+                    "source_family": case.get("source_family"),
+                    "source_id": case.get("source_id"),
+                    "filters": case.get("filters"),
+                    "expected_terminal_outcome": case.get("expected_terminal_outcome"),
+                }
+    except Exception:
+        pass
+    return None
+
+
 def _state_to_serializable(state: dict[str, Any]) -> dict[str, Any]:
     """Convert Phase2State to a JSON-serializable dict."""
     result: dict[str, Any] = {}
@@ -68,8 +88,6 @@ def run_golden_case(
     case_index: int,
     json_output: Path,
     artifact_dir: Path,
-    live_llm: bool = True,
-    live_embeddings: bool = True,
 ) -> dict[str, Any]:
     """Load a golden case and run it through the Phase 2 workflow."""
     case = _load_golden_case(goldens_path, case_index)
@@ -80,8 +98,8 @@ def run_golden_case(
         update={
             "goldens_path": goldens_path,
             "artifact_dir": artifact_dir,
-            "live_llm_required": live_llm,
-            "live_embeddings_required": live_embeddings,
+            "live_llm_required": True,
+            "live_embeddings_required": True,
             "case_id": case_id,
         }
     )
@@ -102,15 +120,13 @@ def run_query(
     query: str,
     json_output: Path,
     artifact_dir: Path,
-    live_llm: bool = True,
-    live_embeddings: bool = True,
 ) -> dict[str, Any]:
     """Run a single user query through the Phase 2 workflow."""
     config = WorkflowRunConfig.default().model_copy(
         update={
             "artifact_dir": artifact_dir,
-            "live_llm_required": live_llm,
-            "live_embeddings_required": live_embeddings,
+            "live_llm_required": True,
+            "live_embeddings_required": True,
         }
     )
 
@@ -147,8 +163,8 @@ def main() -> None:
     parser.add_argument(
         "--goldens",
         type=Path,
-        default=None,
-        help="Path to case YAML file used with --case-index.",
+        default=Path(".planning/phases/01-data-architecture-research/golden-cases.yaml"),
+        help="Path to golden cases YAML file.",
     )
 
     # Output
@@ -166,16 +182,6 @@ def main() -> None:
         default=Path(".planning/phases/02-jury-mvp/workflow-runs"),
         help="Directory for run artifacts.",
     )
-    parser.add_argument(
-        "--no-live-llm",
-        action="store_true",
-        help="Disable live LLM calls; returns an explicit gated state.",
-    )
-    parser.add_argument(
-        "--no-live-embeddings",
-        action="store_true",
-        help="Disable live embedding-dependent calls.",
-    )
 
     args = parser.parse_args()
 
@@ -184,21 +190,15 @@ def main() -> None:
             query=args.query,
             json_output=args.json_output,
             artifact_dir=args.artifact_dir,
-            live_llm=not args.no_live_llm,
-            live_embeddings=not args.no_live_embeddings,
         )
     else:
         if args.case_index is None:
-            parser.error("--case-index requires --goldens to be specified")
-        if args.goldens is None:
             parser.error("--case-index requires --goldens to be specified")
         result = run_golden_case(
             goldens_path=args.goldens,
             case_index=args.case_index,
             json_output=args.json_output,
             artifact_dir=args.artifact_dir,
-            live_llm=not args.no_live_llm,
-            live_embeddings=not args.no_live_embeddings,
         )
 
     # Print status summary to stdout

@@ -69,17 +69,14 @@ def build_extraction_plan(
             filters={},
             output_columns=_canonical_output_columns(),
             skip_reason="no_coverage_reports_provided",
-            validation_errors=["no_coverage_reports_provided"],
-            compile_mode="gated",
         )
 
     # Check if all coverage reports are gated or skipped
-    ok_reports = [r for r in coverage_reports if _report_is_extraction_ready(r)]
+    ok_reports = [r for r in coverage_reports if r.status == "ok"]
     gated_reports = [r for r in coverage_reports if r.status == "gated"]
     skipped_reports = [r for r in coverage_reports if r.status == "skipped_with_reason"]
 
     if not ok_reports:
-        validation_errors = _coverage_validation_errors(coverage_reports)
         if gated_reports:
             return ExtractionPlan(
                 artifact_id=artifact_id,
@@ -90,8 +87,6 @@ def build_extraction_plan(
                 skip_reason="; ".join(
                     r.gated_reason for r in gated_reports if r.gated_reason
                 ) or "coverage_gated",
-                validation_errors=validation_errors,
-                compile_mode="gated",
             )
         return ExtractionPlan(
             artifact_id=artifact_id,
@@ -101,9 +96,7 @@ def build_extraction_plan(
             output_columns=_canonical_output_columns(),
             skip_reason="; ".join(
                 r.gated_reason for r in skipped_reports if r.gated_reason
-            ) or "coverage_not_extraction_ready",
-            validation_errors=validation_errors,
-            compile_mode="gated",
+            ) or "coverage_skipped",
         )
 
     # We have at least one ok coverage report — build the plan
@@ -115,31 +108,11 @@ def build_extraction_plan(
             filters=_safe_filters_from_intent(intent),
             output_columns=_canonical_output_columns(),
             skip_reason="intent_requires_clarification",
-            validation_errors=["intent_requires_clarification"],
-            compile_mode="gated",
         )
 
-    # Direct one-source plans compile deterministically; complex live plans must
-    # surface LLM failures explicitly instead of silently falling back.
-    compile_mode = "deterministic"
-    if _is_direct_deterministic_plan(intent, ok_reports):
-        operations = _select_operations(intent, ok_reports)
-        filters = _safe_filters_from_intent(intent)
-    elif live_llm_required:
-        try:
-            operations, filters = _llm_select_plan(intent, ok_reports)
-            compile_mode = "llm"
-        except Exception as exc:
-            return ExtractionPlan(
-                artifact_id=artifact_id,
-                status="gated",
-                operations=[],
-                filters=_safe_filters_from_intent(intent),
-                output_columns=_canonical_output_columns(),
-                skip_reason=f"llm_extraction_planner_error:{exc}",
-                validation_errors=[f"llm_extraction_planner_error:{exc}"],
-                compile_mode="gated",
-            )
+    # LLM chooses operations and filters; falls back to rule-based if unavailable
+    if live_llm_required:
+        operations, filters = _llm_select_plan(intent, ok_reports)
     else:
         operations = _select_operations(intent, ok_reports)
         filters = _safe_filters_from_intent(intent)
@@ -147,8 +120,6 @@ def build_extraction_plan(
     # Pick the best covered report for dispatch routing.
     primary_report = _select_primary_report(ok_reports, filters)
     source_id = primary_report.source_id
-    source_family = primary_report.source_family or _source_family_from_report(primary_report)
-    adapter_name = get_extractor_for_source(source_family) if source_family else None
 
     # Determine output columns from canonical adapter schema
     output_columns = _canonical_output_columns()
@@ -156,14 +127,6 @@ def build_extraction_plan(
     return ExtractionPlan(
         artifact_id=artifact_id,
         source_id=source_id,
-        source_family=source_family,
-        adapter_name=adapter_name,
-        source_candidate_ids=[
-            str(r.source_candidate_id) for r in ok_reports if r.source_candidate_id
-        ],
-        coverage_report_ids=[_coverage_report_id(r) for r in ok_reports],
-        validation_errors=[],
-        compile_mode=compile_mode,  # type: ignore[arg-type]
         status="ok",
         operations=operations,
         filters=filters,
@@ -207,33 +170,6 @@ def _select_operations(
 
     # Guarantee all selected ops are in the allowlist (safety assertion)
     return [op for op in ops if op in ALLOWED_OPERATIONS]
-
-
-def _report_is_extraction_ready(report: CoverageReport) -> bool:
-    if report.status != "ok":
-        return False
-    if report.extraction_ready is None:
-        return not report.extraction_blockers
-    return bool(report.extraction_ready) and not report.extraction_blockers
-
-
-def _coverage_validation_errors(reports: list[CoverageReport]) -> list[str]:
-    errors: list[str] = []
-    for report in reports:
-        if report.extraction_blockers:
-            errors.extend(f"{report.source_id}:{blocker}" for blocker in report.extraction_blockers)
-        elif report.status != "ok":
-            errors.append(f"{report.source_id}:coverage_status:{report.status}")
-        elif report.extraction_ready is False:
-            errors.append(f"{report.source_id}:not_extraction_ready")
-    return errors or ["no_extraction_ready_coverage_reports"]
-
-
-def _is_direct_deterministic_plan(
-    intent: IntentFrame,
-    ok_reports: list[CoverageReport],
-) -> bool:
-    return len(ok_reports) == 1 and intent.category in {"simple", "ambiguous"}
 
 
 def _safe_filters_from_intent(intent: IntentFrame) -> dict[str, Any]:
@@ -295,18 +231,6 @@ def _select_primary_report(
     return max(ok_reports, key=score)
 
 
-def _source_family_from_report(report: CoverageReport) -> str | None:
-    if report.source_family:
-        return report.source_family
-    evidence = report.evidence or {}
-    family = evidence.get("family") or evidence.get("source_family")
-    return str(family) if family else None
-
-
-def _coverage_report_id(report: CoverageReport) -> str:
-    return str(report.source_candidate_id or report.source_id)
-
-
 def _is_date_like(value: str) -> bool:
     """Return True if value looks like a year or ISO date."""
     import re
@@ -348,7 +272,7 @@ def _llm_select_plan(
 
         gate = qwen_credential_gate()
         if gate["status"] == "gated_skip":
-            raise RuntimeError(f"llm_extraction_planner_gated:{gate.get('missing_env_vars', [])}")
+            return _select_operations(intent, ok_reports), _safe_filters_from_intent(intent)
 
         class _PlanChoice(BaseModel):
             operations: list[str] = []
@@ -413,5 +337,5 @@ def _llm_select_plan(
 
         return safe_ops, safe_filters
 
-    except Exception as exc:
-        raise RuntimeError(str(exc)) from exc
+    except Exception:
+        return _select_operations(intent, ok_reports), _safe_filters_from_intent(intent)

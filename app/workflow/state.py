@@ -116,7 +116,7 @@ def analyze_intent(
     it is not supported.
     """
     if not live_llm_required:
-        raise RuntimeError("Intent analysis requires a live LLM call via Yandex AI Studio / Qwen.")
+        raise RuntimeError("Intent analysis requires live Yandex AI Studio / Qwen.")
     return _analyze_intent_live(query)
 
 
@@ -135,20 +135,26 @@ def _analyze_intent_live(query: str) -> IntentFrame:
 
     client = YandexAIStudioClient()
     system_prompt = (
-        "Ты — аналитик запросов данных. "
-        "Классифицируй запрос пользователя и определи ключевые поля запроса. "
+        "Ты — аналитик запросов экономических данных. "
+        "Классифицируй запрос пользователя и определи ключевые поля. "
+        "ВАЖНЫЕ ПРАВИЛА:\n"
+        "1. needs_clarification=true ТОЛЬКО если запрос принципиально неоднозначен "
+        "(например, непонятен сам показатель). "
+        "2. Отсутствие периода — НЕ повод для уточнения: ищи за всё доступное время. "
+        "3. Отсутствие географии — НЕ повод для уточнения: ищи по всем странам. "
+        "4. missing_fields заполняй ТОЛЬКО если без этого поля запрос выполнить невозможно. "
         "Отвечай только в формате JSON согласно схеме."
     )
     user_prompt = (
         f"Запрос: {query}\n\n"
         "Определи:\n"
         "- category: simple | comparative | research | derived_metric | ambiguous | no_data\n"
-        "- needs_clarification: нужно ли уточнять запрос (true/false)\n"
-        "- geography: страна или регион (null если не указано)\n"
-        "- period: временной период (null если не указано)\n"
+        "- needs_clarification: true только если показатель принципиально неоднозначен\n"
+        "- geography: страна или регион (null → искать по всем странам)\n"
+        "- period: временной период (null → искать за всё доступное время)\n"
         "- indicator: название показателя (null если не указано)\n"
         "- source_preferences: предпочтительные источники (fedstat, world_bank, ckan)\n"
-        "- missing_fields: какие поля необходимо уточнить"
+        "- missing_fields: ТОЛЬКО поля без которых запрос невозможно выполнить (обычно пустой список)"
     )
 
     result = client.structured_chat(
@@ -207,14 +213,23 @@ def design_research(
     intent: IntentFrame,
     *,
     live_llm_required: bool = True,
+    matrix_hint: dict[str, Any] | None = None,
 ) -> ResearchDesignArtifact:
-    """Design a research plan from intent using Qwen structured output."""
+    """Design a research plan from intent using Qwen structured output.
+
+    matrix_hint: optional dict from golden-coverage-matrix.json providing
+    source_family, source_id, filters, and expected terminal outcome.
+    """
     if not live_llm_required:
-        raise RuntimeError("Research design requires a live LLM call via Yandex AI Studio / Qwen.")
-    return _design_research_live(intent)
+        raise RuntimeError("Research design requires live Yandex AI Studio / Qwen.")
+    return _design_research_live(intent, matrix_hint=matrix_hint)
 
 
-def _design_research_live(intent: IntentFrame) -> ResearchDesignArtifact:
+def _design_research_live(
+    intent: IntentFrame,
+    *,
+    matrix_hint: dict[str, Any] | None = None,
+) -> ResearchDesignArtifact:
     """Call Yandex AI Studio Qwen to design the research structure."""
     from app.llm.yandex_ai_studio import YandexAIStudioClient, qwen_credential_gate
 
@@ -226,6 +241,13 @@ def _design_research_live(intent: IntentFrame) -> ResearchDesignArtifact:
         )
 
     client = YandexAIStudioClient()
+    hint_text = ""
+    if matrix_hint:
+        hint_text = (
+            f"\nПодсказка из матрицы покрытия: источник={matrix_hint.get('source_family')}, "
+            f"id={matrix_hint.get('source_id')}, фильтры={matrix_hint.get('filters')}."
+        )
+
     system_prompt = (
         "Ты — аналитик-исследователь данных. "
         "Спроектируй структуру исследования на основе намерения пользователя. "
@@ -236,7 +258,7 @@ def _design_research_live(intent: IntentFrame) -> ResearchDesignArtifact:
         f"Категория: {intent.category}\n"
         f"Известные поля: {intent.known_fields}\n"
         f"Предпочтительные источники: {intent.source_preferences}\n"
-        "\n"
+        f"{hint_text}\n\n"
         "Спроектируй исследование:\n"
         "- hypotheses: список гипотез исследования\n"
         "- dimensions: измерения (география, период, индикатор)\n"

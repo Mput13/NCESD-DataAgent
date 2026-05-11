@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-11T18:41:32Z",
+  "timestamp": "2026-05-12T00:15:00Z",
   "phase": "02",
   "phase_name": "jury-mvp",
   "phase_dir": ".planning/phases/02-jury-mvp",
@@ -9,27 +9,30 @@
   "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {"id": "plan-a", "name": "Schema hardening (intent/coverage/critic/narrator)", "status": "done", "commits": ["bfdeb52", "27f5764", "7bc6ea7", "cfc32b5"]},
-    {"id": "plan-b", "name": "Parquet path fallback + slice validation + zero-row gating", "status": "done", "commits": ["270a9d4", "dd31f6d", "e23dad5", "11f2019", "0526445", "a67f0e4"]},
-    {"id": "review", "name": "Code review of Plans A+B vs WORKFLOW-FIX-DIAGNOSIS.md", "status": "done"}
+    {"id": "parallel-fixes", "name": "BL-03 + test alignment + WR-06 (3 parallel agents)", "status": "done", "commits": ["a5c8b55", "e9aee97", "0f8b422"]},
+    {"id": "wb-iso3", "name": "WB country_id 2-letter vs ISO3 mismatch", "status": "done", "commits": ["302209f"]},
+    {"id": "period-sanitize", "name": "Period sanitization (coverage + deterministic_tools)", "status": "done", "commits": ["5201c83", "4aa2c02"]},
+    {"id": "narrator-coerce", "name": "Narrator limitations string→list + number verifier Russian format", "status": "done", "commits": ["e767c65", "8588aaa"]},
+    {"id": "web-frontend", "name": "Pull web frontend UI overhaul + CSV download", "status": "done", "commits": ["4c53ef4", "0bcc1ab", "656dd18", "8979a5e"]},
+    {"id": "merge-main", "name": "Merge to main + push", "status": "done", "commits": ["0887e43"]}
   ],
   "remaining_tasks": [
-    {"id": "wr-06-fix", "name": "Fix WB preview_world_bank_coverage countries filter (both branches identical)", "status": "not_started", "priority": "high"},
-    {"id": "smoke-rerun", "name": "Re-run 7 smoke test cases to verify Plans A+B actually unblock them", "status": "not_started", "priority": "high"},
-    {"id": "bl-03-fix", "name": "Skip export_dataset_with_script when rows==0 (cosmetic)", "status": "not_started", "priority": "low"},
-    {"id": "finalization-tests", "name": "Fix 7 pre-existing failures in test_phase2_finalization.py (error string mismatch)", "status": "not_started", "priority": "medium"},
-    {"id": "plan-c", "name": "Plan C: cross-language retrieval improvement (Russian query vs English WB corpus)", "status": "not_started", "priority": "medium"}
+    {"id": "gc001-not_found", "name": "GC-001 still not_found despite valid dataset — number verifier edge case", "status": "not_started", "priority": "high"},
+    {"id": "gc004-nondeterministic", "name": "GC-004 nondeterministic (passed/not_found) — extraction country filter LLM randomness", "status": "not_started", "priority": "high"},
+    {"id": "plan-c", "name": "Cross-language retrieval (GC-015/GC-017 get 0 sources)", "status": "not_started", "priority": "medium"},
+    {"id": "sse-hang", "name": "SSE stream sometimes hangs — UI shows Думает forever", "status": "not_started", "priority": "medium"},
+    {"id": "full-20-run", "name": "Run all 20 golden cases and measure pass rate", "status": "not_started", "priority": "high"}
   ],
   "blockers": [
-    {"description": "WR-06: World Bank countries filter is a no-op — both if/else branches produce identical matched_geos", "type": "technical", "workaround": "None; causes WB multi-country queries to pass extraction_ready=True incorrectly"},
-    {"description": "Cross-language retrieval: dense scores 0.05-0.06 for Russian queries vs English WB corpus", "type": "technical", "workaround": "Plan C addresses this but not yet implemented"}
+    {"description": "GC-001: number verifier rejects LLM-generated answer even after Russian formatting fix — likely derived/rounded number not in raw records", "type": "technical", "workaround": "Inspect exact mismatch: run GC-001 alone, capture assert_message_numbers_are_supported failure detail"},
+    {"description": "GC-004 nondeterminism: extraction sometimes only extracts CHN rows — check extraction_planner country filters", "type": "technical", "workaround": "Add logging to _resolve_wb_countries in deterministic_tools"}
   ],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Plans A+B are plumbing patches only — architectural issues (matrix_hint leak, Supervisor silent fallback) intentionally deferred", "rationale": "Scope control for 5-hour session"},
-    {"decision": "Did not fix BL-03/BL-04 from reviewer — verified they are not blocking for smoke tests", "rationale": "Reviewer based findings on pre-fix diagnosis doc; manual code verification showed non-critical"}
+    {"decision": "Only pulled app/web/ from remote, not backend nodes", "rationale": "Remote backend changes conflict with our fixes"},
+    {"decision": "Merged to main and pushed", "rationale": "User requested"}
   ],
   "uncommitted_files": [],
-  "next_action": "Fix WR-06 in app/data/world_bank_adapter.py — make if countries: branch actually filter by requested country codes. Then run smoke batch.",
-  "context_notes": "10 commits from Plans A+B. 36/36 new tests pass. Key remaining gap: WB country filter broken. Smoke re-run needed to confirm actual improvement."
+  "next_action": "Debug GC-001: run single-case batch, capture which numbers in message are rejected. Check if issue is rounding (e.g. message says 1376 млрд but dataset has 1376477.9).",
+  "context_notes": "Branch codex/phase-2-jury-mvp-planning merged to main. Web server running on :8787. All 50 tests green. WB pipeline proven working (GC-004 passed once). Main blockers now are LLM nondeterminism and number verifier strictness."
 }

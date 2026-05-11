@@ -300,6 +300,8 @@ def _resolve_country(country: str) -> str:
 
 
 def _parquet_path(source_card: dict[str, Any]) -> Path:
+    import os
+
     candidates = [
         source_card.get("local_path"),
         source_card.get("parquet_path"),
@@ -313,6 +315,29 @@ def _parquet_path(source_card: dict[str, Any]) -> Path:
             path = Path(str(candidate))
             if path.exists():
                 return path
+
+    # Env-var fallback: look in WORLD_BANK_DUMPS_DIR by dataset_id or resource_id
+    dumps_dir_str = os.environ.get("WORLD_BANK_DUMPS_DIR")
+    if dumps_dir_str:
+        dumps_dir = Path(dumps_dir_str)
+        if dumps_dir.is_dir():
+            for id_key in ("dataset_id", "resource_id"):
+                raw_id = source_card.get(id_key)
+                if not raw_id:
+                    continue
+                for name in [str(raw_id), f"{raw_id}.parquet"]:
+                    candidate = dumps_dir / name
+                    if candidate.exists():
+                        return candidate
+            # Also try card_id last component (e.g. "wb/parquet/NY.GDP.MKTP.CD.parquet")
+            card_id = source_card.get("card_id") or ""
+            if card_id:
+                last_part = card_id.split("/")[-1]
+                if last_part.endswith(".parquet"):
+                    candidate = dumps_dir / last_part
+                    if candidate.exists():
+                        return candidate
+
     archived = _extract_archived_parquet(source_card)
     if archived is not None:
         return archived

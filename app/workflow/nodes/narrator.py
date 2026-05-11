@@ -257,7 +257,7 @@ def _build_response_live(
         "- clarification_questions: вопросы уточнения (если нужно)"
     )
 
-    from pydantic import BaseModel
+    from pydantic import BaseModel, field_validator
 
     class _NarratorSchemaInner(BaseModel):
         message: str = ""
@@ -266,6 +266,17 @@ def _build_response_live(
         limitations: list[str] = []
         how_found: str = ""
         clarification_questions: list[str] = []
+
+        @field_validator("limitations", "clarification_questions", mode="before")
+        @classmethod
+        def _coerce_list(cls, v: object) -> list[str]:
+            if v is None:
+                return []
+            if isinstance(v, str):
+                return [v] if v.strip() else []
+            if isinstance(v, list):
+                return v
+            return list(v)
 
     client = YandexAIStudioClient()
     result = client.structured_chat(

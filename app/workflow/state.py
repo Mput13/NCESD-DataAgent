@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 from app.artifacts.workflow_artifacts import (
     DatasetArtifact,
@@ -70,6 +70,37 @@ class _IntentAnalysisSchema(BaseModel):
     indicator: str | None = None
     source_preferences: list[str] = []
     missing_fields: list[str] = []
+    countries: list[str] = []
+
+    @field_validator("geography", mode="before")
+    @classmethod
+    def _coerce_geography_list(cls, v: Any) -> str | None:
+        if isinstance(v, list):
+            return ", ".join(str(item) for item in v if item)
+        return v
+
+    @field_validator("countries", mode="before")
+    @classmethod
+    def _coerce_countries(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(item) for item in v if item]
+        if isinstance(v, str) and v:
+            return [v]
+        return v if v is not None else []
+
+    @model_validator(mode="after")
+    def _derive_countries_from_geography(self) -> "_IntentAnalysisSchema":
+        """If countries not explicitly set, derive from geography."""
+        if not self.countries and self.geography:
+            self.countries = [c.strip() for c in self.geography.split(",") if c.strip()]
+        return self
+
+    @field_validator("source_preferences", "missing_fields", mode="before")
+    @classmethod
+    def _coerce_str_to_list(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [v] if v else []
+        return v if v is not None else []
 
 
 
@@ -133,6 +164,11 @@ def _analyze_intent_live(query: str) -> IntentFrame:
     known_fields: dict[str, Any] = {}
     if result.geography:
         known_fields["geography"] = result.geography
+    if result.countries:
+        known_fields["countries"] = result.countries
+    elif result.geography:
+        # Fallback: derive countries from geography string for multi-country queries
+        known_fields["countries"] = [c.strip() for c in result.geography.split(",") if c.strip()]
     if result.period:
         known_fields["period"] = result.period
     if result.indicator:

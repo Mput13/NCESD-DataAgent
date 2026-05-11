@@ -54,6 +54,27 @@ def preview_fedstat_coverage(
         if metadata.get("unit_column") and _optional_text(row.get(metadata["unit_column"]))
     }
 
+    # Compute slice-level coverage
+    requested_geo = _optional_text(filters.get("geography") or filters.get("geo_name")) or ""
+    if requested_geo:
+        aliases = _geography_aliases(requested_geo)
+        matched_geos = [g for g in geographies if _geo_matches(g, aliases)]
+        slice_rows = sum(
+            1 for row in filtered
+            if _geo_matches(_geo_name(row, metadata), aliases)
+        )
+    else:
+        matched_geos = list(geographies)
+        slice_rows = len(filtered)
+
+    requested_periods_filter = {str(p) for p in (filters.get("periods") or [])}
+    if requested_periods_filter:
+        matched_periods = [p for p in period_columns if p in requested_periods_filter]
+    else:
+        matched_periods = list(period_columns)
+
+    extraction_ready = slice_rows > 0
+
     return CoverageReport(
         source_id=str(source_card.get("dataset_id") or source_card.get("resource_id") or "fedstat"),
         status="ok",
@@ -75,6 +96,10 @@ def preview_fedstat_coverage(
             "physical_columns": metadata["physical_columns"],
             "logical_columns": metadata["logical_columns"],
         },
+        matched_geographies=matched_geos,
+        matched_periods=matched_periods,
+        requested_slice_rows=slice_rows,
+        extraction_ready=extraction_ready,
     )
 
 

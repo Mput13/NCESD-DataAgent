@@ -17,6 +17,7 @@ QueryCategory = Literal[
 
 WorkflowStatus = Literal[
     "ok",
+    "partial",
     "gated",
     "skipped_with_reason",
     "needs_clarification",
@@ -54,6 +55,8 @@ class ResearchDesignArtifact(BaseModel):
     indicators: list[str] = Field(default_factory=list)
     grouping_policy: str | None = None
     assumptions: list[str] = Field(default_factory=list)
+    expanded_indicators: list[dict] = Field(default_factory=list)
+    # Each item: {"name_ru": str, "name_en": str, "search_query_ru": str, "search_query_en": str}
 
     model_config = ConfigDict(extra="forbid")
 
@@ -91,6 +94,7 @@ class CoverageReport(BaseModel):
     frequency: str | None = None
     evidence: dict[str, Any] = Field(default_factory=dict)
     gated_reason: str | None = None
+    partial_note: str | None = None
     # Slice-level validation fields (Plan B)
     matched_geographies: list[str] = Field(default_factory=list)
     matched_periods: list[str] = Field(default_factory=list)

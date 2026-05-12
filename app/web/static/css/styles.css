@@ -1173,3 +1173,37 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   font-weight: 500;
 }
 .art-dl-btn:hover { background: #1d4ed8; }
+
+/* ---- Inline chart card ---- */
+.inline-chart-card .artifact-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.inline-chart-body {
+  padding: 4px 0 8px;
+  overflow: hidden;
+}
+.inline-chart-body .chart-svg {
+  height: 220px;
+}
+.inline-chart-series-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 14px 0;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+/* chart dialog backdrop */
+#chart-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+}
+#chart-dialog .chart-dialog-inner .chart-svg {
+  height: 320px;
+}
+#chart-dialog .chart-dialog-inner .inline-chart-series-label {
+  padding: 8px 0 0;
+}

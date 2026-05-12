@@ -14,10 +14,13 @@ Key invariants:
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 from app.artifacts.workflow_artifacts import (
     CritiqueReport,
@@ -319,15 +322,28 @@ def _build_response_live(
         ok_datasets = [d for d in dataset_artifacts if d.status == "ok"]
         try:
             assert_message_numbers_are_supported(result.message, ok_datasets)
-        except ValueError:
-            pass  # guard fired but we keep the response — data is real
+        except ValueError as exc:
+            logger.warning("number_verifier_advisory: %s", exc)
+            # outcome unchanged — artifact already came from adapter records
+
+    # Append partial coverage notes if any source only partially covers the requested range
+    final_message = result.message
+    if final_outcome == "passed":
+        partial_notes = [
+            r.partial_note
+            for r in coverage_reports
+            if getattr(r, "status", None) == "partial" and getattr(r, "partial_note", None)
+        ]
+        if partial_notes:
+            note = " ".join(f"⚠️ {n}." for n in partial_notes)
+            final_message = f"{final_message}\n\n{note}"
 
     return _assemble_response(
         state=state,
         final_outcome=final_outcome,
         critique=critique,
         visualization=visualization,
-        message=result.message,
+        message=final_message,
         summary=result.summary,
         methodology=result.methodology,
         limitations=result.limitations,

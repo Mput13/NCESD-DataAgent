@@ -372,6 +372,8 @@ function workflowViewModel(response) {
     if (response.answer_blocks?.length) {
       contentBlocks.push(answerBlocksCard(response.answer_blocks));
     }
+    const inlineChart = buildInlineChartCard(response);
+    if (inlineChart) contentBlocks.push(inlineChart);
     if (datasets.length) {
       contentBlocks.push(datasetSummaryCard(datasets));
       contentBlocks.push(...datasets.map(datasetPreviewCard).filter(Boolean));
@@ -614,6 +616,145 @@ function table(headers, rows) {
         </tbody>
       </table>
     </div>`;
+}
+
+// ---- Inline chart card ----
+
+function _chartSeriesFromDataset(dataset) {
+  const records = dataset.records || [];
+  if (!records.length) return null;
+
+  // Label column: period or year
+  const labelKey = records[0].period !== undefined ? "period"
+    : records[0].year  !== undefined ? "year"
+    : null;
+
+  // Value column: value, val, or first numeric field
+  const numericKey = (() => {
+    for (const key of ["value", "val"]) {
+      if (records[0][key] !== undefined) return key;
+    }
+    for (const key of Object.keys(records[0])) {
+      if (typeof records[0][key] === "number") return key;
+    }
+    return null;
+  })();
+
+  if (!numericKey) return null;
+
+  const labels = records.map((r) => String(r[labelKey] ?? ""));
+  const values = records.map((r) => Number(r[numericKey]));
+  if (values.some((v) => isNaN(v))) return null;
+
+  return { labels, values };
+}
+
+function _groupedSeries(dataset) {
+  // Returns array of { geo, labels, values }
+  const records = dataset.records || [];
+  if (!records.length) return [];
+
+  const geoKey = records[0].geo_id !== undefined ? "geo_id"
+    : records[0].country_id !== undefined ? "country_id"
+    : null;
+  if (!geoKey) return [];
+
+  const labelKey = records[0].period !== undefined ? "period"
+    : records[0].year  !== undefined ? "year"
+    : null;
+
+  const numericKey = (() => {
+    for (const key of ["value", "val"]) {
+      if (records[0][key] !== undefined) return key;
+    }
+    for (const key of Object.keys(records[0])) {
+      if (typeof records[0][key] === "number") return key;
+    }
+    return null;
+  })();
+  if (!numericKey) return [];
+
+  const groups = {};
+  records.forEach((r) => {
+    const geo = String(r[geoKey] ?? "");
+    if (!groups[geo]) groups[geo] = [];
+    groups[geo].push(r);
+  });
+
+  return Object.entries(groups).map(([geo, recs]) => ({
+    geo,
+    labels: recs.map((r) => String(r[labelKey] ?? "")),
+    values: recs.map((r) => Number(r[numericKey])),
+  })).filter((s) => !s.values.some((v) => isNaN(v)));
+}
+
+function buildInlineChartCard(response) {
+  const vis = response.visualization;
+  if (!vis || vis.status !== "ok") return null;
+  if (!vis.chart_type || vis.chart_type === "table") return null;
+
+  const datasets = response.dataset_artifacts || [];
+  const dataset = datasets.find((d) => d.artifact_id === vis.dataset_artifact_id)
+    || datasets.find((d) => d.records?.length);
+  if (!dataset || !dataset.records?.length) return null;
+
+  const chartType = vis.chart_type; // "line" | "grouped_line" | "bar"
+  const title = dataset.records[0]?.indicator_name || "График";
+
+  let svgHtml = "";
+
+  if (chartType === "grouped_line") {
+    const series = _groupedSeries(dataset);
+    if (!series.length) {
+      // fall back to single series
+      const s = _chartSeriesFromDataset(dataset);
+      if (!s) return null;
+      svgHtml = renderTrendChart(s.values, s.labels);
+    } else {
+      // Render one trend chart per series, stacked
+      svgHtml = series.map((s) =>
+        `<div class="inline-chart-series-label">${escapeHtml(s.geo)}</div>${renderTrendChart(s.values, s.labels)}`
+      ).join("");
+    }
+  } else if (chartType === "bar") {
+    const s = _chartSeriesFromDataset(dataset);
+    if (!s) return null;
+    svgHtml = renderBarChart(s.values, s.labels);
+  } else {
+    // line or anything else
+    const s = _chartSeriesFromDataset(dataset);
+    if (!s) return null;
+    svgHtml = renderTrendChart(s.values, s.labels);
+  }
+
+  // Use a unique ID so the expand button can reference the SVG content
+  const cardId = `inline-chart-${Math.random().toString(36).slice(2)}`;
+
+  return `
+    <div class="artifact inline-chart-card" id="${cardId}">
+      <div class="artifact-head">
+        <div class="art-title">
+          <span class="art-ico">&vltri;</span>
+          <div>
+            <div>${escapeHtml(title)}</div>
+            <div class="art-sub">${escapeHtml(chartType)}</div>
+          </div>
+        </div>
+        <button class="chip-btn ghost" type="button" title="Развернуть"
+          onclick="(function(){
+            var dlg=document.getElementById('chart-dialog');
+            var src=document.getElementById('${cardId}').querySelector('.inline-chart-body').innerHTML;
+            dlg.querySelector('.chart-dialog-inner').innerHTML=src;
+            dlg.showModal();
+          })()">&#x2197;</button>
+      </div>
+      <div class="inline-chart-body">${svgHtml}</div>
+    </div>`;
+}
+
+function closeChartDialog() {
+  const dlg = document.getElementById("chart-dialog");
+  if (dlg) dlg.close();
 }
 
 function syncArtifacts(response) {

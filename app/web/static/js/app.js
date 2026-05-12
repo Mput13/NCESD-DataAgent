@@ -248,15 +248,15 @@ function parseJson(raw) {
 
 // Agent step labels shown in streaming thinking bubble
 const AGENT_LABELS = {
-  supervisor:           "Супервизор",
-  intent_analyst:       "Анализатор намерений",
-  research_designer:    "Дизайнер исследования",
-  source_scouts:        "Разведчики источников",
-  coverage_schema:      "Покрытие и схема",
-  extraction_planner:   "Планировщик извлечения",
-  deterministic_tools:  "Детерминированные инструменты",
-  finalization_pending: "Завершение",
-  finalization:         "Критик + Нарратор",
+  supervisor:           "Определяю тип запроса...",
+  intent_analyst:       "Разбираю что именно нужно найти...",
+  research_designer:    "Планирую структуру исследования...",
+  source_scouts:        "Ищу подходящие источники данных...",
+  coverage_schema:      "Проверяю наличие данных в источниках...",
+  extraction_planner:   "Составляю план извлечения данных...",
+  deterministic_tools:  "Достаю числа из базы данных...",
+  finalization_pending: "Формирую ответ...",
+  finalization:         "Проверяю данные и составляю ответ...",
 };
 
 function buildThinkingMessage() {
@@ -400,32 +400,121 @@ function outcomeLabel(outcome) {
   return { passed: "Ответ", needs_clarification: "Уточнение" }[outcome] || "";
 }
 
+function humanTraceStep(event) {
+  const state  = event.state    || "";
+  const dec    = event.decision || "";
+  const payload = event.payload || {};
+  const summary = event.input_summary || "";
+
+  // helper: extract source_family from payload or input_summary string
+  function srcFamily() {
+    if (payload.source_family) return payload.source_family;
+    const m = summary.match(/source_family=(\w+)/);
+    return m ? m[1] : "";
+  }
+  function srcLabel(fam) {
+    return fam === "fedstat" ? "Росстат (fedstat.ru)"
+         : fam === "world_bank" ? "Всемирный банк"
+         : fam === "ckan" ? "НЦСЭД / ЕМИСС"
+         : fam || "базы данных";
+  }
+
+  switch (state) {
+    case "supervisor":
+      if (dec === "direct")   return "Запрос простой — ищу один показатель напрямую";
+      if (dec === "research") return "Запрос исследовательский — понадобится несколько источников";
+      if (dec === "no_data")  return "Запрос выходит за рамки доступных источников";
+      return "Определяю тип запроса";
+
+    case "intent_analyst": {
+      const kf = payload.known_fields || {};
+      const parts = [];
+      if (kf.indicator || kf.indicator_name) parts.push(`показатель: ${kf.indicator || kf.indicator_name}`);
+      if (kf.geography)                       parts.push(`регион: ${kf.geography}`);
+      if (kf.countries && kf.countries.length) parts.push(`страны: ${kf.countries.join(", ")}`);
+      const per = kf.period || (kf.periods && kf.periods.length ? kf.periods.join("–") : "");
+      if (per) parts.push(`период: ${per}`);
+      return parts.length
+        ? `Понял запрос: ${parts.join("; ")}`
+        : "Понял запрос, структурировал параметры поиска";
+    }
+
+    case "research_designer":
+      if (dec === "gated") return "Модуль планирования временно недоступен (LLM не отвечает)";
+      return "Спланировал структуру исследования и список индикаторов";
+
+    case "source_scouts": {
+      const n = payload.selected_count ?? payload.source_count;
+      if (dec === "not_found" || dec === "skipped") return "Подходящих источников данных не найдено";
+      return n != null
+        ? `Нашёл ${n} подходящих источника(ов) данных`
+        : "Нашёл подходящие источники данных";
+    }
+
+    case "coverage_schema": {
+      const periods = payload.available_periods;
+      if (dec === "gated" || dec === "skipped_with_reason") return "Данные в источниках недоступны";
+      if (periods && periods.length)
+        return `Проверил источники: данные есть за ${periods[0]}–${periods[periods.length - 1]}`;
+      return "Проверил наличие данных в найденных источниках";
+    }
+
+    case "extraction_planner":
+      if (dec === "gated" || dec === "skipped_with_reason") return "Нет данных для извлечения";
+      if (dec === "needs_clarification") return "Недостаточно информации — нужно уточнение";
+      return "Составил точный план извлечения числовых данных";
+
+    case "deterministic_tools": {
+      const rows = payload.row_count;
+      const fam  = srcFamily();
+      if (dec === "empty_slice") return `Открыл файл базы данных — для этого среза данных нет (0 строк)`;
+      if (dec === "not_found")   return "Файл источника найден, но нужные данные отсутствуют";
+      if (dec === "skipped")     return "Извлечение пропущено (источник недоступен)";
+      const rowStr = rows != null ? ` — получено ${rows} строк` : "";
+      return `Извлёк числовые данные из ${srcLabel(fam)}${rowStr}`;
+    }
+
+    case "finalization_pending":
+    case "finalization":
+      if (dec === "passed")              return "Данные проверены: всё сходится, ответ готов";
+      if (dec === "not_found")           return "Данные в источниках не найдены";
+      if (dec === "needs_clarification") return "Нужно уточнение запроса";
+      if (dec === "finalization_pending") return "Собираю финальный ответ...";
+      return "Завершаю формирование ответа";
+
+    default:
+      return event.agent || state || "Обрабатываю...";
+  }
+}
+
 function traceCard(events) {
   const id = `trace-${Math.random().toString(36).slice(2)}`;
-  const rows = events.map((event) => {
-    const step = escapeHtml(event.state || "");
-    const agent = escapeHtml(event.agent || "");
-    const decision = escapeHtml(event.decision || "—");
-    const summary = escapeHtml(event.input_summary || event.output_artifact || "");
-    const warnings = (event.warnings || [])
-      .filter((w) => !isInternalWarning(w))
-      .map((w) => `<br><span class="trace-warn">⚠ ${escapeHtml(w)}</span>`)
-      .join("");
-    return `<tr>
-      <td><span class="trace-step">${step}</span></td>
-      <td>${agent}</td>
-      <td><span class="trace-decision">${decision}</span></td>
-      <td class="trace-summary">${summary}${warnings}</td>
-    </tr>`;
-  });
 
-  const tableHtml = `
-    <div class="table-wrap">
-      <table class="data-table trace-table">
-        <thead><tr><th>Шаг</th><th>Агент</th><th>Решение</th><th>Детали</th></tr></thead>
-        <tbody>${rows.join("")}</tbody>
-      </table>
-    </div>`;
+  const FAIL_DECISIONS = new Set(["empty_slice", "not_found", "gated", "skipped", "skipped_with_reason", "error"]);
+
+  const steps = events.map((event) => {
+    const dec    = event.decision || "";
+    const isFail = FAIL_DECISIONS.has(dec);
+    const isWarn = dec === "finalization_pending" || dec === "";
+    const icon   = isFail ? "✗" : isWarn ? "·" : "✓";
+    const cls    = isFail ? "fail" : isWarn ? "pending" : "ok";
+
+    const text = escapeHtml(humanTraceStep(event));
+
+    const userWarnings = (event.warnings || []).filter((w) => !isInternalWarning(w));
+    const warningHtml = userWarnings
+      .map((w) => `<div class="trace-note">${escapeHtml(w)}</div>`)
+      .join("");
+
+    return `
+      <div class="trace-step-row ${cls}">
+        <span class="trace-step-icon">${icon}</span>
+        <div class="trace-step-content">
+          <span class="trace-step-text">${text}</span>
+          ${warningHtml}
+        </div>
+      </div>`;
+  });
 
   return `
     <div class="trace-card" id="${id}">
@@ -439,7 +528,9 @@ function traceCard(events) {
           else{t.style.display='none';b.textContent='Показать';}
         ">Скрыть</button>
       </div>
-      <div class="trace-card-body">${tableHtml}</div>
+      <div class="trace-card-body">
+        <div class="trace-steps">${steps.join("")}</div>
+      </div>
     </div>`;
 }
 

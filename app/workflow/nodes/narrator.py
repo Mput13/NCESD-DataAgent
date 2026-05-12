@@ -256,6 +256,11 @@ def _build_response_live(
         if has_records else
         "Данные не найдены или records пусты."
     )
+    wants_table = any(w in query.lower() for w in ("csv", "таблиц", "table", "табличн"))
+    csv_note = (
+        " Пользователь запросил табличный формат — в message явно укажи, что CSV-файл доступен для скачивания ниже."
+        if wants_table else ""
+    )
 
     user_prompt = (
         f"Запрос пользователя: {query}\n"
@@ -265,7 +270,7 @@ def _build_response_live(
         f"Найденные датасеты:\n{dataset_summaries}\n\n"
         f"Источники: {[s.get('title', s.get('card_id','')) for s in selected_sources[:8]]}\n"
         + (f"Недостающие поля: {missing_fields}\n" if missing_fields else "") +
-        "\nСформируй развёрнутый ответ:\n"
+        f"\nСформируй развёрнутый ответ:{csv_note}\n"
         "- message: подробный анализ с цифрами из records, динамика, контекст, смежные направления для изучения\n"
         "- summary: 2-3 предложения итог\n"
         "- methodology: источник и метод поиска\n"
@@ -302,7 +307,7 @@ def _build_response_live(
             {"role": "user", "content": user_prompt},
         ],
         schema=_NarratorSchemaInner,
-        temperature=0.3,
+        temperature=0.0,
         max_tokens=2048,
     )
 

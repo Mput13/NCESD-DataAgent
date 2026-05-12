@@ -1057,24 +1057,35 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   background: linear-gradient(90deg, var(--cloud-50) 0%, var(--bg) 60%);
   border-bottom: 1px solid var(--line);
 }
-.trace-card-body .table-wrap { max-height: none; overflow: visible; }
-.trace-table { font-size: 12px; }
-.trace-table thead th { background: var(--bg-2); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.trace-step {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; font-weight: 600;
-  color: var(--cloud);
-  background: var(--cloud-50);
-  padding: 2px 6px; border-radius: 4px;
-  white-space: nowrap;
+.trace-steps {
+  padding: 10px 14px 12px;
+  display: flex; flex-direction: column; gap: 4px;
 }
-.trace-decision {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: var(--ink-2);
+.trace-step-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 5px 0;
+  border-left: 2px solid var(--line);
+  padding-left: 12px;
+  margin-left: 6px;
+  position: relative;
 }
-.trace-warn { font-size: 11px; color: #e07000; }
-.trace-table td.trace-summary { color: var(--muted); max-width: 260px; word-break: break-word; }
+.trace-step-row:last-child { border-left-color: transparent; }
+.trace-step-icon {
+  position: absolute; left: -9px; top: 5px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; line-height: 1;
+  flex-shrink: 0;
+}
+.trace-step-row.ok   .trace-step-icon { background: #d4f0d4; color: #1a7a1a; }
+.trace-step-row.fail .trace-step-icon { background: #fde8e8; color: #c84545; }
+.trace-step-row.pending .trace-step-icon { background: var(--bg-2); color: var(--muted); }
+.trace-step-content { display: flex; flex-direction: column; gap: 2px; padding-left: 4px; }
+.trace-step-text { font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+.trace-step-row.fail .trace-step-text { color: #c84545; }
+.trace-step-row.pending .trace-step-text { color: var(--muted); }
+.trace-note { font-size: 11px; color: #e07000; margin-top: 1px; }
 
 /* ============ OUTCOME TAGS ============ */
 .role-tag {

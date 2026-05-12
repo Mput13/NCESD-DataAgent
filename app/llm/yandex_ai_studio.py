@@ -133,11 +133,40 @@ class YandexAIStudioClient:
         )
         try:
             payload = json.loads(content)
-        except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                f"Structured Yandex AI Studio response was not valid JSON: {content[:200]}"
-            ) from exc
+        except json.JSONDecodeError:
+            payload = _repair_truncated_json(content)
+            if payload is None:
+                raise RuntimeError(
+                    f"Structured Yandex AI Studio response was not valid JSON: {content[:200]}"
+                )
         return schema.model_validate(payload)
+
+
+def _repair_truncated_json(content: str) -> dict[str, Any] | None:
+    """Try to salvage a JSON object truncated by max_tokens.
+
+    Strategy: walk backwards from the end, trying progressively more closing
+    brackets/quotes until json.loads succeeds. Returns None if unrepairable.
+    """
+    text = content.strip()
+    if not text.startswith("{"):
+        return None
+    # Try adding closing punctuation sequences most likely to close a truncated JSON object
+    suffixes = ['"}', '"]}', '"]}}', '"}}', '"}}}', "}", "}}"]
+    for suffix in suffixes:
+        try:
+            return json.loads(text + suffix)
+        except json.JSONDecodeError:
+            pass
+    # Truncate at last complete top-level string value by finding last "key": "value" boundary
+    last_comma = max(text.rfind('",'), text.rfind('",\n'))
+    if last_comma > 0:
+        truncated = text[: last_comma + 1] + "}"
+        try:
+            return json.loads(truncated)
+        except json.JSONDecodeError:
+            pass
+    return None
 
 
 def qwen_credential_gate(profile: str = "QWEN") -> dict[str, Any]:

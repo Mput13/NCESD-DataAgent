@@ -287,7 +287,7 @@ def _design_research_live(
         ],
         schema=_ResearchDesignSchema,
         temperature=0.0,
-        max_tokens=512,
+        max_tokens=1024,
     )
 
     return ResearchDesignArtifact(

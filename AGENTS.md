@@ -26,4 +26,4 @@ For small direct fixes, keep the change scoped, update `.planning/STATE.md` when
 - CKAN is a trusted NSED catalog API, not general web search. Use it through bounded package/resource search and cache only promoted metadata.
 - Keep local secrets in `.env`; never commit API keys.
 - Prefer traceable artifacts: research notes, source candidates, rejection reasons, generated SQL/code, extraction logs, and verification results.
-- Streamlit is the first demo UI target. The UI must expose the state machine, trace, artifacts, and user feedback/fix requests.
+- The web UI (`app/web/`) is the demo target. It exposes the state machine, trace, artifacts, and user feedback/fix requests via the built-in HTTP server with SSE streaming.

@@ -1,1 +1,1 @@
-"""Diagnostic UI payload models for Streamlit adapters."""
+"""Diagnostic UI payload models (trace view, feedback, fix requests)."""

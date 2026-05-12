@@ -180,17 +180,30 @@ def _safe_filters_from_intent(intent: IntentFrame) -> dict[str, Any]:
     known = intent.known_fields or {}
     safe: dict[str, Any] = {}
 
-    # Periods: list of strings (e.g. ["2020", "2021"])
+    # Periods: list of year strings — expand "1999-2012" range into individual years
+    import re as _re
+    def _expand_period(p: str) -> list[str]:
+        p = p.strip()
+        m = _re.fullmatch(r"(\d{4})\s*[-–—]\s*(\d{4})", p)
+        if m:
+            y1, y2 = int(m.group(1)), int(m.group(2))
+            return [str(y) for y in range(y1, y2 + 1)]
+        if p.isdigit() and len(p) == 4:
+            return [p]
+        return []
+
     if "periods" in known:
-        periods = known["periods"]
-        if isinstance(periods, (list, tuple)):
-            safe["periods"] = [str(p) for p in periods if str(p).isdigit() or _is_date_like(str(p))]
-        elif isinstance(periods, str) and (_is_date_like(periods) or periods.isdigit()):
-            safe["periods"] = [periods]
+        raw = known["periods"]
+        if isinstance(raw, (list, tuple)):
+            expanded: list[str] = []
+            for p in raw:
+                expanded.extend(_expand_period(str(p)))
+            safe["periods"] = expanded or [str(p) for p in raw if str(p).isdigit()]
+        elif isinstance(raw, str):
+            safe["periods"] = _expand_period(raw) or ([raw] if raw.isdigit() else [])
     elif "period" in known:
         period = str(known["period"]).strip()
-        if _is_date_like(period) or period.isdigit():
-            safe["periods"] = [period]
+        safe["periods"] = _expand_period(period) or ([period] if period.isdigit() else [])
 
     # Geography
     if "geography" in known:

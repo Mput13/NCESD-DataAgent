@@ -426,15 +426,12 @@ class TestRunGraphCLI:
 
 
 class TestPhase208WorkflowSurface:
-    def test_streamlit_module_uses_workflow_service_entrypoints(self) -> None:
-        src = Path("app/ui/streamlit_app.py").read_text(encoding="utf-8")
+    def test_web_server_uses_workflow_service_entrypoints(self) -> None:
+        src = Path("app/web/server.py").read_text(encoding="utf-8")
         assert "run_user_query" in src
         assert "continue_user_query" in src
         assert "apply_feedback" in src
-        assert "pending_clarification" in src
-        assert "WorkflowRunConfig.default" in src
-        assert "st.download_button" in src
-        assert "active_query" not in src
+        assert "WorkflowRunConfig" in src
 
     def test_continue_user_query_preserves_run_and_can_change_outcome(
         self,

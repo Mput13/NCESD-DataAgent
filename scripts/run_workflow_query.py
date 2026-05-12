@@ -1,7 +1,7 @@
-"""Run one Phase 2 workflow query without Streamlit.
+"""Run one Phase 2 workflow query from the CLI.
 
-This is the direct CLI wrapper around app.workflow.service.run_user_query.
-Use it for manual UAT when the browser UI gets in the way.
+Direct wrapper around app.workflow.service.run_user_query.
+Use it for manual UAT or scripted evaluation without starting the web server.
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def _print_summary(response: dict[str, Any]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run one DataAgent Phase 2 workflow query without Streamlit."
+        description="Run one DataAgent Phase 2 workflow query from the CLI."
     )
     parser.add_argument("query", help="User query to run through the workflow.")
     parser.add_argument(

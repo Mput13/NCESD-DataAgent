@@ -1,1 +1,3 @@
-"""Workflow graph contracts and runnable Phase 1 graph entrypoints."""
+from app.workflow.orchestrator import run_query
+
+__all__ = ["run_query"]

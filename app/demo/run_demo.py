@@ -142,7 +142,7 @@ def assess_demo_readiness(inputs: DemoInputs) -> dict[str, Any]:
 def build_trace_view_model(
     *, readiness: dict[str, Any], index_manifest: dict[str, Any]
 ) -> WorkflowTraceViewModel:
-    """Create the diagnostic payload consumed by the Streamlit shell."""
+    """Create the diagnostic payload for the web UI trace view."""
 
     run_id = str(readiness.get("run_id") or "phase1-demo-readiness")
     qdrant_status = str(readiness.get("qdrant_status") or "gated_skip")

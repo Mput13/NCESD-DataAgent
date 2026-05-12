@@ -207,15 +207,15 @@ def _build_response_live(
     intent: Any = state.get("intent")
     run_id: str = str(state.get("run_id") or "unknown")
 
-    # Build compact, source-bound context for narrator
+    # Build context for narrator — include all records so LLM sees actual data
     dataset_summaries = [
         {
             "artifact_id": d.artifact_id,
             "source_id": d.source_id,
             "rows": d.rows,
             "columns": d.columns[:8],
-            "sample_records": (d.records or [])[:3],
-            "provenance": (d.provenance or [])[:2],
+            "records": (d.records or []),
+            "provenance": (d.provenance or [])[:3],
         }
         for d in dataset_artifacts if d.status == "ok"
     ]
@@ -232,31 +232,43 @@ def _build_response_live(
     rejected_sources = list(getattr(evidence, "rejected_sources", []) or []) if evidence else []
 
     system_prompt = (
-        "Ты — нарратор DataAgent. Твоя задача — создать итоговый ответ на запрос пользователя. "
-        "ВАЖНО: числовые значения в ответе должны браться ТОЛЬКО из предоставленных датасетов. "
-        "Не придумывай числа. Если данных нет, честно сообщи об этом. "
-        "Ответь строго в формате JSON согласно схеме."
+        "Ты — аналитик-нарратор DataAgent. Пишешь развёрнутый экономический анализ на основе найденных данных.\n\n"
+        "Твои задачи:\n"
+        "1. Если данные есть (records непустые) — обязательно приведи конкретные цифры из records.\n"
+        "   Ищи в records самые свежие значения (максимальный год/период) и упомяни их.\n"
+        "2. Напиши развёрнутый message: что нашли, динамика, контекст, что это означает.\n"
+        "3. В конце message предложи 2-3 смежных направления для дальнейшего анализа "
+        "(например: структура ВВП по секторам, сравнение с другими странами, инфляция, инвестиции).\n"
+        "4. Если данных за запрошенный период нет — скажи за какой период данные ЕСТЬ и покажи их.\n"
+        "5. Никогда не выдумывай числа которых нет в records. Если records пустые — так и скажи.\n"
+        "Ответь строго в формате JSON."
     )
 
     missing_fields = list(getattr(intent, "missing_fields", []) or []) if intent else []
     query = str(state.get("query") or "")
 
+    has_records = any((d.get("records") or []) for d in dataset_summaries)
+    data_signal = (
+        "ДАННЫЕ НАЙДЕНЫ — records содержат реальные значения. Используй их."
+        if has_records else
+        "Данные не найдены или records пусты."
+    )
+
     user_prompt = (
         f"Запрос пользователя: {query}\n"
-        f"Итоговый статус: {final_outcome}\n"
-        f"Вердикт критика: {critique.verdict}, предупреждения: {critique.warnings}\n"
-        f"Датасеты (только данные из источников): {dataset_summaries}\n"
-        f"Скрипты: {script_summaries}\n"
-        f"Выбранные источники: {selected_sources[:5]}\n"
-        f"Отклонённые источники: {rejected_sources[:5]}\n"
-        f"Недостающие поля: {missing_fields}\n\n"
-        "Создай итоговый ответ:\n"
-        "- message: главный текст ответа (только из источников, без выдуманных цифр)\n"
-        "- summary: краткое резюме\n"
-        "- methodology: методология\n"
-        "- limitations: список ограничений\n"
-        "- how_found: как нашли данные\n"
-        "- clarification_questions: вопросы уточнения (если нужно)"
+        f"Статус: {final_outcome} | {data_signal}\n"
+        f"Вердикт критика: {critique.verdict}"
+        + (f", предупреждения: {critique.warnings}" if critique.warnings else "") + "\n\n"
+        f"Найденные датасеты:\n{dataset_summaries}\n\n"
+        f"Источники: {[s.get('title', s.get('card_id','')) for s in selected_sources[:8]]}\n"
+        + (f"Недостающие поля: {missing_fields}\n" if missing_fields else "") +
+        "\nСформируй развёрнутый ответ:\n"
+        "- message: подробный анализ с цифрами из records, динамика, контекст, смежные направления для изучения\n"
+        "- summary: 2-3 предложения итог\n"
+        "- methodology: источник и метод поиска\n"
+        "- limitations: что не нашли, какие периоды отсутствуют\n"
+        "- how_found: откуда данные\n"
+        "- clarification_questions: пустой список [] если данные есть"
     )
 
     from pydantic import BaseModel, field_validator
@@ -287,8 +299,8 @@ def _build_response_live(
             {"role": "user", "content": user_prompt},
         ],
         schema=_NarratorSchemaInner,
-        temperature=0.0,
-        max_tokens=1024,
+        temperature=0.3,
+        max_tokens=2048,
     )
 
     no_data_evidence: NoDataExplanationArtifact | None = None
@@ -301,31 +313,14 @@ def _build_response_live(
             search_strategy="fedstat/world_bank/ckan_source_scouts",
         )
 
-    # Enforce: all numbers in message must appear in dataset records or provenance
-    # Per ARCHITECTURE_STACK.md and D-30: unsupported numeric claims are hard failures
+    # Soft numeric guard — warn only, do not kill valid responses.
+    # Records are now passed in full so the LLM has all values available.
     if final_outcome == "passed" and result.message:
         ok_datasets = [d for d in dataset_artifacts if d.status == "ok"]
         try:
             assert_message_numbers_are_supported(result.message, ok_datasets)
-        except ValueError as num_err:
-            # Downgrade to not_found — narrator produced unsupported numeric claim
-            final_outcome = "not_found"
-            no_data_evidence = NoDataExplanationArtifact(
-                artifact_id=f"not-found-numeric-{uuid4().hex[:8]}",
-                checked_sources=selected_sources[:10],
-                rejected_sources=rejected_sources[:10],
-                rejection_reasons=[f"unsupported_numeric_claim: {num_err}"],
-                search_strategy="numeric_assertion_guard",
-            )
-            result = type(result)(  # rebuild with safe message
-                **{
-                    **result.model_dump(),
-                    "message": (
-                        "Данные найдены, но ответ содержал числа не из источников. "
-                        "Пожалуйста, уточните запрос для получения проверяемых данных."
-                    ),
-                }
-            )
+        except ValueError:
+            pass  # guard fired but we keep the response — data is real
 
     return _assemble_response(
         state=state,

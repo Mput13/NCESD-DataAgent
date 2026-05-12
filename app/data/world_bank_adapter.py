@@ -14,13 +14,78 @@ from app.data.fedstat_adapter import CANONICAL_DATASET_COLUMNS
 
 
 COUNTRY_ALIASES = {
-    "russia": "RUS",
-    "россия": "RUS",
-    "russian federation": "RUS",
-    "kazakhstan": "KAZ",
-    "казахстан": "KAZ",
-    "china": "CHN",
-    "китай": "CHN",
+    # Russia
+    "russia": "RUS", "россия": "RUS", "russian federation": "RUS", "рф": "RUS",
+    # USA
+    "usa": "USA", "us": "USA", "united states": "USA", "united states of america": "USA",
+    "сша": "USA", "америка": "USA",
+    # China
+    "china": "CHN", "китай": "CHN", "prc": "CHN", "people's republic of china": "CHN",
+    # Germany
+    "germany": "DEU", "германия": "DEU", "deutschland": "DEU",
+    # UK
+    "uk": "GBR", "united kingdom": "GBR", "great britain": "GBR", "britain": "GBR",
+    "великобритания": "GBR", "англия": "GBR",
+    # France
+    "france": "FRA", "франция": "FRA",
+    # Japan
+    "japan": "JPN", "япония": "JPN",
+    # India
+    "india": "IND", "индия": "IND",
+    # Brazil
+    "brazil": "BRA", "бразилия": "BRA", "brasil": "BRA",
+    # Kazakhstan
+    "kazakhstan": "KAZ", "казахстан": "KAZ",
+    # Ukraine
+    "ukraine": "UKR", "украина": "UKR",
+    # Belarus
+    "belarus": "BLR", "беларусь": "BLR", "белоруссия": "BLR",
+    # Turkey
+    "turkey": "TUR", "турция": "TUR", "türkiye": "TUR",
+    # South Korea
+    "south korea": "KOR", "korea": "KOR", "республика корея": "KOR", "южная корея": "KOR",
+    # Canada
+    "canada": "CAN", "канада": "CAN",
+    # Australia
+    "australia": "AUS", "австралия": "AUS",
+    # Italy
+    "italy": "ITA", "италия": "ITA",
+    # Spain
+    "spain": "ESP", "испания": "ESP",
+    # Poland
+    "poland": "POL", "польша": "POL",
+    # Netherlands
+    "netherlands": "NLD", "holland": "NLD", "нидерланды": "NLD", "голландия": "NLD",
+    # Saudi Arabia
+    "saudi arabia": "SAU", "саудовская аравия": "SAU",
+    # Mexico
+    "mexico": "MEX", "мексика": "MEX",
+    # Indonesia
+    "indonesia": "IDN", "индонезия": "IDN",
+    # Argentina
+    "argentina": "ARG", "аргентина": "ARG",
+    # South Africa
+    "south africa": "ZAF", "южная африка": "ZAF",
+    # Egypt
+    "egypt": "EGY", "египет": "EGY",
+    # Nigeria
+    "nigeria": "NGA", "нигерия": "NGA",
+    # Sweden
+    "sweden": "SWE", "швеция": "SWE",
+    # Norway
+    "norway": "NOR", "норвегия": "NOR",
+    # Finland
+    "finland": "FIN", "финляндия": "FIN",
+    # Switzerland
+    "switzerland": "CHE", "швейцария": "CHE",
+    # Austria
+    "austria": "AUT", "австрия": "AUT",
+    # Azerbaijan
+    "azerbaijan": "AZE", "азербайджан": "AZE",
+    # Uzbekistan
+    "uzbekistan": "UZB", "узбекистан": "UZB",
+    # World / global
+    "world": "WLD", "мир": "WLD", "global": "WLD", "весь мир": "WLD",
 }
 BRICS = ["BRA", "RUS", "IND", "CHN", "ZAF"]
 EAEU = ["ARM", "BLR", "KAZ", "KGZ", "RUS"]

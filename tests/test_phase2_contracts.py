@@ -10,14 +10,12 @@ def test_phase2_runtime_imports_declared_dependencies() -> None:
     import pyarrow
     import pydantic
     import qdrant_client
-    import streamlit
 
     assert duckdb
     assert langgraph
     assert pyarrow
     assert pydantic
     assert qdrant_client
-    assert streamlit
 
 
 def _workflow_response_payload(**overrides: object) -> dict[str, object]:

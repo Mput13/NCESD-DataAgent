@@ -7,7 +7,7 @@ Provides:
 - run_user_query: full pipeline including critic, visualization, narrator
 - continue_user_query: loads pending clarification state, merges answer, reruns
 
-Streamlit, evals, and CLI callers use service.py, not graph.py directly.
+The web frontend, evals, and CLI callers use service.py, not graph.py directly.
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def run_user_query_to_pending_finalization(
 ) -> Phase2State:
     """Execute the Phase 2 graph through extraction and return finalization_pending state.
 
-    This is the primary entrypoint for Streamlit, evals, and CLI prior to plan 02-06.
+    This is the primary entrypoint for the web frontend, evals, and CLI.
     Always sets finalization_pending=True — plan 02-06 will add critic/visualization/narrator
     and turn this into a final WorkflowResponse.
 
@@ -149,7 +149,7 @@ def run_user_query(
     *,
     run_config: WorkflowRunConfig | None = None,
 ) -> WorkflowResponse:
-    """Single user-query API for Streamlit, evals, and CLI callers.
+    """Single user-query API for the web frontend, evals, and CLI callers.
 
     Executes the full Phase 2 pipeline:
     1. Graph through extraction (via run_user_query_to_pending_finalization)
@@ -513,7 +513,7 @@ def apply_feedback(
 ) -> WorkflowResponse | FeedbackArtifact:
     """Persist user feedback and execute supported repair actions.
 
-    Streamlit calls this for both lightweight ratings and fix requests. Supported
+    The web frontend calls this for both lightweight ratings and fix requests. Supported
     actions rerun through the clarification path so the repair is linked to the
     original run. Unsupported actions create a fix-request artifact for later
     inspection instead of pretending the UI button fixed anything.

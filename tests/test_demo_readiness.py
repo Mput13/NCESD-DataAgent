@@ -28,10 +28,8 @@ def test_demo_readiness_reports_gates_without_dense_success() -> None:
     assert result["trace_view_model"]["trace_events"]
 
 
-def test_streamlit_app_imports_without_streamlit_runtime() -> None:
-    import app.ui.streamlit_app as streamlit_app
-
-    view_model = streamlit_app.load_view_model()
-
-    assert view_model.diagnostic is True
-    assert view_model.index_status.state in {"ready", "gated_skip"}
+def test_web_server_imports_cleanly() -> None:
+    import importlib
+    server = importlib.import_module("app.web.server")
+    assert hasattr(server, "run_server")
+    assert hasattr(server, "DataAgentWebHandler")

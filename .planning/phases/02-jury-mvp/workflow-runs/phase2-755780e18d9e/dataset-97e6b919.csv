@@ -1,0 +1,3 @@
+source,dataset_id,indicator_id,indicator_name,geo_id,geo_name,period,period_type,value,unit,dimensions,source_url,retrieved_at,quality_flags
+fedstat,57395,57395,GDP,Российская Федерация,Российская Федерация,2024,year,,383 рубль,"{'Вид цены': '\n1 Текущие цены', 'Период': '1558883 значение показателя за год'}",https://www.fedstat.ru/indicator/57395,2026-05-12T05:56:26Z,['missing_value']
+fedstat,57395,57395,GDP,Российская Федерация без учета новых субъектов (с 01.01.2023),Российская Федерация без учета новых субъектов (с 01.01.2023),2024,year,1376477.9,383 рубль,"{'Вид цены': '\n1 Текущие цены', 'Период': '1558883 значение показателя за год'}",https://www.fedstat.ru/indicator/57395,2026-05-12T05:56:26Z,[]

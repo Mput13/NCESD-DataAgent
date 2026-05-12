@@ -1,0 +1,31 @@
+{
+  "artifact_id": "dataset-46ca40f8",
+  "columns": [
+    "source",
+    "dataset_id",
+    "indicator_id",
+    "indicator_name",
+    "geo_id",
+    "geo_name",
+    "period",
+    "period_type",
+    "value",
+    "unit",
+    "dimensions",
+    "source_url",
+    "retrieved_at",
+    "quality_flags"
+  ],
+  "csv_path": ".planning\\phases\\02-jury-mvp\\workflow-runs\\phase2-c109bf234963\\dataset-46ca40f8.csv",
+  "parquet_path": ".planning\\phases\\02-jury-mvp\\workflow-runs\\phase2-c109bf234963\\dataset-46ca40f8.parquet",
+  "provenance": [
+    {
+      "resource_id": "wb/parquet/NY.GDP.DEFL.KD.ZG.AD.parquet",
+      "retrieved_at": "2026-05-12T00:35:48Z",
+      "source": "world_bank",
+      "source_url": "https://api.worldbank.org/v2/indicator/NY.GDP.DEFL.KD.ZG.AD"
+    }
+  ],
+  "rows": 14,
+  "status": "ok"
+}

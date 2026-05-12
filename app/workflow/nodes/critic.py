@@ -219,12 +219,16 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
     ]
 
     system_prompt = (
-        "Ты — методологический критик DataAgent. "
-        "Оцени качество и корректность подготовленного датасета и источников. "
-        "Ответь строго в формате JSON согласно схеме. "
-        "Допустимые значения verdict: pass, pass_with_warnings, needs_repair, "
-        "needs_user_clarification, not_found."
+        "Ты — главный аудитор по методологии статистической отчетности DataAgent. "
+        "Твоя задача — провести финальную проверку качества подготовленного датасета перед выдачей пользователю.\n\n"
+        "ПРИНЦИПЫ АУДИТА:\n"
+        "1. Нулевая терпимость к отсутствию источников (provenance).\n"
+        "2. Строгая проверка на наличие пустых значений или некорректных периодов.\n"
+        "3. Если данные не соответствуют критериям качества — выноси вердикт 'needs_repair' или 'not_found'.\n"
+        "Отвечай строго в формате JSON согласно схеме.\n\n"
+        "Допустимые значения verdict: pass, pass_with_warnings, needs_repair, needs_user_clarification, not_found."
     )
+
     user_prompt = (
         f"Покрытие источников: {coverage_summary}\n"
         f"Датасеты: {dataset_summary}\n"

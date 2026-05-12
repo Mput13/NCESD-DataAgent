@@ -1,0 +1,86 @@
+{
+  "run_id": "phase2-5e7039317ac1",
+  "query": "за 2015 год ввп",
+  "intent": {
+    "query": "за 2015 год ввп",
+    "category": "simple",
+    "known_fields": {
+      "period": "2015",
+      "indicator": "ВВП"
+    },
+    "missing_fields": [
+      "geography"
+    ],
+    "needs_clarification": true,
+    "source_preferences": [],
+    "open_reasoning": [
+      "Qwen structured output via Yandex AI Studio"
+    ]
+  },
+  "research_design": null,
+  "evidence": null,
+  "coverage_reports": [],
+  "extraction_plan": null,
+  "dataset_artifacts": [],
+  "script_artifacts": [],
+  "final_outcome": null,
+  "finalization_pending": true,
+  "pending_reason": "awaiting_plan_02_06_finalization",
+  "trace_events": [
+    {
+      "run_id": "phase2-5e7039317ac1",
+      "state": "supervisor",
+      "agent": "Supervisor",
+      "input_summary": "за 2015 год ввп",
+      "tool_calls": [],
+      "output_artifact": null,
+      "decision": "direct",
+      "warnings": [],
+      "started_at": "2026-05-12T00:21:26Z",
+      "duration_ms": 0,
+      "payload": {
+        "run_id": "phase2-5e7039317ac1",
+        "route": "direct"
+      }
+    },
+    {
+      "run_id": "phase2-5e7039317ac1",
+      "state": "intent_analyst",
+      "agent": "Intent Analyst",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": "IntentFrame",
+      "decision": "ok",
+      "warnings": [],
+      "started_at": "2026-05-12T00:21:27Z",
+      "duration_ms": 0,
+      "payload": {
+        "category": "simple",
+        "needs_clarification": true,
+        "status": "ok"
+      }
+    },
+    {
+      "run_id": "phase2-5e7039317ac1",
+      "state": "finalization_pending",
+      "agent": "Supervisor",
+      "input_summary": null,
+      "tool_calls": [],
+      "output_artifact": null,
+      "decision": "finalization_pending",
+      "warnings": [],
+      "started_at": "2026-05-12T00:21:27Z",
+      "duration_ms": 0,
+      "payload": {
+        "pending_reason": "awaiting_plan_02_06_finalization",
+        "dataset_artifacts": 0,
+        "script_artifacts": 0
+      }
+    }
+  ],
+  "component_statuses": {
+    "supervisor": "ok",
+    "intent_analyst": "ok",
+    "finalization": "pending"
+  }
+}

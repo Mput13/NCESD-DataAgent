@@ -1,0 +1,31 @@
+{
+  "artifact_id": "dataset-1db55e36",
+  "columns": [
+    "source",
+    "dataset_id",
+    "indicator_id",
+    "indicator_name",
+    "geo_id",
+    "geo_name",
+    "period",
+    "period_type",
+    "value",
+    "unit",
+    "dimensions",
+    "source_url",
+    "retrieved_at",
+    "quality_flags"
+  ],
+  "csv_path": ".planning\\phases\\02-jury-mvp\\workflow-runs\\phase2-4922393c6d3c\\dataset-1db55e36.csv",
+  "parquet_path": ".planning\\phases\\02-jury-mvp\\workflow-runs\\phase2-4922393c6d3c\\dataset-1db55e36.parquet",
+  "provenance": [
+    {
+      "resource_id": "fedstatru/data/parquet/57319.parquet",
+      "retrieved_at": "2026-05-12T06:40:16Z",
+      "source": "fedstat",
+      "source_url": "https://www.fedstat.ru/indicator/57319"
+    }
+  ],
+  "rows": 30,
+  "status": "ok"
+}

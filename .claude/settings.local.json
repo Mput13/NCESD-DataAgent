@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pkill -f \"app.web.server\")",
+      "Bash(python -W ignore -m app.web.server --port 8790)",
+      "Bash(curl --noproxy '*' -s -o /dev/null -w \"%{http_code}\" http://localhost:8790/)",
+      "Bash(pkill -f \"app.web.server\" 2>/dev/null; sleep 1 *)",
+      "Bash(python scripts/run_golden_eval.py)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}

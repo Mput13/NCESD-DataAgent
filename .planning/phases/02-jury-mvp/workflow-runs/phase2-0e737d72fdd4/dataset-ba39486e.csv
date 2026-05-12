@@ -1,0 +1,2 @@
+source,dataset_id,indicator_id,indicator_name,geo_id,geo_name,period,period_type,value,unit,dimensions,source_url,retrieved_at,quality_flags
+fedstat,55396,55396,Inflation,Российская Федерация,Российская Федерация,2023,year,107.42,744 процент,"{'Виды показателя': '\n4 К декабрю предыдущего года', 'Виды товаров и услуг': '1 Все товары и услуги', 'Период': '62 декабрь'}",https://www.fedstat.ru/indicator/55396,2026-05-12T09:21:24Z,[]

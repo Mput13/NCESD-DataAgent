@@ -302,6 +302,7 @@ def _node_source_scouts(state: Phase2State) -> Phase2State:
                 query,
                 expected_sources=expected_sources,
                 index_manifest_path=index_manifest_path,
+                research_design=state.get("research_design"),
             )
             status = "ok" if evidence.selected_sources else "no_candidate"
         except Exception as exc:

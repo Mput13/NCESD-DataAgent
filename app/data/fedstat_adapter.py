@@ -202,7 +202,7 @@ def _load_normalized_rows(source_card: dict[str, Any]) -> tuple[list[dict[str, A
 
     period_columns = [column for column in logical_columns if re.fullmatch(r"\d{4}", str(column))]
     indicator_column = _find_column(logical_columns, ("indicator", "показатель", "name"))
-    geo_column = _find_column(logical_columns, ("geo", "region", "country", "territory", "террит", "регион"))
+    geo_column = _find_column(logical_columns, ("geo", "region", "country", "territory", "террит", "регион", "окато", "оксм"))
     unit_column = _find_column(logical_columns, ("unit", "единиц", "measure"))
     dimension_columns = [column for column in logical_columns if column not in period_columns]
     return rows, {

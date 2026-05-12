@@ -199,6 +199,22 @@ def _fedstat_coverage(
         evidence = dict(report.evidence)
         if "source_specific_risks" not in evidence:
             evidence["source_specific_risks"] = []
+        # Check for partial period coverage
+        requested_periods = intent_fields.get("periods") or (
+            [intent_fields["period"]] if intent_fields.get("period") else []
+        )
+        requested_years = {str(p) for p in requested_periods if str(p).strip().isdigit()}
+        avail_set = set(report.available_periods)
+        if requested_years and avail_set:
+            missing_years = requested_years - avail_set
+            present_years = requested_years & avail_set
+            if missing_years and present_years:
+                partial_note = f"доступны только {min(avail_set)}–{max(avail_set)}"
+                return report.model_copy(update={
+                    "evidence": evidence,
+                    "status": "partial",
+                    "partial_note": partial_note,
+                })
         return report.model_copy(update={"evidence": evidence})
     except FileNotFoundError as exc:
         return CoverageReport(
@@ -260,6 +276,22 @@ def _world_bank_coverage(
         evidence = dict(report.evidence)
         if "source_specific_risks" not in evidence:
             evidence["source_specific_risks"] = []
+        # Check for partial period coverage.
+        # `periods` here is already the digit-only requested years (computed above).
+        # `report.available_periods` contains only years that exist in the data
+        # AND were requested (because the WB adapter filters by requested periods).
+        requested_years = set(periods)  # already digit-only strings
+        avail_set = set(report.available_periods)
+        if requested_years and avail_set:
+            missing_years = requested_years - avail_set
+            present_years = requested_years & avail_set
+            if missing_years and present_years:
+                partial_note = f"доступны только {min(avail_set)}–{max(avail_set)}"
+                return report.model_copy(update={
+                    "evidence": evidence,
+                    "status": "partial",
+                    "partial_note": partial_note,
+                })
         return report.model_copy(update={"evidence": evidence})
     except FileNotFoundError as exc:
         return CoverageReport(

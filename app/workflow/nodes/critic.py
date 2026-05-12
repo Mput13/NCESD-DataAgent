@@ -53,11 +53,14 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 
+_ACCEPTABLE_COVERAGE = {"ok", "partial"}
+
+
 def _coverage_all_ok(coverage_reports: list[Any]) -> bool:
-    """Return True only if every coverage report has status == 'ok'."""
+    """Return True if every coverage report has status == 'ok' or 'partial'."""
     if not coverage_reports:
         return False
-    return all(getattr(r, "status", None) == "ok" for r in coverage_reports)
+    return all(getattr(r, "status", None) in _ACCEPTABLE_COVERAGE for r in coverage_reports)
 
 
 def _has_ok_dataset(dataset_artifacts: list[Any]) -> bool:
@@ -259,7 +262,7 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
     if verdict in ("pass", "pass_with_warnings"):
         if not _coverage_all_ok(coverage_reports):
             verdict = "needs_repair"
-            result.warnings.append("coverage_not_all_ok: passed outcome requires all coverage ok")
+            result.warnings.append("coverage_not_all_ok: passed outcome requires all coverage ok or partial")
         elif not _has_ok_dataset(dataset_artifacts):
             verdict = "needs_repair"
             result.warnings.append("no_ok_dataset: passed outcome requires at least one ok dataset with rows>0")

@@ -14,10 +14,13 @@ Key invariants:
 """
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 from app.artifacts.workflow_artifacts import (
     CritiqueReport,
@@ -256,6 +259,11 @@ def _build_response_live(
         if has_records else
         "Данные не найдены или records пусты."
     )
+    wants_table = any(w in query.lower() for w in ("csv", "таблиц", "table", "табличн"))
+    csv_note = (
+        " Пользователь запросил табличный формат — в message явно укажи, что CSV-файл доступен для скачивания ниже."
+        if wants_table else ""
+    )
 
     user_prompt = (
         f"Запрос пользователя: {query}\n"
@@ -265,7 +273,7 @@ def _build_response_live(
         f"Найденные датасеты:\n{dataset_summaries}\n\n"
         f"Источники: {[s.get('title', s.get('card_id','')) for s in selected_sources[:8]]}\n"
         + (f"Недостающие поля: {missing_fields}\n" if missing_fields else "") +
-        "\nСформируй развёрнутый ответ:\n"
+        f"\nСформируй развёрнутый ответ:{csv_note}\n"
         "- message: подробный анализ с цифрами из records, динамика, контекст, смежные направления для изучения\n"
         "- summary: 2-3 предложения итог\n"
         "- methodology: источник и метод поиска\n"
@@ -302,7 +310,7 @@ def _build_response_live(
             {"role": "user", "content": user_prompt},
         ],
         schema=_NarratorSchemaInner,
-        temperature=0.3,
+        temperature=0.0,
         max_tokens=2048,
     )
 
@@ -322,15 +330,28 @@ def _build_response_live(
         ok_datasets = [d for d in dataset_artifacts if d.status == "ok"]
         try:
             assert_message_numbers_are_supported(result.message, ok_datasets)
-        except ValueError:
-            pass  # guard fired but we keep the response — data is real
+        except ValueError as exc:
+            logger.warning("number_verifier_advisory: %s", exc)
+            # outcome unchanged — artifact already came from adapter records
+
+    # Append partial coverage notes if any source only partially covers the requested range
+    final_message = result.message
+    if final_outcome == "passed":
+        partial_notes = [
+            r.partial_note
+            for r in coverage_reports
+            if getattr(r, "status", None) == "partial" and getattr(r, "partial_note", None)
+        ]
+        if partial_notes:
+            note = " ".join(f"⚠️ {n}." for n in partial_notes)
+            final_message = f"{final_message}\n\n{note}"
 
     return _assemble_response(
         state=state,
         final_outcome=final_outcome,
         critique=critique,
         visualization=visualization,
-        message=result.message,
+        message=final_message,
         summary=result.summary,
         methodology=result.methodology,
         limitations=result.limitations,

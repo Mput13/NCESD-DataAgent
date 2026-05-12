@@ -27,6 +27,7 @@ def run_source_scouts(
     *,
     expected_sources: list[str],
     index_manifest_path: Path,
+    research_design=None,  # ResearchDesignArtifact | None
 ) -> EvidenceBundleArtifact:
     """Run source scouts and return an EvidenceBundleArtifact.
 
@@ -91,6 +92,33 @@ def run_source_scouts(
                     "evidence_keywords": [],
                     "match_mode": "ckan_catalog",
                 })
+
+    # Expanded indicator search
+    if research_design is not None:
+        expanded = getattr(research_design, "expanded_indicators", []) or []
+        for item in expanded:
+            for search_q in [item.get("search_query_ru", ""), item.get("search_query_en", "")]:
+                if not search_q:
+                    continue
+                exp_result = retriever.search(search_q, expected_sources=expected_sources, limit=3)
+                for candidate in exp_result.candidates:
+                    # Skip if already selected (by card_id)
+                    if any(s.get("card_id") == candidate.card_id for s in selected):
+                        continue
+                    selected.append({
+                        "source_family": candidate.source_family,
+                        "card_id": candidate.card_id,
+                        "chunk_id": candidate.chunk_id,
+                        "title": candidate.title,
+                        "score": candidate.score,
+                        "relevance_score": candidate.relevance_score,
+                        "retrieval_mode": candidate.retrieval_mode,
+                        "evidence_keywords": candidate.evidence_keywords,
+                        "match_mode": candidate.metadata.get("match_mode"),
+                        "provenance_url": candidate.metadata.get("provenance_url"),
+                        "why_matched": f"expanded_indicator={item.get('name_ru')} q={search_q}",
+                        "risk_flags": [],
+                    })
 
     return EvidenceBundleArtifact(
         selected_sources=selected,

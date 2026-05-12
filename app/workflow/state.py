@@ -142,6 +142,13 @@ def _analyze_intent_live(query: str) -> IntentFrame:
         "1. Интерпретируй термины профессионально (например, 'динамика' = временной ряд).\n"
         "2. Определяй географию и периоды максимально точно.\n"
         "3. Если запрос неполный — запрашивай уточнение.\n"
+        "4. ВАЖНО: needs_clarification=true только если запрос объективно неполный — "
+        "не указана ни страна, ни период, ни предметная область. "
+        "Составные концепты ('основные экономические показатели', 'макроэкономика', "
+        "'социальные индикаторы', 'демографические показатели') — это НЕ повод для уточнения. "
+        "Они хорошо известны и будут разложены на конкретные показатели автоматически. "
+        "Если geography и period указаны, а indicator — составной концепт, "
+        "ставь needs_clarification=false and category=research.\n"
         "Отвечай только в формате JSON согласно схеме."
     )
     user_prompt = (
@@ -206,6 +213,7 @@ class _ResearchDesignSchema(BaseModel):
     indicators: list[str] = []
     grouping_policy: str | None = None
     assumptions: list[str] = []
+    expanded_indicators: list[dict] = []
 
 
 def design_research(
@@ -267,7 +275,16 @@ def _design_research_live(
         "- dimensions: измерения (география, период, индикатор)\n"
         "- indicators: конкретные показатели для поиска\n"
         "- grouping_policy: политика группировки (null если не требуется)\n"
-        "- assumptions: допущения исследования"
+        "- assumptions: допущения исследования\n"
+        "- expanded_indicators: если запрос содержит агрегатный концепт "
+        "(например 'основные экономические показатели', 'макроэкономика', 'социальные индикаторы', "
+        "'демографические показатели'), используй свои знания и разложи его на 3-7 конкретных "
+        "экономических показателей. Для каждого укажи: "
+        "  name_ru (название по-русски), "
+        "  name_en (название по-английски), "
+        "  search_query_ru (короткая поисковая фраза на русском, 2-5 слов), "
+        "  search_query_en (короткая поисковая фраза на английском, 2-5 слов). "
+        "Если запрос уже конкретен — оставь expanded_indicators пустым списком."
     )
 
     artifact_id = f"research-design-{uuid4().hex[:8]}"
@@ -279,7 +296,7 @@ def _design_research_live(
         ],
         schema=_ResearchDesignSchema,
         temperature=0.0,
-        max_tokens=512,
+        max_tokens=1024,
     )
 
     return ResearchDesignArtifact(
@@ -290,4 +307,5 @@ def _design_research_live(
         indicators=result.indicators,
         grouping_policy=result.grouping_policy,
         assumptions=result.assumptions,
+        expanded_indicators=result.expanded_indicators,
     )

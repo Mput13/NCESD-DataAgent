@@ -28,8 +28,8 @@ class TestFedstatParquetPathEnvFallback:
             "local_path": "/nonexistent/old/path/12345.parquet",  # wrong catalog path
         }
 
-        from app.data.fedstat_adapter import _parquet_path
-        path = _parquet_path(source_card)
+        from app.data.fedstat_adapter import resolve_fedstat_parquet_path
+        path = resolve_fedstat_parquet_path(source_card)
         assert path == parquet_file
 
     def test_finds_parquet_by_dataset_id_in_dumps_dir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -80,13 +80,23 @@ class TestWorldBankParquetPathEnvFallback:
 
         monkeypatch.setenv("WORLD_BANK_DUMPS_DIR", str(dumps_dir))
 
-        from app.data.world_bank_adapter import _parquet_path
+        from app.data.world_bank_adapter import resolve_world_bank_parquet_path
         source_card = {
             "dataset_id": "NY.GDP.MKTP.CD",
             "local_path": "/nonexistent/old/path/NY.GDP.MKTP.CD.parquet",
         }
-        path = _parquet_path(source_card)
+        path = resolve_world_bank_parquet_path(source_card)
         assert path == parquet_file
+
+    def test_private_parquet_path_alias_still_works(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        dumps_dir = tmp_path / "wb_dumps"
+        dumps_dir.mkdir()
+        parquet_file = dumps_dir / "SP.POP.TOTL.parquet"
+        parquet_file.write_bytes(b"fake")
+        monkeypatch.setenv("WORLD_BANK_DUMPS_DIR", str(dumps_dir))
+
+        from app.data.world_bank_adapter import _parquet_path
+        assert _parquet_path({"dataset_id": "SP.POP.TOTL"}) == parquet_file
 
     def test_finds_by_card_id_filename(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         """_parquet_path finds by card_id component ending in .parquet."""

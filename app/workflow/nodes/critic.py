@@ -223,14 +223,13 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
 
     system_prompt = (
         "Ты — главный аудитор по методологии статистической отчетности DataAgent. "
-        "Твоя задача — не просто вынести вердикт, а подготовить детальное описание процесса извлечения "
-        "для профессионального экономиста, который будет проводить верификацию.\n\n"
+        "Твоя задача — вынести вердикт о пригодности найденных данных для ответа пользователю.\n\n"
         "ПРИНЦИПЫ АУДИТА:\n"
         "1. Нулевая терпимость к отсутствию источников (provenance).\n"
         "2. Строгая проверка на наличие пустых значений или некорректных периодов.\n"
-        "3. В поле 'repair_plan' подготовь технический отчет для эксперта: "
-        "какие именно фильтры были применены, какие срезы данных выбраны и почему, "
-        "и какие методологические особенности источника были учтены.\n\n"
+        "3. Поле 'repair_plan' заполняй только конкретными действиями по исправлению, "
+        "если verdict требует ремонта или уточнения. Для pass оставляй repair_plan пустым.\n"
+        "4. Не выдумывай технические детали фильтров или срезов, которых нет во входных данных.\n\n"
         "Отвечай строго в формате JSON согласно схеме.\n"
         "Допустимые значения verdict: pass, pass_with_warnings, needs_repair, needs_user_clarification, not_found."
     )
@@ -272,6 +271,9 @@ def _run_critic_live(state: dict[str, Any]) -> CritiqueReport:
         elif not _all_datasets_have_provenance(dataset_artifacts):
             verdict = "needs_repair"
             result.warnings.append("missing_provenance: passed outcome requires non-empty provenance on all ok datasets")
+
+    if verdict == "pass":
+        result.repair_plan = []
 
     return CritiqueReport(
         artifact_id=f"critique-{uuid4().hex[:8]}",

@@ -382,7 +382,7 @@ def _resolve_country(country: str) -> str:
     return COUNTRY_ALIASES.get(text.casefold(), text.upper())
 
 
-def _parquet_path(source_card: dict[str, Any]) -> Path:
+def resolve_world_bank_parquet_path(source_card: dict[str, Any]) -> Path:
     import os
 
     candidates = [
@@ -425,6 +425,10 @@ def _parquet_path(source_card: dict[str, Any]) -> Path:
     if archived is not None:
         return archived
     raise FileNotFoundError(f"No readable World Bank parquet path in source card: {source_card!r}")
+
+
+def _parquet_path(source_card: dict[str, Any]) -> Path:
+    return resolve_world_bank_parquet_path(source_card)
 
 
 def _extract_archived_parquet(source_card: dict[str, Any]) -> Path | None:

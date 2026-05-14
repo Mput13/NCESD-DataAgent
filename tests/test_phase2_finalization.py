@@ -284,6 +284,39 @@ class TestRunMethodologyCritic:
         critique = run_methodology_critic(state, live_llm_required=True)
         assert critique.verdict == "pass"
 
+    def test_pass_verdict_discards_repair_plan_audit_noise(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """repair_plan is corrective only; passing critiques should not keep audit filler."""
+        from app.workflow.nodes.critic import run_methodology_critic
+        from pydantic import BaseModel
+
+        captured: dict[str, str] = {}
+
+        class FakeCritiqueSchema(BaseModel):
+            verdict: str = "pass"
+            warnings: list[str] = []
+            repair_plan: list[str] = ["fake technical audit"]
+
+        class FakeClient:
+            def structured_chat(self, messages, *, schema, **kwargs):
+                captured["prompt"] = "\n".join(str(m["content"]) for m in messages)
+                return FakeCritiqueSchema()
+
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: FakeClient())
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.qwen_credential_gate",
+            lambda profile="QWEN": {"status": "ready", "missing_env_vars": []},
+        )
+
+        state = _make_state(
+            dataset_artifacts=[_make_ok_dataset()],
+            coverage_reports=[_make_ok_coverage()],
+        )
+        critique = run_methodology_critic(state, live_llm_required=True)
+        assert critique.repair_plan == []
+        assert "технический отчет" not in captured["prompt"].lower()
+
 
 class TestDeriveFinalOutcome:
     """derive_final_outcome: maps CritiqueReport to TerminalOutcome."""
@@ -739,6 +772,104 @@ class TestBuildWorkflowResponse:
 
         assert response.final_outcome == "not_found"
         assert response.not_found_evidence is not None
+
+    def test_narrator_prompt_does_not_use_repair_plan_as_audit_log(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pydantic import BaseModel
+        from app.artifacts.workflow_artifacts import CritiqueReport
+        from app.workflow.nodes.narrator import build_workflow_response
+
+        captured: dict[str, str] = {}
+
+        class FakeNarratorSchema(BaseModel):
+            message: str = "Данные получены из источника."
+            summary: str = "summary"
+            methodology: str = "det"
+            limitations: list[str] = []
+            how_found: str = "scouts"
+            clarification_questions: list[str] = []
+
+        class FakeClient:
+            def structured_chat(self, messages, *, schema, **kwargs):
+                captured["prompt"] = "\n".join(str(m["content"]) for m in messages)
+                return FakeNarratorSchema()
+
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: FakeClient())
+
+        script_path = tmp_path / "script.py"
+        script_path.write_text("# script", encoding="utf-8")
+        state = _make_state(
+            dataset_artifacts=[_make_ok_dataset()],
+            script_artifacts=[_make_script_artifact(str(script_path))],
+            coverage_reports=[_make_ok_coverage()],
+            tmp_path=tmp_path,
+        )
+        critique = CritiqueReport(
+            artifact_id="critique-001",
+            verdict="pass",
+            repair_plan=["fake audit should not be shown"],
+        )
+
+        build_workflow_response(
+            state,
+            final_outcome="passed",
+            critique=critique,
+            visualization=None,
+            live_llm_required=True,
+        )
+
+        assert "Технический лог аудитора" not in captured["prompt"]
+        assert "стандартному протоколу" not in captured["prompt"]
+        assert "fake audit should not be shown" not in captured["prompt"]
+        assert "Проверочный контекст из артефактов" in captured["prompt"]
+
+    def test_narrator_not_found_prompt_has_no_expert_verification_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pydantic import BaseModel
+        from app.artifacts.workflow_artifacts import CritiqueReport
+        from app.workflow.nodes.narrator import build_workflow_response
+
+        captured: dict[str, str] = {}
+
+        class FakeNarratorSchema(BaseModel):
+            message: str = "Данные не найдены."
+            summary: str = "summary"
+            methodology: str = ""
+            limitations: list[str] = ["not found"]
+            how_found: str = ""
+            clarification_questions: list[str] = []
+
+        class FakeClient:
+            def structured_chat(self, messages, *, schema, **kwargs):
+                captured["prompt"] = "\n".join(str(m["content"]) for m in messages)
+                return FakeNarratorSchema()
+
+        monkeypatch.setattr("app.llm.yandex_ai_studio.qwen_credential_gate",
+                            lambda: {"status": "ok", "missing_env_vars": []})
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: FakeClient())
+
+        critique = CritiqueReport(
+            artifact_id="critique-001",
+            verdict="not_found",
+            warnings=["no data"],
+            repair_plan=["fake repair plan"],
+        )
+        response = build_workflow_response(
+            _make_state(dataset_artifacts=[], script_artifacts=[]),
+            final_outcome="not_found",
+            critique=critique,
+            visualization=None,
+            live_llm_required=True,
+        )
+
+        assert response.not_found_evidence is not None
+        assert response.not_found_evidence.limitations == []
+        assert "КОНТЕКСТ ДЛЯ ЭКСПЕРТНОЙ ВЕРИФИКАЦИИ" not in captured["prompt"]
+        assert "fake repair plan" not in captured["prompt"]
 
     def test_fallback_raises_not_silently_returns(self) -> None:
         """live_llm_required=False must raise, never silently return a fake response."""

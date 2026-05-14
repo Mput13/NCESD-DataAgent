@@ -213,39 +213,9 @@ _FAMILY_TO_TOOL: dict[str, str] = {
 
 def _resolve_source_family(plan: ExtractionPlan) -> str:
     """Determine source_family from the extraction plan's source_id or operations."""
-    if plan.source_id:
-        sid = plan.source_id.lower()
-        if "fedstat" in sid or "emiss" in sid or "емисс" in sid:
-            return "fedstat"
-        if sid.isdigit():
-            return "fedstat"
-        if "ckan" in sid:
-            return "ckan"
-        # World Bank: UPPER.CASE.DOT (NY.GDP.MKTP.CD) or UPPER_WITH_UNDERSCORES (SH_UHC_FH40_LARGE)
-        # or lowercase with dot that isn't a file path (fin30.2)
-        raw = plan.source_id
-        has_dot = "." in raw
-        starts_upper = raw[0].isupper() if raw else False
-        all_upper_or_digit = all(c.isupper() or c.isdigit() or c in "._" for c in raw)
-        if "world_bank" in sid or "wb" in sid:
-            return "world_bank"
-        if starts_upper and (has_dot or "_" in raw):
-            return "world_bank"
-        if all_upper_or_digit and ("_" in raw or has_dot):
-            return "world_bank"
-        if has_dot and "/" not in raw and "\\" not in raw and not raw.endswith(".parquet"):
-            return "world_bank"
+    from app.data.source_family import detect_source_family_from_plan
 
-    # Check operations for hints
-    ops_text = " ".join(plan.operations).lower()
-    if "fedstat" in ops_text:
-        return "fedstat"
-    if "world_bank" in ops_text or "wb" in ops_text:
-        return "world_bank"
-    if "ckan" in ops_text:
-        return "ckan"
-
-    return "unknown"
+    return detect_source_family_from_plan(plan)
 
 
 def _dispatch_extraction(
@@ -634,7 +604,8 @@ def _maybe_codegen_fallback(
         return result
 
     from app.data.source_card_lookup import lookup_source_card
-    from app.data.codegen_extractor import codegen_extract_dataset, _detect_family
+    from app.data.source_family import detect_source_family_from_card
+    from app.data.codegen_extractor import codegen_extract_dataset
 
     source_card = lookup_source_card(extraction_plan.source_id) or {
         "source_family": source_family,
@@ -647,7 +618,7 @@ def _maybe_codegen_fallback(
     if not effective_family or effective_family == "unknown":
         effective_family = source_family
     if not effective_family or effective_family == "unknown":
-        effective_family = _detect_family(source_card)
+        effective_family = detect_source_family_from_card(source_card)
     if effective_family not in _CODEGEN_SUPPORTED_FAMILIES:
         return result
     # Ensure source_card has the resolved family for codegen path resolution

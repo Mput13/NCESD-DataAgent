@@ -244,7 +244,7 @@ def _filter_rows(
     return result
 
 
-def _parquet_path(source_card: dict[str, Any]) -> Path:
+def resolve_fedstat_parquet_path(source_card: dict[str, Any]) -> Path:
     import os
 
     candidates = [
@@ -280,6 +280,10 @@ def _parquet_path(source_card: dict[str, Any]) -> Path:
     if archived is not None:
         return archived
     raise FileNotFoundError(f"No readable FedStat parquet path in source card: {source_card!r}")
+
+
+def _parquet_path(source_card: dict[str, Any]) -> Path:
+    return resolve_fedstat_parquet_path(source_card)
 
 
 def _extract_archived_parquet(source_card: dict[str, Any]) -> Path | None:

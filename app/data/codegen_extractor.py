@@ -12,6 +12,7 @@ Returns DatasetArtifact on success, NoDataExplanationArtifact on permanent failu
 from __future__ import annotations
 
 import re
+from numbers import Number
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -32,6 +33,17 @@ _UNSAFE_KEYWORDS_RE = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|COPY|ATTACH|INSTALL|LOAD)\b",
     re.IGNORECASE,
 )
+_SOURCE_RELATION_RE = re.compile(r"\bFROM\s+source\b", re.IGNORECASE)
+_VALUE_ALIASES = ("value", "obs_value", "amount", "gdp", "metric_value")
+_NUMERIC_VALUE_EXCLUDE = {
+    "period",
+    "year",
+    "date",
+    "geo_id",
+    "country_id",
+    "indicator_id",
+    "id",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +110,14 @@ def codegen_extract_dataset(
             attempts.append(f"attempt {attempt}: execution error — {exc}")
             continue
 
-        non_null_rows = [r for r in rows if r.get("value") is not None]
+        try:
+            normalized_rows = _normalize_result_rows(rows)
+        except ValueError as exc:
+            error_feedback = f"Result normalization failed: {exc}"
+            attempts.append(f"attempt {attempt}: normalization error — {exc}")
+            continue
+
+        non_null_rows = [r for r in normalized_rows if r.get("value") is not None]
         if not non_null_rows:
             error_feedback = (
                 f"Query returned {len(rows)} rows but all values are NULL. "
@@ -205,7 +224,7 @@ def _generate_query(
         "Твоя задача — написать DuckDB SQL-запрос для извлечения данных из Parquet-файла.\n\n"
         "СТРОГИЕ ПРАВИЛА:\n"
         "1. Используй ТОЛЬКО SELECT. Запрещены INSERT, UPDATE, DELETE, DROP, CREATE и т.д.\n"
-        "2. Обращайся к файлу через: read_parquet('ПУТЬ')\n"
+        "2. Таблица уже подключена как source. Используй FROM source, не вызывай read_parquet самостоятельно.\n"
         "3. Выбирай реальные значения из колонок — не вычисляй числа самостоятельно.\n"
         "4. Результат должен содержать колонки: geo_name (или аналог), period (год), value (числовое значение), unit (единица измерения).\n"
         "   Используй AS для переименования: ... AS geo_name, ... AS period, ... AS value, ... AS unit.\n"
@@ -216,8 +235,9 @@ def _generate_query(
 
     user_prompt = (
         f"Запрос пользователя: {intent_text}\n\n"
-        f"Путь к файлу: {safe_path}\n\n"
-        f"Схема таблицы:\n{schema_text}{sample_text}"
+        f"Таблица для запроса: source\n"
+        f"Локальный файл уже подключен системой: {safe_path}\n\n"
+        f"Схема таблицы source:\n{schema_text}{sample_text}"
         f"{feedback_section}"
     )
 
@@ -233,8 +253,6 @@ def _generate_query(
             max_tokens=1024,
         )
         sql = result.sql.strip()
-        # Replace placeholder path if LLM used a different one
-        sql = sql.replace("ПУТЬ", safe_path).replace("PATH", safe_path)
         return sql if sql else None
     except Exception:
         return None
@@ -257,25 +275,59 @@ def _validate_sql(sql: str) -> str | None:
 def _execute(sql: str, parquet_path: Path) -> list[dict[str, Any]]:
     """Execute SQL against the Parquet file and return rows as dicts."""
     safe_path = str(parquet_path).replace("'", "''")
-    # Allow LLM to use a table alias; replace common placeholders
-    resolved_sql = sql.replace(
-        "read_parquet('PATH')", f"read_parquet('{safe_path}')"
-    ).replace(
-        f"read_parquet('{str(parquet_path)}')", f"read_parquet('{safe_path}')"
-    )
-    # If LLM forgot the path entirely, inject it
-    if "read_parquet" not in resolved_sql.lower():
-        resolved_sql = resolved_sql.replace(
-            "FROM data", f"FROM read_parquet('{safe_path}')"
+    stripped_sql = sql.strip().rstrip(";")
+    if "read_parquet" in stripped_sql.lower():
+        resolved_sql = stripped_sql.replace(
+            "read_parquet('PATH')", f"read_parquet('{safe_path}')"
         ).replace(
-            "FROM t", f"FROM read_parquet('{safe_path}')"
+            "read_parquet('ПУТЬ')", f"read_parquet('{safe_path}')"
         ).replace(
-            "FROM source", f"FROM read_parquet('{safe_path}')"
+            f"read_parquet('{str(parquet_path)}')", f"read_parquet('{safe_path}')"
         )
+    elif _SOURCE_RELATION_RE.search(stripped_sql):
+        resolved_sql = (
+            f"WITH source AS (SELECT * FROM read_parquet('{safe_path}'))\n"
+            f"{stripped_sql}"
+        )
+    else:
+        raise ValueError("generated query must read from source using FROM source")
 
     conn = duckdb.connect(database=":memory:")
     df = conn.execute(resolved_sql).fetchdf()
     return df.to_dict(orient="records")
+
+
+def _normalize_result_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return rows with canonical lower-case keys and a resolved numeric value."""
+    if not rows:
+        return []
+
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        canonical = {str(key).lower(): value for key, value in row.items()}
+        value_key = _resolve_value_key(canonical)
+        canonical["value"] = canonical.get(value_key)
+        normalized.append(canonical)
+    return normalized
+
+
+def _resolve_value_key(row: dict[str, Any]) -> str:
+    for alias in _VALUE_ALIASES:
+        if alias in row:
+            return alias
+
+    numeric_candidates = [
+        key
+        for key, value in row.items()
+        if key not in _NUMERIC_VALUE_EXCLUDE
+        and isinstance(value, Number)
+        and not isinstance(value, bool)
+    ]
+    if len(numeric_candidates) == 1:
+        return numeric_candidates[0]
+    if not numeric_candidates:
+        raise ValueError("result has no value column or numeric value candidate")
+    raise ValueError(f"result has ambiguous numeric value columns: {numeric_candidates}")
 
 
 # ---------------------------------------------------------------------------
@@ -365,27 +417,19 @@ def _no_data(
 
 
 def _detect_family(source_card: dict[str, Any]) -> str:
-    family = str(source_card.get("source_family") or "").lower()
-    if family in ("fedstat", "world_bank", "ckan"):
-        return family
-    raw_id = str(source_card.get("dataset_id") or source_card.get("resource_id") or "")
-    sid = raw_id.lower()
-    if sid.isdigit() or "fedstat" in sid or "emiss" in sid:
-        return "fedstat"
-    # WB indicator IDs are UPPER.CASE.DOT format (e.g. NY.GDP.MKTP.CD)
-    if "." in raw_id and raw_id[0].isupper():
-        return "world_bank"
-    return "unknown"
+    from app.data.source_family import detect_source_family_from_card
+
+    return detect_source_family_from_card(source_card)
 
 
 def _resolve_parquet_path(source_card: dict[str, Any], source_family: str) -> Path:
     """Reuse adapter path resolution logic."""
     if source_family == "fedstat":
-        from app.data.fedstat_adapter import _parquet_path  # type: ignore[attr-defined]
-        return _parquet_path(source_card)
+        from app.data.fedstat_adapter import resolve_fedstat_parquet_path
+        return resolve_fedstat_parquet_path(source_card)
     elif source_family == "world_bank":
-        from app.data.world_bank_adapter import _parquet_path  # type: ignore[attr-defined]
-        return _parquet_path(source_card)
+        from app.data.world_bank_adapter import resolve_world_bank_parquet_path
+        return resolve_world_bank_parquet_path(source_card)
     # Fallback: try direct candidates
     for key in ("local_path", "parquet_path", "resource_id"):
         val = source_card.get(key)

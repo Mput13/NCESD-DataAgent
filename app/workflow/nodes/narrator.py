@@ -242,13 +242,10 @@ def _build_response_live(
         "2. СТРУКТУРА: Разделяй блоки текста ПУСТЫМИ СТРОКАМИ и ЗАГЛАВНЫМИ БУКВАМИ для заголовков. Вместо списков со звездочками используй тире (-) или цифры.\n"
         "3. ИСТОЧНИКИ: В начале отчета четко перечисли базы данных (Росстат/FedStat, World Bank и т.д.) и параметры поиска.\n"
         "4. СТИЛЬ: Официально-деловой, профессиональный аналитический язык без технического жаргон системы.\n"
-        "5. ОБЯЗАТЕЛЬНЫЕ РАЗДЕЛЫ (ПИШИ ИХ ЗАГЛАВНЫМИ БУКВАМИ):\n"
-        "   АНАЛИТИЧЕСКИЙ ОТЧЕТ: [Название]\n\n"
-        "   ОБЗОР ИСТОЧНИКОВ И ПАРАМЕТРОВ ПОИСКА\n\n"
-        "   ОСНОВНЫЕ ПОКАЗАТЕЛИ\n\n"
-        "   АНАЛИЗ ДИНАМИКИ И КОНТЕКСТ\n\n"
-        "   КОНТЕКСТ ДЛЯ ЭКСПЕРТНОЙ ВЕРИФИКАЦИИ (ТЕХНИЧЕСКИЕ ДЕТАЛИ)\n\n"
-        "   РЕКОМЕНДАЦИИ ДЛЯ ДАЛЬНЕЙШЕГО АНАЛИЗА\n\n"
+        "5. Если статус passed, сделай разделы: АНАЛИТИЧЕСКИЙ ОТЧЕТ, ИСТОЧНИКИ И ПАРАМЕТРЫ, ОСНОВНЫЕ ПОКАЗАТЕЛИ, АНАЛИЗ ДИНАМИКИ, ДАЛЬНЕЙШИЙ АНАЛИЗ.\n"
+        "6. Если статус not_found, дай короткое объяснение что проверено и почему данных нет; не пиши полноценный аналитический отчет.\n"
+        "7. Если статус needs_clarification, задай вопросы; не пиши отчет и не имитируй найденные данные.\n"
+        "8. Не добавляй технические детали экстракции, если они не переданы во входном контексте.\n\n"
         "Отвечай строго в формате JSON."
     )
 
@@ -266,20 +263,27 @@ def _build_response_live(
         " Пользователь запросил табличный формат — в message явно укажи, что CSV-файл доступен для скачивания ниже."
         if wants_table else ""
     )
-
-    audit_log = "; ".join(critique.repair_plan) if critique.repair_plan else "Технические детали экстракции соответствуют стандартному протоколу."
+    verification_context = _build_verification_context(
+        dataset_artifacts=dataset_artifacts,
+        script_artifacts=script_artifacts,
+        coverage_reports=coverage_reports,
+    )
+    verification_note = (
+        f"Проверочный контекст из артефактов: {verification_context}\n"
+        if final_outcome == "passed" and verification_context else ""
+    )
 
     user_prompt = (
         f"Запрос пользователя: {query}\n"
         f"Статус: {final_outcome} | {data_signal}\n"
         f"Вердикт критика: {critique.verdict}"
         + (f", предупреждения: {critique.warnings}" if critique.warnings else "") + "\n"
-        f"Технический лог аудитора для эксперта: {audit_log}\n\n"
+        + verification_note + "\n"
         f"Найденные датасеты:\n{dataset_summaries}\n\n"
         f"Источники: {[s.get('title', s.get('card_id','')) for s in selected_sources[:8]]}\n"
         + (f"Недостающие поля: {missing_fields}\n" if missing_fields else "") +
         f"\nСформируй развёрнутый ответ:{csv_note}\n"
-        "- message: подробный анализ с цифрами, разделом для экспертной верификации и смежными направлениями\n"
+        "- message: ответ пользователю с цифрами из records, источниками, ограничениями и смежными направлениями где уместно\n"
         "- summary: 2-3 предложения итог\n"
         "- methodology: источник и метод поиска\n"
         "- limitations: что не нашли, какие периоды отсутствуют\n"
@@ -369,6 +373,44 @@ def _build_response_live(
         extra_statuses={},
     )
 
+
+def _build_verification_context(
+    *,
+    dataset_artifacts: list[DatasetArtifact],
+    script_artifacts: list[ScriptArtifact],
+    coverage_reports: list[Any],
+) -> list[dict[str, Any]]:
+    """Build evidence-backed extraction context for narrator prompts."""
+    context: list[dict[str, Any]] = []
+    for dataset in dataset_artifacts:
+        if dataset.status != "ok":
+            continue
+        context.append({
+            "source_id": dataset.source_id,
+            "rows": dataset.rows,
+            "columns": dataset.columns[:8],
+            "quality_flags": dataset.quality_flags,
+            "provenance": dataset.provenance[:2],
+        })
+    for coverage in coverage_reports:
+        if getattr(coverage, "status", None) in {"ok", "partial"}:
+            context.append({
+                "source_id": getattr(coverage, "source_id", None),
+                "coverage_status": getattr(coverage, "status", None),
+                "matched_periods": getattr(coverage, "matched_periods", [])[:5],
+                "matched_geographies": getattr(coverage, "matched_geographies", [])[:5],
+                "unit": getattr(coverage, "unit", None),
+            })
+    downloadable = [
+        {"artifact_id": s.artifact_id, "path": s.path}
+        for s in script_artifacts
+        if s.downloadable
+    ]
+    if downloadable:
+        context.append({"downloadable_scripts": downloadable[:3]})
+    return context
+
+
 def _derive_clarification_questions(missing_fields: list[str], query: str) -> list[str]:
     field_to_question = {
         "geography": "Для какой страны или региона нужны данные?",
@@ -404,7 +446,7 @@ def _build_not_found_response(
         rejection_reasons=critique.warnings or [reason],
         search_strategy="fedstat/world_bank/ckan_source_scouts",
         alternatives=[],
-        limitations=critique.repair_plan or [],
+        limitations=critique.warnings or [],
     )
 
     query = str(state.get("query") or "")

@@ -62,7 +62,7 @@ def test_describe_schema_sample_truncated(tmp_path):
 @pytest.mark.parametrize("sql", [
     "SELECT * FROM read_parquet('x.parquet')",
     "select geo, value from read_parquet('x.parquet') where year=2020",
-    "  SELECT geo AS geo_name, year AS period FROM t",
+    "  SELECT geo AS geo_name, year AS period FROM source",
 ])
 def test_validate_sql_ok(sql):
     assert _validate_sql(sql) is None
@@ -101,6 +101,25 @@ def test_execute_returns_rows(tmp_path):
     assert rows[0]["value"] == 1500.0
 
 
+def test_execute_supports_source_relation(tmp_path):
+    df = pd.DataFrame({
+        "region": ["Russia"],
+        "year": ["2022"],
+        "amount": [2240.0],
+        "unit": ["USD"],
+    })
+    p = _write_parquet(tmp_path, df)
+    rows = _execute("SELECT region AS geo_name, year AS period, amount, unit FROM source", p)
+    assert rows == [{"geo_name": "Russia", "period": "2022", "amount": 2240.0, "unit": "USD"}]
+
+
+def test_execute_rejects_unknown_table_alias(tmp_path):
+    df = pd.DataFrame({"region": ["Russia"], "value": [1.0]})
+    p = _write_parquet(tmp_path, df)
+    with pytest.raises(ValueError, match="FROM source"):
+        _execute("SELECT region, value FROM df", p)
+
+
 def test_execute_raises_on_bad_sql(tmp_path):
     df = pd.DataFrame({"x": [1]})
     p = _write_parquet(tmp_path, df)
@@ -118,9 +137,28 @@ def test_execute_raises_on_bad_sql(tmp_path):
     ({"source_family": "world_bank"}, "world_bank"),
     ({"dataset_id": "40578"}, "fedstat"),
     ({"dataset_id": "NY.GDP.MKTP.CD"}, "world_bank"),
+    ({"dataset_id": "SH_UHC_FH40_LARGE"}, "world_bank"),
+    ({"dataset_id": "fin30.2"}, "unknown"),
+    ({"dataset_id": "fin30.2", "card_id": "world_bank:fin30.2:wb/parquet/fin30.2.parquet"}, "world_bank"),
     ({}, "unknown"),
 ])
 def test_detect_family(card, expected):
+    assert _detect_family(card) == expected
+
+
+@pytest.mark.parametrize("source_id,expected", [
+    ("40578", "fedstat"),
+    ("NY.GDP.MKTP.CD", "world_bank"),
+    ("SH_UHC_FH40_LARGE", "world_bank"),
+    ("fin30.2", "unknown"),
+])
+def test_workflow_family_detection_matches_codegen_for_ids(source_id, expected):
+    from app.artifacts.workflow_artifacts import ExtractionPlan
+    from app.workflow.nodes.deterministic_tools import _resolve_source_family
+
+    plan = ExtractionPlan(artifact_id="plan-test", source_id=source_id, operations=[])
+    card = {"dataset_id": source_id}
+    assert _resolve_source_family(plan) == expected
     assert _detect_family(card) == expected
 
 
@@ -156,8 +194,7 @@ def test_codegen_success_on_first_attempt(tmp_path):
         "unit": ["млрд руб"],
     })
     p = _write_parquet(tmp_path, df)
-    safe = str(p).replace("'", "''")
-    sql = f"SELECT region AS geo_name, year AS period, value, unit FROM read_parquet('{safe}')"
+    sql = "SELECT region AS geo_name, year AS period, value, unit FROM source"
 
     source_card = {"source_family": "fedstat", "dataset_id": "40578", "local_path": str(p)}
 
@@ -171,6 +208,42 @@ def test_codegen_success_on_first_attempt(tmp_path):
     assert result.rows == 1
     assert result.records[0]["value"] == 1500.5
     assert "codegen_extraction" in result.quality_flags
+
+
+def test_codegen_normalizes_amount_column_to_value(tmp_path):
+    df = pd.DataFrame({
+        "region": ["Russia"],
+        "year": ["2022"],
+        "amount": [2240.0],
+        "unit": ["USD"],
+    })
+    p = _write_parquet(tmp_path, df)
+    source_card = {"source_family": "fedstat", "dataset_id": "40578", "local_path": str(p)}
+    sql = "SELECT region AS geo_name, year AS period, amount, unit FROM source"
+
+    with patch("app.llm.yandex_ai_studio.qwen_credential_gate", return_value={"status": "ok"}), \
+         patch("app.data.codegen_extractor._generate_query", return_value=sql):
+        result = codegen_extract_dataset(
+            source_card, None, {}, output_dir=tmp_path, artifact_id="test-amount"
+        )
+
+    assert isinstance(result, DatasetArtifact)
+    assert result.records[0]["value"] == 2240.0
+
+
+def test_codegen_retries_on_unresolvable_value_column(tmp_path):
+    df = pd.DataFrame({"region": ["Russia"], "year": ["2022"], "label": ["n/a"]})
+    p = _write_parquet(tmp_path, df)
+    source_card = {"source_family": "fedstat", "dataset_id": "40578", "local_path": str(p)}
+
+    with patch("app.llm.yandex_ai_studio.qwen_credential_gate", return_value={"status": "ok"}), \
+         patch("app.data.codegen_extractor._generate_query", return_value="SELECT * FROM source"):
+        result = codegen_extract_dataset(
+            source_card, None, {}, output_dir=tmp_path, artifact_id="test-no-value", max_retries=1
+        )
+
+    assert isinstance(result, NoDataExplanationArtifact)
+    assert any("normalization error" in reason for reason in result.rejection_reasons)
 
 
 def test_codegen_retries_on_null_values(tmp_path):

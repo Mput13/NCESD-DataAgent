@@ -100,6 +100,16 @@ def run_deterministic_tools(
         artifact_id=artifact_id,
     )
 
+    # Variant B fallback: when static adapter returns 0 rows or no-data, try codegen.
+    result = _maybe_codegen_fallback(
+        result=result,
+        source_family=source_family,
+        extraction_plan=extraction_plan,
+        intent=intent,
+        filters=filters,
+        output_dir=output_dir,
+    )
+
     tool_calls = [tool_name, "export_dataset_with_script"]
     artifact_ids_produced: list[str] = []
     row_count: int | None = None
@@ -584,3 +594,59 @@ if __name__ == "__main__":
         }],
         quality_flags=["deterministic_extraction_script"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Variant B: codegen fallback
+# ---------------------------------------------------------------------------
+
+# Source families that support codegen fallback (have Parquet files we can introspect)
+_CODEGEN_SUPPORTED_FAMILIES: frozenset[str] = frozenset({"fedstat", "world_bank"})
+
+
+def _maybe_codegen_fallback(
+    *,
+    result: DatasetArtifact | NoDataExplanationArtifact,
+    source_family: str,
+    extraction_plan: ExtractionPlan,
+    intent: Any,
+    filters: dict[str, Any],
+    output_dir: Path,
+) -> DatasetArtifact | NoDataExplanationArtifact:
+    """Run codegen extraction when static adapter returned 0 rows or no-data.
+
+    Only runs for fedstat and world_bank (Parquet-backed sources).
+    Skips if Qwen credentials are absent to avoid silent degradation.
+    """
+    if source_family not in _CODEGEN_SUPPORTED_FAMILIES:
+        return result
+
+    should_try = (
+        isinstance(result, NoDataExplanationArtifact)
+        or (isinstance(result, DatasetArtifact) and (result.rows or 0) == 0)
+    )
+    if not should_try:
+        return result
+
+    from app.data.source_card_lookup import lookup_source_card
+    from app.data.codegen_extractor import codegen_extract_dataset
+
+    source_card = lookup_source_card(extraction_plan.source_id) or {
+        "source_family": source_family,
+        "dataset_id": extraction_plan.source_id or source_family,
+        "resource_id": extraction_plan.source_id or source_family,
+    }
+
+    codegen_artifact_id = f"dataset-cg-{uuid4().hex[:8]}"
+    codegen_result = codegen_extract_dataset(
+        source_card,
+        intent,
+        filters,
+        output_dir=output_dir,
+        artifact_id=codegen_artifact_id,
+    )
+
+    # Only replace original result if codegen actually found data
+    if isinstance(codegen_result, DatasetArtifact) and (codegen_result.rows or 0) > 0:
+        return codegen_result
+    return result

@@ -5,7 +5,7 @@ from time import perf_counter
 from app.artifacts import ArtifactStore
 from app.config import Settings, load_settings
 from app.contracts import TraceEvent, WorkflowOutcome, WorkflowResponse
-from app.retrieval import SourceCatalog
+from app.retrieval.catalog import SourceCatalog
 from app.sources import build_source_adapters
 from app.workflow.intent import build_intent
 

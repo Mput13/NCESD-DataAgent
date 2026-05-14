@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-14T13:54:21Z",
+  "timestamp": "2026-05-14T20:50:21Z",
   "phase": "02",
   "phase_name": "jury-mvp",
   "phase_dir": ".planning/phases/02-jury-mvp",
@@ -9,72 +9,78 @@
   "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {"id": "fix1-verifier", "name": "Number verifier advisory-only (narrator.py)", "status": "done", "commits": ["db66f6e"]},
-    {"id": "fix2-charts", "name": "Inline SVG charts in chat response", "status": "done", "commits": ["db66f6e"]},
-    {"id": "fix3-expansion", "name": "Query expansion via Qwen in Research Designer + scouts", "status": "done", "commits": ["db66f6e"]},
-    {"id": "fix4-partial", "name": "Partial coverage → passed with warning", "status": "done", "commits": ["db66f6e"]},
-    {"id": "fix5-intent-prompt", "name": "Intent analyst prompt: compound concepts not needs_clarification", "status": "done", "commits": ["c1edeed"]},
-    {"id": "fix6-gated-label", "name": "UI gated label: запрос остановлен", "status": "done", "commits": ["789d7c7"]},
-    {"id": "fix7-fedstat-geo", "name": "FedStat geo column detection: ОКАТО/ОКСМ needles", "status": "done", "commits": ["839b54d"]},
-    {"id": "fix8-json-truncation", "name": "JSON truncation repair + max_tokens bumped", "status": "done", "commits": ["839b54d"]},
-    {"id": "fix9-ui-trace", "name": "UI trace redesign: human-readable Russian timeline", "status": "done", "commits": ["839b54d"]},
-    {"id": "fix10-csv-note", "name": "Narrator CSV acknowledgment", "status": "done", "commits": ["839b54d"]},
-    {"id": "fix11-graceful-degradation", "name": "Graceful degradation: partial analysis instead of not_found (coverage/critic/narrator/extraction_planner)", "status": "done", "commits": ["a50b8ca"]}
+    {"id": "fix1-fix11", "name": "Fixes 1–11 (graceful degradation и др.)", "status": "done", "commits": ["a50b8ca", "839b54d", "c1edeed", "db66f6e"]},
+    {"id": "import-cleanup", "name": "ArtifactStore export + SourceCatalog import fix", "status": "done", "commits": ["c8644fd"]},
+    {"id": "golden-eval-varA", "name": "20-case golden eval Variant A (main, с Qdrant)", "status": "done", "notes": "batch-20260514T140840Z: 5/20 passed. 10 кейсов sel=0, 3 кейса ds=1 but not_found, 2 кейса dt=not_found"},
+    {"id": "variant-b-impl", "name": "Variant B: codegen extraction agent", "status": "done", "commits": ["797d6a1"], "notes": "app/data/codegen_extractor.py + fallback в deterministic_tools.py + 22 теста. Ветка: worktree-feat+variant-b-codegen-extraction"},
+    {"id": "variant-b-fix-family", "name": "Fix: WB source_family detection + source_card resolution в codegen fallback", "status": "done", "commits": ["1e08b07"]},
+    {"id": "golden-eval-varB-first", "name": "20-case golden eval Variant A+B (первый прогон с фиксом)", "status": "done", "notes": "batch-variantB-20260514T150223Z: 5/20 passed. Codegen сработал в 1 кейсе (GC-007). GC-011+GC-015 всё ещё not_found (source_family=unknown — исправлено в 1e08b07)"}
   ],
   "remaining_tasks": [
     {
-      "id": "full-20-run",
-      "name": "Run all 20 golden cases, measure pass rate after all 11 fixes",
+      "id": "rerun-after-family-fix",
+      "name": "Перезапустить 20-case батч в worktree после фикса source_family (1e08b07)",
       "status": "not_started",
       "priority": "high",
-      "description": "11 fixes shipped. Run batch via scripts/run_golden_cases.py or batch-runs/. Target: unacceptable==0 in phase2-golden-results.json."
+      "description": "GC-011 (WB source_id=SH_UHC_FH40_LARGE) и GC-015 (WB source_id=fin30.2) теперь должны активировать codegen. Запустить python3 -m scripts.run_workflow_batch из worktree-feat+variant-b-codegen-extraction. ВАЖНО: нужны симлинки .env → /Users/a/MAI/matmod/.env и .local → /Users/a/MAI/matmod/.local"
+    },
+    {
+      "id": "sel-zero-root-cause",
+      "name": "Анализ 10 кейсов с sel=0 (скауты не находят кандидатов)",
+      "status": "not_started",
+      "priority": "high",
+      "description": "GC-006,009,010,012,014,016,017,018,019,020 — source_scouts возвращает 0 кандидатов. Codegen не активируется т.к. до deterministic_tools не доходит. Нужен анализ: (1) что за запросы в этих кейсах, (2) есть ли подходящие данные в корпусе, (3) routing/intent проблема или отсутствие данных."
+    },
+    {
+      "id": "ds1-not-found",
+      "name": "3 кейса: ds=1 но not_found (GC-003, GC-005, GC-008)",
+      "status": "not_started",
+      "priority": "medium",
+      "description": "Данные извлечены (dataset_artifacts=1, records>0), но critic или narrator возвращает not_found. Fix A должен был это покрыть. Проверить component_statuses и trace для этих кейсов."
     },
     {
       "id": "gc011-routing",
       "name": "GC-011: no_data supervisor route overridden by intent.needs_clarification",
       "status": "not_started",
       "priority": "medium",
-      "description": "In graph.py _route_after_intent(), check supervisor_route=='no_data' BEFORE intent.needs_clarification."
+      "description": "В graph.py _route_after_intent(): проверять supervisor_route=='no_data' ДО intent.needs_clarification."
     },
     {
       "id": "fedstat-period-filter",
-      "name": "FedStat cumulative data: period_columns regex \\d{4} misses monthly/cumulative columns",
+      "name": "FedStat cumulative data: period_columns regex \\d{4} пропускает месячные колонки",
       "status": "not_started",
       "priority": "medium",
-      "description": "fedstat_adapter.py line 203: period_columns = [col for col in logical_columns if re.fullmatch(r'\\d{4}', str(col))]. Columns like 'Янв', 'фев.2023' are dropped entirely. Need to detect and handle non-year period columns for cumulative sources like 61502."
+      "description": "fedstat_adapter.py ~строка 203: period_columns = [col for col in logical_columns if re.fullmatch(r'\\d{4}', str(col))]. Колонки 'Янв', 'фев.2023' отбрасываются. Кумулятивные источники (61502) возвращают 0 строк."
     },
     {
       "id": "sse-hang",
-      "name": "SSE hang: Думает stays on screen after pipeline ends",
+      "name": "SSE hang: Думает зависает после окончания пайплайна",
       "status": "not_started",
       "priority": "low",
-      "description": "server.py _handle_stream finally block may not send terminal SSE event on error paths."
+      "description": "server.py _handle_stream finally block может не отправлять terminal SSE event на error paths."
     },
     {
-      "id": "variant-b-code-gen",
-      "name": "Variant B: code-gen extraction agent with schema awareness + retries",
+      "id": "merge-to-main",
+      "name": "Смержить ветку Variant B в main после подтверждения результатов",
       "status": "not_started",
-      "priority": "future",
-      "description": "Replace static adapters with LLM that sees real parquet schema and writes DuckDB queries. Multiple attempts on error. User agreed: do A first, then B."
+      "priority": "low",
+      "description": "Ветка: worktree-feat+variant-b-codegen-extraction (worktree-feat+variant-b-codegen-extraction). После успешного батча — merge в main."
     }
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Variant A before Variant B", "rationale": "Fix degradation path first (narrator always called, partial results surface); then code-gen extraction agent", "phase": "02"},
-    {"decision": "coverage can_proceed=False → partial (not skipped_with_reason)", "rationale": "partial is accepted by _coverage_all_ok(); skipped_with_reason kills extraction pipeline entirely", "phase": "02"},
-    {"decision": "needs_repair + ok dataset with rows>0 → passed", "rationale": "Surface extracted data as partial analysis rather than silence", "phase": "02"},
-    {"decision": "has_records checks non-null values (value is not None)", "rationale": "198 WB rows all value=None caused contradictory narrator output (data_signal=НАЙДЕНЫ for nulls)", "phase": "02"},
-    {"decision": "extraction_planner max_tokens 512 → 1024", "rationale": "Last remaining node at 512; Research Designer 1024, Narrator 2048", "phase": "02"},
-    {"decision": "Number verifier: advisory warning only", "rationale": "False positives on rounded/scaled values; adapters guarantee source-bound numbers"},
-    {"decision": "LLM unavailable → gated/stopped, zero fallback paths", "rationale": "Core architectural invariant"},
-    {"decision": "FedStat geo detection: ОКАТО+ОКСМ added to needle list", "rationale": "Wide Parquet files use Russian classifier column names"},
-    {"decision": "JSON max_tokens: 1024 for Research Designer, 2048 for Narrator", "rationale": "Russian prose compresses poorly; 512 too small"}
+    {"decision": "Variant A before Variant B — оба сделаны", "rationale": "Fix A (graceful degradation) и Variant B (codegen) оба реализованы", "phase": "02"},
+    {"decision": "Variant B как fallback в deterministic_tools, не отдельный граф-узел", "rationale": "Не требует изменений routing/graph.py. Прозрачен для пайплайна.", "phase": "02"},
+    {"decision": "Codegen только для fedstat и world_bank (Parquet-backed)", "rationale": "CKAN не имеет локальных Parquet файлов для schema introspection", "phase": "02"},
+    {"decision": "_resolve_source_family расширен: WB ID с подчёркиваниями и lowercase.dot", "rationale": "SH_UHC_FH40_LARGE и fin30.2 раньше возвращали unknown — codegen не активировался", "phase": "02"},
+    {"decision": "_maybe_codegen_fallback берёт source_family из source_card напрямую", "rationale": "source_card из каталога имеет explicit source_family — надёжнее чем парсинг source_id", "phase": "02"},
+    {"decision": "Worktree требует симлинков .env и .local/", "rationale": "Gitignored файлы не в worktree. Без .env — Yandex key не грузится (скауты gated). Без .local — parquet not found (extraction gated).", "phase": "02"},
+    {"decision": "coverage can_proceed=False → partial (не skipped_with_reason)", "rationale": "partial принимается _coverage_all_ok(); skipped_with_reason убивает всю extraction pipeline", "phase": "02"},
+    {"decision": "needs_repair + ok dataset rows>0 → passed", "rationale": "Показывать извлечённые данные вместо тишины", "phase": "02"},
+    {"decision": "LLM unavailable → gated/stopped, zero fallback paths", "rationale": "Архитектурный инвариант", "phase": "02"}
   ],
-  "uncommitted_files": [
-    "app/artifacts/__init__.py (modified, pre-existing dirty)",
-    "app/workflow/orchestrator.py (modified, pre-existing dirty)"
-  ],
-  "next_action": "Run full 20-case golden eval to measure pass rate after 11 fixes. Then fix gc011-routing and fedstat-period-filter.",
-  "context_notes": "Session analyzed root cause of extraction/artifact failures: pipeline had too many binary fail-fast points where partial data silently became not_found. Fix A (graceful degradation) shipped at a50b8ca — 4 files changed. Fix B (code-gen extraction agent) is next architectural step agreed with user."
+  "uncommitted_files": [],
+  "next_action": "Запустить 20-case батч в worktree worktree-feat+variant-b-codegen-extraction (убедиться что .env и .local/ симлинки есть). Сравнить с Variant A: ожидаем что GC-011 и GC-015 теперь активируют codegen. Потом анализировать 10 кейсов sel=0.",
+  "context_notes": "Variant B (codegen) реализован и протестирован. Первый прогон: 5/20 passed (нейтрально к Variant A). После фикса WB source_family detection (1e08b07) ожидаем +2 кейса. Главный потолок — 10 кейсов с sel=0 где проблема upstream в retrieval/routing, codegen туда не доходит. Три кейса (GC-003/005/008) имеют данные но возвращают not_found — проблема в critic/narrator. Ветка: worktree-feat+variant-b-codegen-extraction."
 }

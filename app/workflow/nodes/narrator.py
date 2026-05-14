@@ -250,17 +250,40 @@ def _build_response_live(
     missing_fields = list(getattr(intent, "missing_fields", []) or []) if intent else []
     query = str(state.get("query") or "")
 
-    has_records = any((d.get("records") or []) for d in dataset_summaries)
-    data_signal = (
-        "ДАННЫЕ НАЙДЕНЫ — records содержат реальные значения. Используй их."
-        if has_records else
-        "Данные не найдены или records пусты."
+    has_records = any(
+        r.get("value") is not None
+        for d in dataset_summaries
+        for r in (d.get("records") or [])
     )
+    all_missing = (
+        bool(dataset_summaries)
+        and not has_records
+        and any(d.get("records") for d in dataset_summaries)
+    )
+    if has_records:
+        data_signal = "ДАННЫЕ НАЙДЕНЫ — records содержат реальные значения. Используй их."
+    elif all_missing:
+        data_signal = "Источник найден и записи есть, но все значения отсутствуют (value=null). Сообщи пользователю что данные за этот период не заполнены в источнике."
+    else:
+        data_signal = "Данные не найдены или records пусты."
     wants_table = any(w in query.lower() for w in ("csv", "таблиц", "table", "табличн"))
     csv_note = (
         " Пользователь запросил табличный формат — в message явно укажи, что CSV-файл доступен для скачивания ниже."
         if wants_table else ""
     )
+
+    # For not_found: include available periods from coverage so LLM can say
+    # "data exists but not for the requested period, available: X–Y"
+    coverage_hint = ""
+    if final_outcome == "not_found" and coverage_reports:
+        hints = []
+        for r in coverage_reports:
+            periods = getattr(r, "available_periods", [])
+            sid = getattr(r, "source_id", "")
+            if periods:
+                hints.append(f"{sid}: периоды {periods[0]}–{periods[-1]}" if len(periods) > 1 else f"{sid}: период {periods[0]}")
+        if hints:
+            coverage_hint = f"Доступные периоды в источниках: {'; '.join(hints)}.\n"
 
     user_prompt = (
         f"Запрос пользователя: {query}\n"
@@ -269,6 +292,7 @@ def _build_response_live(
         + (f", предупреждения: {critique.warnings}" if critique.warnings else "") + "\n\n"
         f"Найденные датасеты:\n{dataset_summaries}\n\n"
         f"Источники: {[s.get('title', s.get('card_id','')) for s in selected_sources[:8]]}\n"
+        + coverage_hint
         + (f"Недостающие поля: {missing_fields}\n" if missing_fields else "") +
         f"\nСформируй развёрнутый ответ:{csv_note}\n"
         "- message: подробный анализ с цифрами из records, динамика, контекст, смежные направления для изучения\n"

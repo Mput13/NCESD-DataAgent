@@ -134,10 +134,11 @@ def _llm_assess_coverage(
                 evidence["llm_ask_user"] = assessment.ask_user
                 if assessment.ask_user_reason:
                     evidence["llm_ask_user_reason"] = assessment.ask_user_reason
-                # Override status if LLM says cannot proceed
+                # Override status if LLM says cannot proceed — keep as partial so
+                # extraction still runs; critic will see warnings in evidence.
                 status = report.status
                 if not assessment.can_proceed and status == "ok":
-                    status = "skipped_with_reason"
+                    status = "partial"
                 enriched.append(report.model_copy(update={"evidence": evidence, "status": status}))
             else:
                 enriched.append(report)

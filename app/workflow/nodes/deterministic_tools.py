@@ -219,14 +219,22 @@ def _resolve_source_family(plan: ExtractionPlan) -> str:
             return "fedstat"
         if sid.isdigit():
             return "fedstat"
-        if "world_bank" in sid or "wb" in sid or any(
-            c.isupper() for c in plan.source_id[:3]
-        ):
-            # World Bank indicator IDs are typically UPPER.CASE.DOT
-            if "." in plan.source_id and plan.source_id[0].isupper():
-                return "world_bank"
         if "ckan" in sid:
             return "ckan"
+        # World Bank: UPPER.CASE.DOT (NY.GDP.MKTP.CD) or UPPER_WITH_UNDERSCORES (SH_UHC_FH40_LARGE)
+        # or lowercase with dot that isn't a file path (fin30.2)
+        raw = plan.source_id
+        has_dot = "." in raw
+        starts_upper = raw[0].isupper() if raw else False
+        all_upper_or_digit = all(c.isupper() or c.isdigit() or c in "._" for c in raw)
+        if "world_bank" in sid or "wb" in sid:
+            return "world_bank"
+        if starts_upper and (has_dot or "_" in raw):
+            return "world_bank"
+        if all_upper_or_digit and ("_" in raw or has_dot):
+            return "world_bank"
+        if has_dot and "/" not in raw and "\\" not in raw and not raw.endswith(".parquet"):
+            return "world_bank"
 
     # Check operations for hints
     ops_text = " ".join(plan.operations).lower()
@@ -618,9 +626,6 @@ def _maybe_codegen_fallback(
     Only runs for fedstat and world_bank (Parquet-backed sources).
     Skips if Qwen credentials are absent to avoid silent degradation.
     """
-    if source_family not in _CODEGEN_SUPPORTED_FAMILIES:
-        return result
-
     should_try = (
         isinstance(result, NoDataExplanationArtifact)
         or (isinstance(result, DatasetArtifact) and (result.rows or 0) == 0)
@@ -629,13 +634,25 @@ def _maybe_codegen_fallback(
         return result
 
     from app.data.source_card_lookup import lookup_source_card
-    from app.data.codegen_extractor import codegen_extract_dataset
+    from app.data.codegen_extractor import codegen_extract_dataset, _detect_family
 
     source_card = lookup_source_card(extraction_plan.source_id) or {
         "source_family": source_family,
         "dataset_id": extraction_plan.source_id or source_family,
         "resource_id": extraction_plan.source_id or source_family,
     }
+
+    # Resolve effective family: prefer source_card's explicit field over plan-derived value
+    effective_family = str(source_card.get("source_family") or "").lower()
+    if not effective_family or effective_family == "unknown":
+        effective_family = source_family
+    if not effective_family or effective_family == "unknown":
+        effective_family = _detect_family(source_card)
+    if effective_family not in _CODEGEN_SUPPORTED_FAMILIES:
+        return result
+    # Ensure source_card has the resolved family for codegen path resolution
+    if not source_card.get("source_family"):
+        source_card = {**source_card, "source_family": effective_family}
 
     codegen_artifact_id = f"dataset-cg-{uuid4().hex[:8]}"
     codegen_result = codegen_extract_dataset(

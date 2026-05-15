@@ -163,7 +163,10 @@ def derive_final_outcome(
         return "not_found"
 
     else:
-        # needs_repair, unknown -> not_found as terminal
+        # needs_repair / unknown — if we extracted real data, surface it as passed
+        # so the narrator can deliver a partial analysis rather than silence.
+        if _has_ok_dataset(dataset_artifacts):
+            return "passed"
         return "not_found"
 
 

@@ -333,7 +333,7 @@ def _llm_select_plan(
             ],
             schema=_PlanChoice,
             temperature=0.0,
-            max_tokens=512,
+            max_tokens=1024,
         )
 
         # Enforce allowlist — LLM output cannot add unsafe operations

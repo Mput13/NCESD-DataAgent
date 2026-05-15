@@ -1,82 +1,78 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-14T21:59:17.807Z",
+  "timestamp": "2026-05-15T09:13:30Z",
+  "phase": "02",
+  "phase_name": "jury-mvp",
+  "phase_dir": ".planning/phases/02-jury-mvp",
   "workstream": "feat/fix-after-matmod",
   "branch": "feat/fix-after-matmod",
-  "worktree": "/Users/a/MAI/matmod/.claude/worktrees/feat+variant-b-codegen-extraction",
   "status": "paused",
   "completed_tasks": [
     {
-      "id": "source-routing",
-      "name": "Shared source-family detection and public parquet resolver aliases",
-      "status": "done"
+      "id": "fix1-fix11",
+      "name": "Variant A fixes: graceful degradation, UI/trace labels, prompt and pipeline fixes",
+      "status": "done",
+      "commits": ["cded4f7", "789d7c7", "c1edeed", "839b54d", "a50b8ca", "c8644fd"]
     },
     {
-      "id": "codegen-functional",
-      "name": "Codegen FROM source contract and value-column normalization",
-      "status": "done"
+      "id": "variant-b-codegen",
+      "name": "Variant B: codegen extraction fallback with schema awareness and retries",
+      "status": "done",
+      "commits": ["3986474", "9223b1c"]
     },
     {
-      "id": "critic-narrator-semantics",
-      "name": "Remove repair_plan audit misuse and fake narrator audit filler",
-      "status": "done"
+      "id": "post-claude-functional-fixes",
+      "name": "Source-family routing, public parquet resolver aliases, codegen FROM source contract, critic/narrator semantics",
+      "status": "done",
+      "commits": ["fa7a99e"]
     },
     {
-      "id": "tests",
-      "name": "Focused regression tests for functional fixes",
+      "id": "main-refresh",
+      "name": "Merged local main into feat/fix-after-matmod so the branch is the canonical freshest A+B line",
       "status": "done"
     }
   ],
   "remaining_tasks": [
     {
-      "id": "review-diff",
-      "name": "Review modified app/test files and ensure scope stays functional, not safety-hardening",
-      "status": "not_started"
-    },
-    {
       "id": "rerun-targeted-tests",
-      "name": "Rerun combined targeted pytest command",
-      "status": "not_started"
+      "name": "Rerun combined targeted pytest command after the branch refresh",
+      "status": "not_started",
+      "priority": "high"
     },
     {
-      "id": "commit",
-      "name": "Commit relevant app/test handoff files only",
-      "status": "not_started"
+      "id": "diagnose-latest-batch-failures",
+      "name": "Diagnose remaining Phase 2 failures before claiming all-20 acceptance",
+      "status": "not_started",
+      "priority": "high",
+      "description": "Focus first on GC-011/GC-015 codegen behavior, ds=1 but not_found cases, and narrator/API error paths."
+    },
+    {
+      "id": "rerun-all-20",
+      "name": "Run the all-20 golden batch from the main checkout on feat/fix-after-matmod",
+      "status": "not_started",
+      "priority": "medium",
+      "description": "Use the primary repo checkout after removing the old feature worktree. Ensure .env, .local, and Qdrant are available."
     }
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
     {
-      "decision": "Do not include historical GSD phase artifacts in this handoff.",
-      "rationale": "The current work is a focused post-Claude fix pass on feat/fix-after-matmod; old phase files are stale and distracting."
+      "decision": "feat/fix-after-matmod is the canonical fresh A+B branch.",
+      "rationale": "It now contains Variant B plus the local main Variant A/cleanup line."
     },
     {
-      "decision": "Prioritize working-agent behavior over SQL safety hardening.",
-      "rationale": "User explicitly deprioritized safety; scope is functional extraction/routing/narration reliability."
+      "decision": "Remove the separate feature worktree after the branch refresh.",
+      "rationale": "The worktree name was stale and made it unclear where the newest code lived."
     },
     {
-      "decision": "Use FROM source as the codegen table contract.",
-      "rationale": "One clear relation is more reliable than fragile FROM data/t/source string patching."
+      "decision": "Variant B remains a deterministic_tools fallback, not a separate graph node.",
+      "rationale": "It keeps the pipeline transparent and avoids routing churn."
     },
     {
-      "decision": "Keep private _parquet_path aliases.",
-      "rationale": "Avoid broad churn while adding public resolver names for new callers."
+      "decision": "No offline/no-response LLM substitute paths.",
+      "rationale": "Runtime LLM failures must surface as explicit gated/error artifacts."
     }
-  ],
-  "uncommitted_files": [
-    "app/data/source_family.py",
-    "app/data/codegen_extractor.py",
-    "app/data/fedstat_adapter.py",
-    "app/data/world_bank_adapter.py",
-    "app/workflow/nodes/deterministic_tools.py",
-    "app/workflow/nodes/critic.py",
-    "app/workflow/nodes/narrator.py",
-    "tests/test_codegen_extractor.py",
-    "tests/test_parquet_path_resolution.py",
-    "tests/test_phase2_finalization.py",
-    ".continue-here.md",
-    ".planning/HANDOFF.json"
   ],
   "exclude_from_commit": [
     ".local",
@@ -85,17 +81,16 @@
     ".claude/settings.local.json"
   ],
   "verification": [
-    "python3 -m py_compile app/data/source_family.py app/data/codegen_extractor.py app/workflow/nodes/critic.py app/workflow/nodes/narrator.py app/workflow/nodes/deterministic_tools.py app/data/fedstat_adapter.py app/data/world_bank_adapter.py",
-    "python3 -m pytest tests/test_codegen_extractor.py -q -> 33 passed",
-    "python3 -m pytest tests/test_parquet_path_resolution.py -q -> 8 passed",
-    "python3 -m pytest tests/test_phase2_finalization.py -q -> 53 passed",
-    "python3 -m pytest tests/test_schema_validators.py::TestCritiqueSchema -q -> 5 passed",
-    "combined targeted run -> 99 passed, 1 warning"
+    "Before refresh: tests/test_codegen_extractor.py -> 33 passed",
+    "Before refresh: tests/test_parquet_path_resolution.py -> 8 passed",
+    "Before refresh: tests/test_phase2_finalization.py -> 53 passed",
+    "Before refresh: tests/test_schema_validators.py::TestCritiqueSchema -> 5 passed",
+    "Before refresh: combined targeted run -> 99 passed, 1 warning"
   ],
   "known_out_of_scope": [
-    "tests/test_agent_diagnostics.py has pre-existing/diagnostic failures not addressed here.",
-    "Full tests/test_schema_validators.py contains an old live_llm_required=False narrator contract conflict."
+    "Full tests/test_schema_validators.py contains an old live_llm_required=False narrator contract conflict.",
+    "Generated batch/workflow outputs from the removed feature worktree are not part of the canonical code state."
   ],
-  "next_action": "Review git diff for the listed app/test files, rerun the combined targeted tests, then commit only relevant app/test handoff files.",
-  "context_notes": "Current branch fix pass addresses Claude-reported functional reliability issues: source routing, codegen extraction, and narrator/critic semantics. Avoid reading old phase artifacts when resuming."
+  "next_action": "Use /Users/a/MAI/matmod on branch feat/fix-after-matmod. Rerun targeted tests, then diagnose remaining Phase 2 batch failures before the next all-20 acceptance run.",
+  "context_notes": "The branch is being refreshed so future work happens from the primary checkout, not from /Users/a/MAI/matmod/.claude/worktrees/feat+variant-b-codegen-extraction."
 }

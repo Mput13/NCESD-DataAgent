@@ -1,96 +1,163 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-15T09:13:30Z",
+  "timestamp": "2026-05-18T08:36:11.734Z",
   "phase": "02",
   "phase_name": "jury-mvp",
   "phase_dir": ".planning/phases/02-jury-mvp",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
   "workstream": "feat/fix-after-matmod",
   "branch": "feat/fix-after-matmod",
   "status": "paused",
+  "current_position": "Paused after architecture review of workflow intent analysis, source scouting, and retrieval. Current work is an architectural/refactor decision stream inside Phase 2, not a numbered 02-xx plan task.",
   "completed_tasks": [
     {
-      "id": "fix1-fix11",
-      "name": "Variant A fixes: graceful degradation, UI/trace labels, prompt and pipeline fixes",
-      "status": "done",
-      "commits": ["cded4f7", "789d7c7", "c1edeed", "839b54d", "a50b8ca", "c8644fd"]
+      "id": "intent-source-preferences",
+      "name": "Updated Intent Analyst prompt to mention Rosstat/FedStat, World Bank, and NSED/CKAN and to fill source_preferences only from explicit user source hints.",
+      "status": "done_uncommitted",
+      "files": [
+        "app/workflow/state.py",
+        "tests/test_phase2_workflow_service.py"
+      ],
+      "verification": "Targeted source-preference prompt test passed in the earlier session."
     },
     {
-      "id": "variant-b-codegen",
-      "name": "Variant B: codegen extraction fallback with schema awareness and retries",
-      "status": "done",
-      "commits": ["3986474", "9223b1c"]
+      "id": "runtime-paths",
+      "name": "Moved runtime defaults away from .planning paths by adding app.workflow.runtime_paths and changing WorkflowRunConfig/graph fallbacks to .local/dataagent runtime paths with env overrides.",
+      "status": "done_uncommitted",
+      "files": [
+        "app/workflow/runtime_paths.py",
+        "app/workflow/service.py",
+        "app/workflow/graph.py",
+        "tests/test_phase2_contracts.py"
+      ],
+      "verification": "py_compile and targeted runtime-path pytest passed in the earlier session."
     },
     {
-      "id": "post-claude-functional-fixes",
-      "name": "Source-family routing, public parquet resolver aliases, codegen FROM source contract, critic/narrator semantics",
-      "status": "done",
-      "commits": ["fa7a99e"]
-    },
-    {
-      "id": "main-refresh",
-      "name": "Merged local main into feat/fix-after-matmod so the branch is the canonical freshest A+B line",
-      "status": "done"
+      "id": "option-2-spec",
+      "name": "Recorded Workflow Intent and Retrieval Spec V2 as the accepted target design.",
+      "status": "done_uncommitted",
+      "files": [
+        "docs/superpowers/specs/2026-05-18-workflow-intent-retrieval-v2.md",
+        ".planning/STATE.md"
+      ],
+      "verification": "git diff --check passed for the spec and STATE update."
     }
   ],
   "remaining_tasks": [
     {
-      "id": "rerun-targeted-tests",
-      "name": "Rerun combined targeted pytest command after the branch refresh",
+      "id": "decide-intent-analysis-implementation",
+      "name": "Continue from the start of the workflow: decide and implement the Intent Analyst layer using the V2 spec.",
+      "status": "not_started",
+      "priority": "high",
+      "description": "Do not preserve old IntentFrame semantics as the target. The accepted direction is UserIntentArtifact as an LLM semantic compiler; compatibility adapters are temporary only."
+    },
+    {
+      "id": "retrieval-input-planner",
+      "name": "After intent-analysis decision, design/implement RetrievalInput and SearchProbe generation.",
+      "status": "not_started",
+      "priority": "high",
+      "description": "RAG should receive structured probes generated from LLM-normalized intent, not only the raw user query and not json.dumps(intent)."
+    },
+    {
+      "id": "source-scouts-refactor",
+      "name": "Refactor Source Scouts to consume RetrievalInput, run multiple probes, merge/dedupe evidence, and preserve per-probe trace.",
       "status": "not_started",
       "priority": "high"
     },
     {
-      "id": "diagnose-latest-batch-failures",
-      "name": "Diagnose remaining Phase 2 failures before claiming all-20 acceptance",
+      "id": "retriever-semantic-cleanup",
+      "name": "Remove domain-semantic string heuristics from HybridRetriever after the upstream probe contract exists.",
       "status": "not_started",
       "priority": "high",
-      "description": "Focus first on GC-011/GC-015 codegen behavior, ds=1 but not_found cases, and narrator/API error paths."
+      "description": "Hardcoded economic synonym maps, phrase semantics, and query-intent parsers should not own statistical meaning."
     },
     {
-      "id": "rerun-all-20",
-      "name": "Run the all-20 golden batch from the main checkout on feat/fix-after-matmod",
+      "id": "verify-before-commit",
+      "name": "Rerun relevant tests and inspect generated artifacts before committing code/spec changes.",
       "status": "not_started",
-      "priority": "medium",
-      "description": "Use the primary repo checkout after removing the old feature worktree. Ensure .env, .local, and Qdrant are available."
+      "priority": "medium"
     }
   ],
-  "blockers": [],
-  "human_actions_pending": [],
+  "blockers": [
+    {
+      "description": "Layer-by-layer design decisions are intentionally being made with the user before broad implementation.",
+      "type": "human_action",
+      "workaround": "Resume by discussing/implementing the Intent Analyst layer first."
+    },
+    {
+      "description": "Live workflow/golden acceptance still depends on local .env, live Qwen/Yandex credentials, and Qdrant/runtime data availability.",
+      "type": "external",
+      "workaround": "Unit tests can mock LLM calls; product runtime must not use fake offline intent/narrator fallbacks."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Decide the exact Intent Analyst implementation contract before code refactor continues.",
+      "context": "User explicitly asked to decide workflow/retrieval fixes layer by layer, starting with intent_analysis.",
+      "blocking": true
+    }
+  ],
   "decisions": [
     {
-      "decision": "feat/fix-after-matmod is the canonical fresh A+B branch.",
-      "rationale": "It now contains Variant B plus the local main Variant A/cleanup line."
+      "decision": "Intent analysis and retrieval will follow Option 2.",
+      "rationale": "The workflow needs a structured UserIntentArtifact and RetrievalInput with multiple LLM-normalized SearchProbe items. Raw query-only retrieval is not acceptable.",
+      "phase": "02"
     },
     {
-      "decision": "Remove the separate feature worktree after the branch refresh.",
-      "rationale": "The worktree name was stale and made it unclear where the newest code lived."
+      "decision": "Domain semantics belong in live Qwen structured output, not in retriever string heuristics.",
+      "rationale": "The project needs maximum relevant source recall across statistical catalogs; handcrafted token/synonym logic is too brittle and duplicates the LLM's job.",
+      "phase": "02"
     },
     {
-      "decision": "Variant B remains a deterministic_tools fallback, not a separate graph node.",
-      "rationale": "It keeps the pipeline transparent and avoids routing churn."
+      "decision": "Source preferences are explicit user constraints/hints, not guessed defaults.",
+      "rationale": "No explicit source hint means scouts should search all trusted source families; explicit source mentions become soft or hard source scope depending on wording.",
+      "phase": "02"
     },
     {
-      "decision": "No offline/no-response LLM substitute paths.",
-      "rationale": "Runtime LLM failures must surface as explicit gated/error artifacts."
+      "decision": "Runtime manifests and workflow run outputs should not depend on .planning paths.",
+      "rationale": ".planning is durable project memory/agent artifacts, not a runtime data dependency surface.",
+      "phase": "02"
+    },
+    {
+      "decision": "graph_contract.py and orchestrator.py are legacy surfaces for the current Phase 2 runtime.",
+      "rationale": "Current runtime uses service.py, graph.py, state.py, and workflow nodes. graph_contract.py is only directly exercised by tests/test_workflow_graph.py; orchestrator.py is still exported as run_query and used by older scripts/tests but is not the Phase 2 service path.",
+      "phase": "02"
     }
   ],
-  "exclude_from_commit": [
-    ".local",
-    ".planning/phases/*/workflow-runs",
-    ".planning/phases/*/batch-runs",
-    ".claude/settings.local.json"
-  ],
   "verification": [
-    "Before refresh: tests/test_codegen_extractor.py -> 33 passed",
-    "Before refresh: tests/test_parquet_path_resolution.py -> 8 passed",
-    "Before refresh: tests/test_phase2_finalization.py -> 53 passed",
-    "Before refresh: tests/test_schema_validators.py::TestCritiqueSchema -> 5 passed",
-    "Before refresh: combined targeted run -> 99 passed, 1 warning"
+    "Earlier targeted command passed: python3 -m py_compile app/workflow/runtime_paths.py app/workflow/service.py app/workflow/graph.py",
+    "Earlier targeted command passed: python3 -m pytest tests/test_phase2_contracts.py::test_workflow_run_config_default_points_to_phase2_artifacts tests/test_phase2_workflow_service.py::TestAnalyzeIntent::test_analyze_intent_prompt_has_source_preference_rules_for_all_sources -q",
+    "Latest docs/state whitespace check passed: git diff --check -- docs/superpowers/specs/2026-05-18-workflow-intent-retrieval-v2.md .planning/STATE.md"
   ],
-  "known_out_of_scope": [
-    "Full tests/test_schema_validators.py contains an old live_llm_required=False narrator contract conflict.",
-    "Generated batch/workflow outputs from the removed feature worktree are not part of the canonical code state."
+  "known_issues": [
+    "Full tests/test_phase2_workflow_service.py had pre-existing unrelated failures in the earlier session: fake schema missing countries, regex expected live LLM call text, and CLI flags --no-live-llm/--no-live-embeddings missing.",
+    "WorkflowRunConfig field names still contain phase1_index_manifest and phase1_source_catalog_manifest even though their defaults now point to runtime paths.",
+    "There are many untracked generated Phase 2 batch/workflow artifacts and .claude/worktrees entries in git status; treat them as generated/non-canonical unless the user explicitly asks otherwise."
   ],
-  "next_action": "Use /Users/a/MAI/matmod on branch feat/fix-after-matmod. Rerun targeted tests, then diagnose remaining Phase 2 batch failures before the next all-20 acceptance run.",
-  "context_notes": "The branch is being refreshed so future work happens from the primary checkout, not from /Users/a/MAI/matmod/.claude/worktrees/feat+variant-b-codegen-extraction."
+  "uncommitted_files": [
+    ".planning/STATE.md",
+    ".planning/HANDOFF.json",
+    ".planning/phases/02-jury-mvp/.continue-here.md",
+    "app/workflow/graph.py",
+    "app/workflow/runtime_paths.py",
+    "app/workflow/service.py",
+    "app/workflow/state.py",
+    "docs/superpowers/specs/2026-05-18-workflow-intent-retrieval-v2.md",
+    "tests/test_phase2_contracts.py",
+    "tests/test_phase2_workflow_service.py"
+  ],
+  "generated_untracked_to_review_or_ignore": [
+    ".claude/worktrees/",
+    ".planning/phases/02-jury-mvp/batch-runs/",
+    ".planning/phases/02-jury-mvp/workflow-runs/phase2-*",
+    ".local/dataagent/runtime/ (created by runtime path bootstrap, likely ignored)"
+  ],
+  "background_processes": [
+    "No project server, watcher, pytest, Streamlit, or Qdrant process was started by this pause workflow.",
+    "A long recursive placeholder grep was killed after it scanned generated artifacts too broadly."
+  ],
+  "next_action": "Resume with the Intent Analyst layer. Read docs/superpowers/specs/2026-05-18-workflow-intent-retrieval-v2.md, then decide whether to replace IntentFrame directly with UserIntentArtifact or add a temporary compatibility adapter. Do not start by refactoring HybridRetriever; upstream intent/probe contracts come first.",
+  "context_notes": "The user wants decisions and implementation to proceed layer by layer. The immediate conceptual question was answered: RAG should receive RetrievalInput.probes, including the raw query as one probe plus stronger LLM-normalized probes. The new spec is the target; the current code remains partially old and partially patched."
 }

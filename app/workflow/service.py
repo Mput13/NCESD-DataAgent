@@ -18,6 +18,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from app.artifacts.workflow_artifacts import FeedbackArtifact, TraceEvent, WorkflowResponse, utc_now_iso
+from app.workflow.runtime_paths import (
+    index_manifest_path,
+    source_catalog_manifest_path,
+    workflow_artifact_dir,
+)
 from app.workflow.state import Phase2State, new_run_id
 
 
@@ -38,13 +43,9 @@ class WorkflowRunConfig(BaseModel):
     def default(cls) -> WorkflowRunConfig:
         return cls(
             goldens_path=Path(".planning/phases/01-data-architecture-research/golden-cases.yaml"),
-            phase1_index_manifest=Path(
-                ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
-            ),
-            phase1_source_catalog_manifest=Path(
-                ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
-            ),
-            artifact_dir=Path(".planning/phases/02-jury-mvp/workflow-runs"),
+            phase1_index_manifest=index_manifest_path(),
+            phase1_source_catalog_manifest=source_catalog_manifest_path(),
+            artifact_dir=workflow_artifact_dir(),
         )
 
 

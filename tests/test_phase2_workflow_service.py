@@ -152,6 +152,160 @@ class TestAnalyzeIntent:
         assert result.known_fields.get("geography") == "Россия"
         mock_client.structured_chat.assert_called_once()
 
+    def test_analyze_intent_prompt_has_source_preference_rules_for_all_sources(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Intent Analyst prompt must keep source preferences aligned with scout routing."""
+        from unittest.mock import MagicMock
+        from app.workflow.state import analyze_intent, _IntentAnalysisSchema
+
+        mock_result = _IntentAnalysisSchema(
+            category="simple",
+            needs_clarification=False,
+            geography="Россия",
+            period="2024",
+            indicator="57319",
+            source_preferences=["fedstat", "world_bank", "ckan"],
+            missing_fields=[],
+        )
+        mock_client = MagicMock()
+        mock_client.structured_chat.return_value = mock_result
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.qwen_credential_gate",
+            lambda: {"status": "ready", "missing_env_vars": []},
+        )
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.YandexAIStudioClient",
+            lambda: mock_client,
+        )
+
+        analyze_intent("Росстат, World Bank и CKAN: найди показатель ЕМИСС 57319", live_llm_required=True)
+
+        messages = mock_client.structured_chat.call_args.kwargs.get("messages")
+        if messages is None:
+            messages = mock_client.structured_chat.call_args.args[0]
+        system_prompt = messages[0]["content"]
+        assert "НЦСЭД/CKAN" in system_prompt
+        assert "включай 'fedstat'" in system_prompt
+        assert "включай 'world_bank'" in system_prompt
+        assert "включай 'ckan'" in system_prompt
+        assert "оставь source_preferences пустым списком" in system_prompt
+
+    def test_canonical_intent_decomposes_macro_request_without_retrieval_fields(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Intent Analyst emits durable semantic intent, not search execution details."""
+        from unittest.mock import MagicMock
+        from app.workflow.state import _UserIntentAnalysisSchema, analyze_user_intent
+
+        mock_result = _UserIntentAnalysisSchema(
+            original_query="Проанализируй основные экономические показатели стран БРИКС за 2015-2024 годы",
+            task={
+                "category": "research",
+                "user_goal": "Сравнить динамику основных макроэкономических показателей стран БРИКС.",
+                "expected_output": "table",
+            },
+            measures=[
+                {
+                    "measure_id": "m1",
+                    "user_phrase": "ВВП",
+                    "canonical_concept": "gross domestic product",
+                    "aliases_ru": ["ВВП"],
+                    "aliases_en": ["GDP"],
+                    "official_terms_ru": ["валовой внутренний продукт"],
+                    "official_terms_en": ["gross domestic product"],
+                    "possible_indicator_names": ["GDP"],
+                    "measurement_form": "level",
+                    "role": "primary",
+                },
+                {
+                    "measure_id": "m2",
+                    "user_phrase": "инфляция",
+                    "canonical_concept": "inflation",
+                    "aliases_ru": ["инфляция", "ИПЦ"],
+                    "aliases_en": ["inflation", "CPI"],
+                    "official_terms_ru": ["индекс потребительских цен"],
+                    "official_terms_en": ["consumer price index"],
+                    "possible_indicator_names": ["Inflation, consumer prices"],
+                    "measurement_form": "rate",
+                    "role": "primary",
+                },
+            ],
+            dimensions={
+                "geographies": [
+                    {"name": "Brazil", "iso3": "BRA", "aliases": ["Бразилия"]},
+                    {"name": "Russia", "iso3": "RUS", "aliases": ["Россия"]},
+                ],
+                "period": {"start": "2015", "end": "2024", "values": []},
+                "frequency": "annual",
+                "breakdowns": [],
+            },
+            operations={"wants_time_series": True, "wants_comparison": True},
+            source_scope={"requested_sources": [], "source_constraint": "none", "source_hints": []},
+            ambiguity={"needs_clarification": False},
+            confidence=0.93,
+        )
+        mock_client = MagicMock()
+        mock_client.structured_chat.return_value = mock_result
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.qwen_credential_gate",
+            lambda: {"status": "ready", "missing_env_vars": []},
+        )
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: mock_client)
+
+        artifact = analyze_user_intent(mock_result.original_query, live_llm_required=True)
+
+        assert len(artifact.measures) >= 2
+        assert artifact.source_scope.source_constraint == "none"
+        assert artifact.source_scope.requested_sources == []
+        payload = artifact.model_dump()
+        assert "probes" not in payload
+        assert "budget_policy" not in payload
+        assert all(not measure.possible_indicator_codes for measure in artifact.measures)
+
+    def test_canonical_intent_source_hint_becomes_source_scope(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from unittest.mock import MagicMock
+        from app.workflow.state import _UserIntentAnalysisSchema, analyze_user_intent
+
+        mock_result = _UserIntentAnalysisSchema(
+            original_query="Только World Bank: ВВП России 2024",
+            task={"category": "direct_lookup", "user_goal": "Найти ВВП России.", "expected_output": "answer"},
+            measures=[
+                {
+                    "measure_id": "m1",
+                    "user_phrase": "ВВП",
+                    "canonical_concept": "gross domestic product",
+                    "aliases_ru": ["ВВП"],
+                    "aliases_en": ["GDP"],
+                    "official_terms_ru": ["валовой внутренний продукт"],
+                    "official_terms_en": ["gross domestic product"],
+                    "measurement_form": "level",
+                }
+            ],
+            dimensions={"geographies": [{"name": "Russia", "iso3": "RUS"}], "period": {"values": ["2024"]}},
+            operations={},
+            source_scope={
+                "requested_sources": ["world_bank"],
+                "source_constraint": "hard_only",
+                "source_hints": ["World Bank"],
+            },
+            ambiguity={"needs_clarification": False},
+        )
+        mock_client = MagicMock()
+        mock_client.structured_chat.return_value = mock_result
+        monkeypatch.setattr(
+            "app.llm.yandex_ai_studio.qwen_credential_gate",
+            lambda: {"status": "ready", "missing_env_vars": []},
+        )
+        monkeypatch.setattr("app.llm.yandex_ai_studio.YandexAIStudioClient", lambda: mock_client)
+
+        artifact = analyze_user_intent("Только World Bank: ВВП России 2024", live_llm_required=True)
+
+        assert artifact.source_scope.requested_sources == ["world_bank"]
+        assert artifact.source_scope.source_constraint == "hard_only"
+
 
 # ---------------------------------------------------------------------------
 # Task 1: design_research

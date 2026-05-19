@@ -140,6 +140,25 @@ The current UI and workflow are Phase 1 diagnostic infrastructure only. Phase 2 
 
 ## Decisions Log
 
+- **2026-05-19 — Agent artifact drift failure mode recorded.**
+  A negative example is now documented at `docs/superpowers/specs/2026-05-19-agent-artifact-drift-negative-example.md`: after a long architecture discussion, stale deterministic-planner language was carried into a "final" artifact and could lead future agents to implement the wrong architecture. Future workflow specs must reconcile older artifacts, explicitly supersede stale alternatives, add "Not Doing" shortcuts, and include acceptance tests that fail if the shortcut is implemented.
+
+- **2026-05-19 — Retrieval Planner implementation spec accepted.**
+  `docs/superpowers/specs/2026-05-19-retrieval-planner-implementation-spec.md` is the implementation source of truth for Slice 2. Retrieval Planner must call live/mock Qwen/Yandex structured output for primary `RetrievalInput` generation, emit measure-centric source-card metadata probes for World Bank, FedStat, and CKAN when source scope is `none`, keep years/geographies/groups/output shape in constraints, and expose tests that reject deterministic-only probe generation.
+
+- **2026-05-19 — Intent/Retrieval boundary refined; pre-retrieval Research Designer removed.**
+  The pre-retrieval workflow is now `Intent Analyst -> Retrieval Planner -> Source Scouts`. `UserIntentArtifact` is the durable semantic artifact used across the workflow; `RetrievalInput` is a transient search-execution artifact for Source Scouts and trace/provenance. Source-card RAG probes should be measure-centric metadata queries; years, countries, groups, and output shape belong in constraints/coverage targets, not in every probe text. Pre-retrieval `Research Designer` is removed; a later-stage `Analysis Designer` may be considered after Coverage Inventory and Source Selection. ADR: `docs/superpowers/specs/2026-05-19-adr-intent-retrieval-boundary.md`.
+
+- **2026-05-19 — Intent/Retrieval boundary implementation slice landed in working tree.**
+  Added canonical `UserIntentArtifact` and transient `RetrievalInput` contracts, live Qwen structured-output intent path with legacy `IntentFrame` adapter, runtime graph rewiring through `retrieval_planner`, and Source Scouts multi-probe execution with per-probe evidence. The current working-tree retrieval planner must be checked: deterministic-only probe generation is not an accepted target and must be replaced by a live LLM structured-output Retrieval Planner before this slice is considered correct. `ResearchDesignArtifact` remains import-compatible for older downstream/tests, but the pre-retrieval runtime path no longer routes through `research_designer`.
+
+- **2026-05-19 — Retrieval Planner deterministic-only implementation corrected.**
+  `plan_retrieval` now calls the live/mock Qwen/Yandex structured-output client for primary `RetrievalInput` generation and only uses deterministic post-processing for validation, stable IDs, preserved constraints/source scope, safety bounds, and the low-priority `raw_query_fallback`. LLM failures or missing primary probes gate the planner instead of synthesizing deterministic primary probes. Targeted evidence: `python3 -m pytest tests/test_phase2_workflow_nodes.py tests/test_workflow_graph.py tests/test_phase2_workflow_service.py -q` passed 52 tests on 2026-05-19, with one upstream LangGraph deprecation warning.
+  Residual risk: full `python3 -m pytest -q` is not clean outside this slice (288 passed / 18 failed on 2026-05-19). Failures are in existing diagnostics/acceptance/demo/web/Yandex helper surfaces rather than the corrected Retrieval Planner path.
+
+- **2026-05-18 — Workflow intent/retrieval Option 2 accepted as target spec.**
+  The next retrieval refactor should use `Intent Analyst -> Retrieval Planner -> Source Scouts -> Retriever` as separate responsibilities. RAG receives structured `RetrievalInput` with multiple LLM-normalized `SearchProbe` items, not the raw user query alone and not a dumped intent JSON blob. Domain semantics belong in live Qwen structured output; retriever code should keep only mechanical search/ranking/filtering. Spec: `docs/superpowers/specs/2026-05-18-workflow-intent-retrieval-v2.md`.
+
 - **2026-05-11 — Offline/no-response LLM fallbacks are a Phase 2 bug.**
   Phase 2 must not keep product workflow running by pretending the LLM works without network, credentials, or a response. Runtime LLM failures should become explicit gated/error artifacts (`llm_unavailable`, `llm_timeout`, `llm_error`) and must fail acceptance/readiness, not fall back to keyword, rule-based, manual-merge, or fake narrator behavior. Unit tests may mock `YandexAIStudioClient.structured_chat`, but product code should not contain an offline/no-response LLM substitute path.
 

@@ -127,12 +127,12 @@ def test_workflow_run_config_default_points_to_phase2_artifacts() -> None:
     # Use Path comparison to be OS-agnostic (handles both / and \ separators)
     assert config.goldens_path == Path(".planning/phases/01-data-architecture-research/golden-cases.yaml")
     assert config.phase1_index_manifest == Path(
-        ".planning/phases/01-data-architecture-research/embedding-index-manifest.json"
+        ".local/dataagent/runtime/embedding-index-manifest.json"
     )
     assert config.phase1_source_catalog_manifest == Path(
-        ".planning/phases/01-data-architecture-research/source-catalog-manifest.json"
+        ".local/dataagent/runtime/source-catalog-manifest.json"
     )
-    assert config.artifact_dir == Path(".planning/phases/02-jury-mvp/workflow-runs")
+    assert config.artifact_dir == Path(".local/dataagent/workflow-runs")
 
 
 def test_run_user_query_now_implemented_by_plan_02_06(tmp_path) -> None:

@@ -7,7 +7,7 @@ explicit finalization_pending at the end.
 Node names:
 - supervisor
 - intent_analyst
-- research_designer
+- retrieval_planner
 - source_scouts
 - coverage_schema
 - extraction_planner
@@ -31,11 +31,13 @@ from app.artifacts.workflow_artifacts import (
     EvidenceBundleArtifact,
     TraceEvent,
 )
+from app.workflow.runtime_paths import index_manifest_path as default_index_manifest_path
 from app.workflow.state import (
     Phase2State,
-    analyze_intent,
+    analyze_user_intent,
     design_research,
     new_run_id,
+    plan_retrieval,
 )
 
 # ---------------------------------------------------------------------------
@@ -147,7 +149,8 @@ def _node_intent_analyst(state: Phase2State) -> Phase2State:
     component_statuses = dict(state.get("component_statuses") or {})
 
     try:
-        intent = analyze_intent(query, live_llm_required=live_llm)
+        canonical_intent = analyze_user_intent(query, live_llm_required=live_llm)
+        intent = canonical_intent.to_intent_frame()
         status = "ok"
     except Exception as exc:
         # LLM unavailable — gate this run, do not silently fall back to keyword matching
@@ -179,6 +182,7 @@ def _node_intent_analyst(state: Phase2State) -> Phase2State:
             output_artifact="IntentFrame",
             decision=status,
             payload={
+                "canonical_intent": canonical_intent.model_dump(mode="json"),
                 "category": intent.category,
                 "needs_clarification": intent.needs_clarification,
                 "status": status,
@@ -189,7 +193,67 @@ def _node_intent_analyst(state: Phase2State) -> Phase2State:
 
     return {
         **state,
+        "canonical_intent": canonical_intent,
         "intent": intent,
+        "trace_events": trace_events,
+        "component_statuses": component_statuses,
+    }
+
+
+def _node_retrieval_planner(state: Phase2State) -> Phase2State:
+    """Retrieval Planner: convert UserIntentArtifact into metadata-search probes."""
+    run_id = str(state.get("run_id") or "")
+    canonical_intent = state.get("canonical_intent")
+    trace_events = list(state.get("trace_events") or [])
+    component_statuses = dict(state.get("component_statuses") or {})
+
+    if canonical_intent is None:
+        component_statuses["retrieval_planner"] = "skipped_no_intent"
+        return {**state, "trace_events": trace_events, "component_statuses": component_statuses}
+
+    try:
+        retrieval_input = plan_retrieval(canonical_intent)
+    except Exception as exc:
+        trace_events.append(
+            TraceEvent(
+                run_id=run_id,
+                state="retrieval_planner",
+                agent="Retrieval Planner",
+                decision="gated",
+                warnings=[str(exc)],
+                payload={"error": str(exc)},
+            )
+        )
+        component_statuses["retrieval_planner"] = "gated"
+        return {
+            **state,
+            "retrieval_input": None,
+            "finalization_pending": True,
+            "pending_reason": f"retrieval_planner_llm_gated:{exc}",
+            "trace_events": trace_events,
+            "component_statuses": component_statuses,
+        }
+
+    trace_events.append(
+        TraceEvent(
+            run_id=run_id,
+            state="retrieval_planner",
+            agent="Retrieval Planner",
+            output_artifact="RetrievalInput",
+            decision="ok",
+            payload={
+                "probe_count": len(retrieval_input.probes),
+                "probes": [probe.model_dump(mode="json") for probe in retrieval_input.probes],
+                "dimension_constraints": retrieval_input.dimension_constraints.model_dump(mode="json"),
+                "source_scope": retrieval_input.source_scope.model_dump(mode="json"),
+                "budget_policy": retrieval_input.budget_policy.model_dump(mode="json"),
+            },
+        )
+    )
+    component_statuses["retrieval_planner"] = "ok"
+    return {
+        **state,
+        "retrieval_input": retrieval_input,
         "trace_events": trace_events,
         "component_statuses": component_statuses,
     }
@@ -284,9 +348,9 @@ def _node_source_scouts(state: Phase2State) -> Phase2State:
     component_statuses = dict(state.get("component_statuses") or {})
 
     expected_sources = list(intent.source_preferences if intent else [])
+    retrieval_input = state.get("retrieval_input")
     index_manifest_path = Path(
-        str(state.get("_index_manifest_path") or
-            ".planning/phases/01-data-architecture-research/embedding-index-manifest.json")
+        str(state.get("_index_manifest_path") or default_index_manifest_path())
     )
 
     evidence = EvidenceBundleArtifact(
@@ -302,6 +366,7 @@ def _node_source_scouts(state: Phase2State) -> Phase2State:
                 query,
                 expected_sources=expected_sources,
                 index_manifest_path=index_manifest_path,
+                retrieval_input=retrieval_input,
                 research_design=state.get("research_design"),
             )
             status = "ok" if evidence.selected_sources else "no_candidate"
@@ -520,18 +585,14 @@ def _route_after_intent(state: Phase2State) -> str:
 
     - needs_clarification -> finalization_pending
     - finalization_pending already set (LLM gated) -> finalization_pending
-    - supervisor_route=direct -> source_scouts (skip Research Designer)
-    - otherwise -> research_designer
+    - otherwise -> retrieval_planner
     """
     if state.get("finalization_pending"):
         return "finalization_pending_gated"
     intent = state.get("intent")
     if intent and intent.needs_clarification:
         return "finalization_pending_clarification"
-    supervisor_route = state.get("_supervisor_route", "research")  # type: ignore[call-overload]
-    if supervisor_route == "direct":
-        return "source_scouts_direct"
-    return "research_designer"
+    return "retrieval_planner"
 
 
 def _route_after_scouts(state: Phase2State) -> str:
@@ -551,7 +612,7 @@ def build_phase2_graph():
     """Build and compile the Phase 2 LangGraph StateGraph.
 
     Returns a compiled graph with nodes:
-    supervisor -> intent_analyst -> [research_designer or finalization_pending]
+    supervisor -> intent_analyst -> [retrieval_planner or finalization_pending]
     -> source_scouts -> [coverage_schema or finalization_pending]
     -> extraction_planner -> deterministic_tools -> finalization_pending
 
@@ -563,7 +624,7 @@ def build_phase2_graph():
     # Add all nodes
     builder.add_node("supervisor", _node_supervisor)
     builder.add_node("intent_analyst", _node_intent_analyst)
-    builder.add_node("research_designer", _node_research_designer)
+    builder.add_node("retrieval_planner", _node_retrieval_planner)
     builder.add_node("source_scouts", _node_source_scouts)
     builder.add_node("coverage_schema", _node_coverage_schema)
     builder.add_node("extraction_planner", _node_extraction_planner)
@@ -579,15 +640,14 @@ def build_phase2_graph():
         "intent_analyst",
         _route_after_intent,
         {
-            "research_designer": "research_designer",
-            "source_scouts_direct": "source_scouts",   # direct path: skip Research Designer
+            "retrieval_planner": "retrieval_planner",
             "finalization_pending_clarification": "finalization_pending",
             "finalization_pending_gated": "finalization_pending",
         },
     )
 
-    # Research designer -> source scouts
-    builder.add_edge("research_designer", "source_scouts")
+    # Retrieval planner -> source scouts
+    builder.add_edge("retrieval_planner", "source_scouts")
 
     # Conditional routing after scouts
     builder.add_conditional_edges(

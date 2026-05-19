@@ -412,3 +412,13 @@ The first implementation slice should add tests before code. At minimum:
 
 Do not start `HybridRetriever` semantic cleanup until these tests pass and Source
 Scouts consume `RetrievalInput`.
+
+## Implementation Evidence
+
+The deterministic-only implementation drift described in
+`2026-05-19-agent-artifact-drift-negative-example.md` was corrected in commit
+`f4c6fbe` on branch `feat/fix-after-matmod`.
+
+Durable evidence and residual risk are recorded in:
+
+`docs/superpowers/specs/2026-05-19-retrieval-planner-correction-evidence.md`

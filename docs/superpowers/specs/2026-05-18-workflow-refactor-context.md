@@ -31,6 +31,9 @@ Read these artifacts before planning or implementing workflow changes:
   implementation source of truth for the LLM Retrieval Planner workflow,
   including the BRICS example, prompt requirements, Source Scouts handoff, and
   acceptance tests.
+- `docs/superpowers/specs/2026-05-19-retrieval-planner-correction-evidence.md` -
+  implementation evidence for the corrected Retrieval Planner slice, including
+  commit id, verified tests, full-suite residual failures, and next slice risk.
 - This document - broader workflow-refactor context, coverage/source-selection
   discussion, real deterministic coverage demo evidence, and guardrails.
 
